@@ -2295,6 +2295,9 @@ static void events_block(uint32_t n)
 {
     uint32_t i, pr, fo, seq_n = n;
     uint32_t clock_mode = (uint32_t)song.g[G_CLOCK];
+#if AMBPLUS
+    amb_prepare();
+#endif
     if (midi_clock.mode != clock_mode) {
         seq_stop();
         memset(&midi_clock, 0, sizeof midi_clock);
@@ -2440,6 +2443,9 @@ static void events_block(uint32_t n)
     }
     if (song.playing)
         song.tick++;
+#if AMBPLUS
+    amb_clock(n);
+#endif
 }
 
 #include "song_play.c"                           /* the song: the ISR's part (song_chain.c) */

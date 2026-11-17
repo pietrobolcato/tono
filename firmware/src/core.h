@@ -7,6 +7,19 @@
  * engine (General MIDI map) on any part; the SAMPLE engine's PERC set is retired (drum_from_perc).
  * Sections: sizes, parameters, voices and engines, tracks and the song, system. */
 #include <stdint.h>
+#ifndef AMBPLUS
+#define AMBPLUS 0
+#endif
+#if AMBPLUS
+static void amb_init(void);
+static void amb_prepare(void);
+static void amb_clock(uint32_t n);
+static void amb_input(void);
+static void amb_draw(void);
+static void amb_leds(void);
+static void amb_master(int32_t raw, int boot);
+static void amb_output(int32_t *out, uint32_t n);
+#endif
 
 /* ------------------------------------------------------------ sizes --- */
 #define NVOICE 8                 /* voices per part, and the budget shared by all parts */

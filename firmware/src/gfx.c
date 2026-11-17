@@ -10,6 +10,9 @@
  * cv_text takes the phase that puts it within a phase step of its true place. Blending uses a 16-entry
  * ramp per (ink, background) pair, cached, so a pixel costs a nibble read and a store. Colours come from the theme tokens. */
 typedef struct { uint16_t off, adv; int8_t bx; uint8_t by, bw, bh; } aag_t;   /* a glyph at a phase (ag) */
+/* lcd.c precedes gfx.c in firmware; isolated renderer fixtures supply this
+ * surface separately. Declare it before the hole/clear helpers use it. */
+static void lcd_fill(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint16_t c);
 typedef struct { uint16_t off, adv; } aagh_t;   /* (0.9.0) a glyph: its phases' lowest data offset, the advance */
 typedef struct {
     uint8_t h, asc, first, last, nex;   /* line height, baseline; ASCII range; extras */

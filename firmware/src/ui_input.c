@@ -341,6 +341,10 @@ static uint32_t key_leds(uint32_t *br)                 /* (*br: a layer's keys t
  * glow first: an LED going from lit to dim never has a dark frame */
 static void ui_leds(void)
 {
+#if AMBPLUS
+    amb_leds();
+    return;
+#endif
     uint8_t nl[FM1_NCOL] = {0}, nd[FM1_NCOL] = {0}, own[FM1_NCOL] = {0}, og[FM1_NCOL] = {0}, nb[FM1_NCOL] = {0};
     uint8_t nm[FM1_NCOL] = {0}, sg[FM1_NCOL] = {0}, sm[FM1_NCOL] = {0};
     uint32_t k, c, g, br, beat, sc, sr = 0;
@@ -2016,6 +2020,10 @@ static void scale_link(void)
 static void ui_input_frame(void);
 static void ui_input(void)
 {
+#if AMBPLUS
+    amb_input();
+    return;
+#endif
     cpt_poll();                                         /* (0.9.14) CPU TEST measured as it plays (ui_menu.c) */
     ui_input_frame();
     scale_link();                                       /* (JIANT 0.4) one scale for every melodic track (after the

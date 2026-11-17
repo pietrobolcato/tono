@@ -12331,7 +12331,10 @@ static int test_engine_order_099(void)
     return bad;
 }
 
-int main(void)
+#ifndef UI_MAIN
+#define UI_MAIN main
+#endif
+int UI_MAIN(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
     int bad = 0;

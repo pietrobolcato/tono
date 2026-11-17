@@ -115,4 +115,7 @@
 #include "console.c"
 #endif
 #include "master.c"              /* the MASTER pot (#137: read before the audio starts) */
+#if AMBPLUS
+#include "amb_native.c"
+#endif
 #include "main.c"

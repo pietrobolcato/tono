@@ -2284,6 +2284,10 @@ static void lz_frame_end(void)
 static void ui_draw_page(uint32_t counting);
 static void ui_draw(void)
 {
+#if AMBPLUS
+    amb_draw();
+    return;
+#endif
     static uint8_t counting;
     style_apply();
     ui.frame++;

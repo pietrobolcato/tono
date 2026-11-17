@@ -80,6 +80,9 @@ static void audio_block(int32_t *out, uint32_t n)       /* mix (fx.c), then Q15 
 #endif
     t1 = PRF_T();
     mix_block(out, n);
+#if AMBPLUS
+    amb_output(out, n);
+#endif
     t0 += PRF_T() - t1;                                 /* (0.9.14) PROFILE: USB and the output, the mix left out */
 #if FELUCCA_UAC
 #ifdef UAC_TAP8

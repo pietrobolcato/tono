@@ -150,6 +150,9 @@ static void felucca_init(void)
     song.master_q12 = 2048;                   /* (the pot's level replaces it before the audio starts: master_boot) */
     ui.home = 1;
     ui.force = 1;
+#if AMBPLUS
+    amb_init();
+#endif
 }
 
 /* The power-on LED sweep (1.1, hal/fm1_led_anim.h: a soft light over the keys left to right, then the buttons swell
@@ -290,7 +293,9 @@ static void fm1_main(void)
         fm1_irq_on();
     }
 #endif
+#if !AMBPLUS
     autosave_boot(boot_clean);                /* (1.2) the last session's music, under the splash */
+#endif
     session_dice(fm1_ticks() ^ (uint32_t)fm1_adc_read(FM1_ADC_BATT) << 16);   /* (JIANT 0.4) this session's macros */
     {                                         /* the splash, its signature written (JIANT 0.5: was 400 ms); the pot
                                                * followed (MIDI IN plays under it). (0.5.2) On the clock: drawing the
@@ -393,8 +398,10 @@ static void fm1_main(void)
         felucca_dbg.stage = 1;
         ui_input();
         settings_poll();                              /* queued settings save: only while stopped */
+#if !AMBPLUS
         autosave_poll();                              /* (1.2) the music, stopped and idle: project.c */
         mutate_poll();                                /* (JIANT 0.6.43) MUTATE on the bar: project.c */
+#endif
         song_poll();                                  /* the song: the next section staged, the music back after it */
         felucca_dbg.stage = 2;
         ui_leds();
