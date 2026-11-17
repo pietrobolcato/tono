@@ -1,0 +1,56 @@
+{
+  "status": "DEVELOPMENT CANDIDATE; VALIDATION INCOMPLETE; NOT HARDWARE-VALIDATED",
+  "flash_status": "NOT AUTHORISED",
+  "source_sha": "6e51711c37e50f18e473a70e635917390a4831a5",
+  "artifact_sha256": "20ce66b3092ada751e4be0c2c8422a2ce0bb0caaeaf07da1d892a2d88bf82d85",
+  "jiant": {
+    "url": "https://github.com/juanjiant-bit/JIANT",
+    "commit": "beffdd0b32ffebce1d62fd608ffc653fc7feec82",
+    "license": "GPL-3.0-only; see LICENSING.md"
+  },
+  "amb1": {
+    "url": "https://github.com/charlesvestal/fm1-amb",
+    "commit": "da0047dc468a7f4f299e0d54fd12bac0c0c11a96",
+    "license": "MPL-2.0",
+    "files": "amb_harmony.h only; original notices retained"
+  },
+  "emulator_source": {
+    "url": "https://github.com/joakimeriksson/fm1-emu",
+    "commit": "2ed986561c6f26596d37fd306fac0e7558a41356",
+    "license": "MIT"
+  },
+  "emulator_binary": {
+    "release": "v0.5.1 macos-arm64",
+    "reported_commit": "c7e47c4fc",
+    "archive_sha256": "b5df55e1450210ae88be4ddfa903e608fa495a58bf72775d30047308e48b9895"
+  },
+  "sdk": {
+    "url": "https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK",
+    "commit": "d179b4484759423312073f5fbb232501aa491047",
+    "tag": "AC79NN_SDK_V1.2.1_2023-12-13",
+    "license": "Apache-2.0",
+    "uboot.boot_sha256": "4e3b4c220dc96641cb5a723f41e68ce41d5261ae9434bb33fbd7f2c59976ded4",
+    "cfg_tool.bin_sha256": "276579954f076886a6a7694f65dc71c034a63a2c204b76749065c0ac7b010d1b",
+    "eq_cfg_sha256": "41167491bffed4651750719c973d2758adeb9021a5670d02d6a53c85ed80ea7d"
+  },
+  "compiler": {
+    "release": "jieli-linux-toolchains-20260730.1",
+    "version": "clang 4.0.1, pi32v2, Linux x86_64",
+    "archive_sha256": "a1545cddbc451a06bac43eb5cd96d831470c42a97c5c0b1f98879a20fc7647bd"
+  },
+  "build_environment": {
+    "docker": "27.4.0",
+    "image": "debian@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc",
+    "python": "3.14.6",
+    "Pillow": "13.0.0",
+    "fonttools": "4.68.0"
+  },
+  "samples": {
+    "source": "Original offline-generated PCM; tools/gen_amb_samples.py",
+    "license": "GPL-3.0-only",
+    "bytes": 32768
+  },
+  "excluded_sources": [
+    "Shrub"
+  ]
+}

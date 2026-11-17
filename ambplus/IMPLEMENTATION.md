@@ -1,32 +1,33 @@
 # AMB+ implementation ledger
 
-FLASH STATUS: NOT AUTHORISED. No physical device actions are permitted.
+DEVELOPMENT CANDIDATE — VALIDATION INCOMPLETE; NOT HARDWARE-VALIDATED.
+FLASH STATUS: NOT AUTHORISED. No physical device actions were run.
 
-## Source pins
-- JIANT: beffdd0b32ffebce1d62fd608ffc653fc7feec82 (GPL-3.0-only plus notices in LICENSING.md).
-- AMB-1: da0047dc468a7f4f299e0d54fd12bac0c0c11a96 (MPL-2.0; reference under review, no code imported yet).
-- fm1-emu source: 2ed986561c6f26596d37fd306fac0e7558a41356 (MIT).
-- Emulator release: v0.5.1, binary reports c7e47c4fc.
-- SDK: d179b4484759423312073f5fbb232501aa491047, tag AC79NN_SDK_V1.2.1_2023-12-13 (Apache-2.0).
-- Compiler archive: jieli-linux-toolchains-20260730.1, SHA256 a1545cddbc451a06bac43eb5cd96d831470c42a97c5c0b1f98879a20fc7647bd.
-- Python environment: Pillow 13.0.0, fonttools 4.68.0.
-- Docker: Debian bookworm slim digest sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc.
+The native implementation and its tests are committed at `6e51711c37e50f18e473a70e635917390a4831a5`, branch `ambplus/complete-controls-sample`. Source and dependency pins are in SOURCES_LOCK.json. The exact package SHA256 is `20ce66b3092ada751e4be0c2c8422a2ce0bb0caaeaf07da1d892a2d88bf82d85`.
 
-## Milestones (continue without intermediate approval)
-- [ ] Unmodified build, full host suite, exact-package hardware emulator baseline; resource/audio/screenshots.
-- [ ] Four active assignable layers, HOME target and soft takeover, macros and panic.
-- [ ] Native Phosphor six EDIT / five GLO pages, real inputs, contextual LEDs.
-- [ ] 48 distinct ambient patches and six factory pieces using licensed DSP.
-- [ ] Harmony/voice leading/evolution, 22 non-destructive scheduling policies.
-- [ ] Manual melodic/drum recording and locks.
-- [ ] Shared FX, sends, master EQ and headroom.
-- [ ] Versioned save/recall with CRC, safe overwrite and measured slot budget.
-- [ ] Bounded licensed bundled SAMPLE playback subject to resource evidence.
-- [ ] Strict emulator, both chip models, extended playback, release evidence and human card.
+## Implemented and exercised
 
-## Resolutions / investigation
-The full build brief supersedes the older audit-only and single-feature stopping points. Microphone capture and VISUAL remain deferred. GLO has five active pages; VISUAL ID reserved.
+- [x] Baseline build and exact-package hardware emulator audio/screen capture; baseline host suite executed and failures retained.
+- [x] Four assignable layers; five HOME targets, MASTER pickup, macros, mute/solo and panic.
+- [x] Native 240×240 bitmap UI: six EDIT and five GLO pages; contextual inputs/LEDs; 136-frame layout audit with no findings.
+- [x] 48 distinct recipe renders and six factory compositions using JIANT DSP; two original bundled PCM sources.
+- [x] Harmony/voice leading/evolution and 22 distinct deterministic event policies; manual state serialization remains unchanged by scheduling.
+- [x] Manual melodic/drum step recording, locks and independent drum kit selection.
+- [x] Shared native FX, layer sends and master EQ/protection. Strict timing acceptance remains failed.
+- [x] Version-2 whole-piece save, eight existing A/B objects, CRC/failure recovery tests, guarded overwrite and version-1 experimental migration.
+- [x] Exact-package Puya save/recall across emulator processes.
+- [x] Linux ASan/UBSan test of the full native fixture.
+- [ ] Strict timing acceptance: latest stress records peak 96%, two late halves, four shedding events; one late half is also observed at unchanged JIANT idle startup. No claim that the other late half is benign.
+- [ ] UC25 persistence: pinned JIANT rejects `0xB36014`; emulator save is refused with zero flash operations. No flash-driver whitelist was guessed.
+- [ ] Full upstream suite green: 157 golden renders unchanged, but 22 CPU-budget entries and two web mock schema tests fail. No golden or budget updates were made.
+- [ ] Human listening, interactive control acceptance and physical hardware certification.
 
-Pinned JIANT has six tracks (four active already supported through trk_live); retired STRING/SAMPLE need a measured adaptation. Its HAL and panel define seven matrix quadrature encoders (SELECT, ALGORITHM, PRESETS, KNOBS 1-4) and only MASTER/battery ADC inputs. This conflicts with the handoff describing KNOBS 1-4 as absolute pots. Do not invent analog wiring; inspect emulator/hardware sources and document the verified interface before choosing an implementation.
+## Decisions and limits
 
-No firmware modifications before the baseline checks. A failed check stays failed; do not rewrite golden hashes or budgets to hide it.
+The verified HAL and emulator expose KNOBS 1–4 as quadrature encoders, with only MASTER/battery ADC inputs. GENERATE uses the real encoders and 90 ms final settle; the generic absolute-pot pickup/bin/hysteresis decoder is separately tested but cannot be connected to nonexistent ADC inputs. This resolves the handoff's wiring contradiction using source evidence.
+
+Retired STRING is replaced by live PHASE/FM/analog recipes. The four-voice global budget is enforced under dense input; four simultaneous layers share it. Heavy shared FX can still exceed timing headroom. DSP output and distinct PCM hashes establish actual signal generation, not aesthetic quality or click-free operation across every possible gesture.
+
+MPL-2.0 AMB-1 Euclid, chord-tone and voice-leading code is isolated in amb_harmony.h with original notices and complete license. Existing JIANT processing supplies spatial/tape effects. No Shrub materials were used. External capture and fullscreen VISUAL remain intentionally deferred.
+
+The root release folder contains the final report, complete feature matrix, human card, emulator launch script, checksums, source archive, WAV examples and native screenshots. Earlier failed candidates remain under TEST_REPORTS; only TEST_REPORTS/final matches the delivered package. See the final report for exact evidence and outstanding gates.

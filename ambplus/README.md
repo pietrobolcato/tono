@@ -31,3 +31,7 @@ The SAMPLE engine appends ID 15, preserving all legacy engine numbers. Two origi
 The AMB-1 Euclidean and voice-leading helpers remain in `firmware/src/amb_harmony.h` under MPL-2.0, pinned to da0047dc468a7f4f299e0d54fd12bac0c0c11a96. Its notice and full license are included. All AMB+ scheduling/runtime additions are GPL-3.0-only with JIANT; see LICENSING.md and LICENSES/. No Shrub sources, samples, presets or dependencies were used.
 
 See CONTROLS.md, the final test report and the milestone card for validation and remaining acceptance work. No successful software test authorizes hardware installation.
+
+## Candidate acceptance status
+
+The delivered development package is reproducible and emulator-tested, but validation is incomplete. Strict heavy-FX stress still records late halves and voice shedding. The global four-voice cap is enforced under dense input, so layers share a deliberately limited budget. The upstream suite reports 22 CPU-budget failures and two web mock schema failures; golden renders are unchanged. UC25HQ80 writes are refused by the pinned flash driver; only Puya persistence passes. Solo is included in the saved piece. See `../../release/ambplus-0.1-development/VALIDATION_REPORT.md` and FEATURE_MATRIX.md for evidence and open gates. No software result authorizes installation.

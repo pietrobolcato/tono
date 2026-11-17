@@ -1,0 +1,30 @@
+# Required feature acceptance matrix
+
+PASS below means exercised in the stated software test level. It never means hardware certification. The overall stable release gate is BLOCKED. Only microphone capture and fullscreen VISUAL were intentionally deferred.
+
+| Requirement | Result | Evidence / remaining scope |
+|---|---|---|
+| Four active layers, seven roles, five HOME targets | PASS in native C | Full fixture assigns every role in every slot, exercises routing and sample/drum DSP; exact package boots and plays |
+| MASTER pickup, retained HOME target, panic, mute/solo | PASS in native C; PARTIAL acceptance | Pickup/retarget and solo persistence tests; manual physical feel and emergency low-volume test outstanding |
+| Macros preserve deep baselines | PASS in native C | Parameter serialization before/after macro and generation events; shared underlying destinations |
+| 48 recipes, six factory pieces | PASS signal generation; PARTIAL musical review | All 48 isolated renders have nonzero energy/distinct PCM hashes; six 12-second scene renders; human curation/listening outstanding |
+| Engine-specific PATCH/DETAIL, envelope, LFO | PASS in native C | Page/role/parameter fixtures and real DSP; one control-rate LFO/layer |
+| SAMPLE playback | PASS software | Two original 8192-sample PCM16 sources, four playback styles, looping/trim/pitch; all slots tested; 32768 flash bytes and no writable PCM sectors |
+| Harmony preview/REC/auto and voice leading | PASS in native C | Chord validity, deterministic helper tests, staged bar recall and harmony scheduling |
+| 8 rhythm / 8 phrase / 6 interplay policies | PASS in native C | All 22 distinct/repeatable traces; four-bar queuing/cancel; 1000-event local-state immutability comparison |
+| Absolute Knobs 1–3 | BLOCKED as written; encoder equivalent implemented | Verified HAL/emulator have quadrature KNOBS 1–4, no corresponding ADCs. Separate absolute decoder tested; MASTER is actual absolute pot |
+| Pitched/drum recording, off-scale notes, manual locks | PASS in native C | Step/lane/REC fixtures and serialized preservation; real GPIO scripted note/role controls in package soak |
+| Shared FX, layer sends, EQ, output protection | PARTIAL | Real JIANT DSP plus master EQ, unclipped captured output; heavy-FX strict timing gate fails |
+| Smooth tails / no jumps across all combinations | PARTIAL | Native ramps, fade/voice-steal tests and unclipped capture; no exhaustive transition or human listening acceptance |
+| Native Phosphor six EDIT / five GLO pages | PASS renderer; PARTIAL interactive acceptance | 136-frame native bitmap audit at 240×240 with zero bounds/overlap findings; package LCD captures; desktop UI control was not comprehensively exercised manually |
+| Contextual LEDs / scale cues | PASS in native fixture | Real HAL key map used; REC inert on GENERATE, active during recording; physical LED acceptance outstanding |
+| PRESETS recall at bar / SAVE overwrite guards | PASS in native C | Staged complete recall, cancellation, selected slot overwrite and failed-write tests |
+| Eight saves, CRC and versioning | PASS Puya software; BLOCKED UC25 | 1400 B vs existing 3840 B capacity; all eight A/B slots tested; separate-process Puya payload equality. UC25 has zero writes and SAVE REFUSED |
+| Resource layout / no reserved-sector changes | PASS static/build | App/RAM budgets pass; HAL flash driver, linker layout, loader and package builder unchanged |
+| Dense voice bound | PASS in native C | 40-note fixture enforces global cap of four |
+| DSP golden / full host regression | PARTIAL / FAIL overall | 157 unchanged golden renders; 22 CPU-budget entries and two web-editor mock failures remain in baseline suite |
+| Strict worst-case timing | FAIL | Peak 96%, max 2802 µs, 2 late halves, 4 sheds in 60 s; audio_lost=0; not a release pass |
+| 20-minute exact-package soak | See report | Script and diagnostics included; fast emulation is a functional stability level, separate from strict timing |
+| Physical FM1 / chip / backups / recovery | BLOCKED | No owner JEDEC, two verified backups, exported settings, stock image or recovery/signoff evidence supplied |
+| External microphone/voice capture | DEFERRED by scope | UI states unavailable; no simulated capture |
+| Fullscreen VISUAL | DEFERRED by scope | Page ID reserved |
