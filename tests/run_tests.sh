@@ -151,6 +151,13 @@ cd "$(dirname "$0")/.."
 OUT=build/host
 mkdir -p "$OUT"
 CC="${CC:-cc} -O1 -Wall -Wno-unused-function"
+# The target's ELF section names (.pool/.lowbuf) are not Mach-O section
+# specifiers. Host tests do not use the target linker map; their DSP/UI
+# harnesses already discard these attributes. Apply the same convention to
+# the isolated storage/USB tests on macOS. Never passed to the target build.
+if [ "$(uname -s)" = Darwin ]; then
+    CC="$CC -D__attribute__(x)="
+fi
 fail=0
 run() { echo "== $1"; shift; "$@" || fail=1; }
 
