@@ -336,6 +336,12 @@ static int mc_two(void);                                /* (fx.c) */
 static uint32_t voice_cap(void)
 {
     uint32_t c = sys_load == LOAD_ECO ? ECO_VOICES : mc_two() ? VOICES_2CORE : NVOICE;
+#if AMBPLUS
+    /* Four ambient parts plus long release tails reached 94% / two late
+     * halves in strict 240 MHz emulation. Keep the existing fade/steal
+     * machinery and arrays; bound simultaneous voices before overload. */
+    if (c > 4u) c = 4u;
+#endif
     return c < gov_cap ? c : gov_cap;
 }
 static uint32_t voices_busy(void)                       /* sounding voices of all parts (not the fading ones) */
@@ -361,7 +367,7 @@ static uint32_t lowest_held(const track_t *t)           /* index of the lowest h
  * Returns its index, *pp its part; NVOICE = none */
 static uint32_t voice_victim(const track_t *self, int soft, track_t **pp)
 {
-    uint32_t p, i, best = NVOICE, cat = 4;
+    uint32_t p, i, best = NVOICE, cat = 4u + AMBPLUS;
     for (p = 0; p < NPART; p++) {
         track_t *t = &trk[p];
         uint32_t mode = trk_vmode(t);
@@ -379,6 +385,12 @@ static uint32_t voice_victim(const track_t *self, int soft, track_t **pp)
                 c = 2;                                  /* extra UNISON, or a voice left by a mode / cap change */
             else if (!soft && mode == V_POLY && i != low)
                 c = 3;                                  /* held, not the bass */
+#if AMBPLUS
+            else if (!soft && t == self)
+                c = 4;                                  /* last resort: reuse this part's protected note.
+                                                         * The upstream allocator otherwise borrows a fifth
+                                                         * voice beyond AMB+'s four-part timing budget. */
+#endif
             else
                 continue;
             if (c < cat || (c == cat && v->age < (*pp)->v[best].age)) {

@@ -19,6 +19,7 @@ static int section_jump(uint32_t s);    /* (song_main.c: 0.6.80, channel 16's PR
 static int song_select(uint32_t n);
 static void undo_mark(void);                    /* (0.6.21) project.c: the music before a change, */
 static void system_init(void);                  /* (0.6.40) project.c: INIT SYSTEM */
+static void live_return(uint32_t mask);          /* ui_layer.c/ui_live.c; system_init also calls it */
 static uint32_t mut_progress(uint32_t k);       /* (0.6.43) project.c: MUTATE's next, 0..256 (0xFFFF: off) */
 static void mut_keep(void);                     /* .. the music now the anchor */
 static void mut_forget(void);                   /* (0.9.3) .. another music now: no going back to the anchor */

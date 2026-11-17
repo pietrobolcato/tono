@@ -5,6 +5,15 @@
 #define AMBPLUS 1
 #define UI_MAIN unused_jiant_ui_main
 #include "ui_test.c"
+/* Matrix data from the pinned JIANT HAL (GPL-3.0-only, Leo Kuroshita). */
+static const int8_t FM1_KEYMAP[6][FM1_NCOL] = {
+    {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},          /* PA0: encoders */
+    { 5, 11,  4, 10,  3,  9,  2,  8, -1, -1, -1},          /* PA5 */
+    {34, 35, 36, 37, 38, 40, 39, 13,  7,  6, 12},          /* PA6 */
+    {23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33},          /* PA7 */
+    { 0,  1, 15, 14, 17, 16, 19, 18, 20, 21, 22},          /* PA8 */
+    {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},          /* PB7: encoder 6 */
+};
 static uint8_t amb_nor[0x100000];
 static int amb_flash_fail=-1;
 static unsigned amb_writes;
@@ -30,7 +39,11 @@ static void amb_render(unsigned frames)
     int32_t out[CTL*2];unsigned i;
     for(i=0;i<frames;i+=CTL) {mix_block(out,CTL);amb_output(out,CTL);}
 }
-int main(int argc,char **argv)
+
+#ifndef AMB_MAIN
+#define AMB_MAIN main
+#endif
+int AMB_MAIN(int argc,char **argv)
 {
     unsigned i,k,scene;amb_piece_t before;int64_t energy;int32_t out[CTL*2];FILE *f=0;
     (void)argc;(void)argv;
@@ -69,6 +82,63 @@ int main(int argc,char **argv)
         for(i=0;i<FS*12u/CTL;i++) {mix_block(out,CTL);amb_output(out,CTL);for(k=0;k<CTL*2;k++) {assert(out[k]>=-30000 && out[k]<=30000);energy+=(int64_t)out[k]*out[k];}}
         assert(energy>1000000);printf("scene %u energy %lld PASS\n",scene,(long long)energy);seq_stop();amb_render(FS*2);
     }
+    for(scene=0;scene<7;scene++) {
+        uint64_t hashes[8]={0};unsigned patch;
+        for(patch=0;patch<(scene==6?2u:8u);patch++) {
+            int32_t mono[CTL];uint64_t hash=1469598103934665603ull;
+            amb_factory(0);song.playing=0;
+            for(k=0;k<NTRK;k++)memset(&trk[k],0,sizeof trk[k]);
+            amb_patch(0,scene,scene==6?0:patch);
+            if(scene==6)amb.layer[0].base[P_E0]=(int16_t)patch;
+            amb_prepare();trk[0].engine=amb.layer[0].engine;
+            trk[0].xf_on=trk[0].xf=trk[0].xin=0;
+            trk_note_on(&trk[0],scene==4?36:60,80);energy=0;
+            for(i=0;i<FS*3u/CTL;i++) {
+                track_render(&trk[0],mono,CTL);
+                for(k=0;k<CTL;k++){energy+=(int64_t)mono[k]*mono[k];hash^=(uint32_t)mono[k];hash*=1099511628211ull;}
+            }
+            assert(energy>100000);hashes[patch]=hash;
+            for(k=0;k<patch;k++)assert(hashes[k]!=hash);
+            printf("role %u patch/source %u isolated PCM energy %lld hash %016llx PASS\n",scene,patch,(long long)energy,(unsigned long long)hash);
+        }
+    }
+    for(k=0;k<4;k++) {
+        amb_factory(0);amb_patch(k,6,0);amb_prepare();trk[k].engine=ENGI_AMB_SAMPLE;
+        assert(amb_valid(&amb));
+        for(i=0;i<4;i++) {
+            amb.layer[k].base[P_E1]=(int16_t)i;amb_base_revision[k]++;
+            amb_prepare();trk_note_on(&trk[k],60,80);amb_render(FS);trk_all_off(&trk[k]);amb_render(FS*2);
+        }
+    }
+    /* Whole-state macro sweep leaves all deep baselines intact. */
+    amb_factory(0);before=amb;
+    for(i=0;i<128;i++) {
+        for(k=0;k<4;k++)amb.layer[k].macro[i%4]=(uint8_t)i;
+        amb_prepare();
+        for(k=0;k<4;k++)assert(!memcmp(before.layer[k].base,amb.layer[k].base,sizeof amb.layer[k].base));
+    }
+    amb_factory(0);amb.layer[0].swing=100;ambr.step=1;amb_step();assert(ambr.due[0]>0);
+    ambr.view=2;ambr.page=2;before=amb;turn(EN_ALGO,4);press(B_REC);assert(!memcmp(&before,&amb,sizeof amb));
+    amb_factory(0);ambr.view=0;seq_start();ambr.step=9;ambr.piece_preview=2;amb_rec();
+    assert(amb_pending_ready && amb.key==0);
+    while(ambr.step<16)amb_step();assert(amb.key==0);
+    amb_step();assert(!amb_pending_ready && amb.key==2 && song.playing);
+    seq_stop();ambr.last_play=0;
+    amb_factory(0);amb.layer[0].level=0;amb_patch(0,2,0);assert(amb.layer[0].level==0);
+    amb_factory(0);song.playing=0;amb.version=1;memset(&amb.policy,0,sizeof amb.policy);
+    assert(!st_save(amb_object(7),&amb,sizeof amb));assert(amb_recall(7));
+    assert(amb.version==2 && amb.policy.variation==40 && amb.policy.active[0]==0 && amb.policy.pending[0]==255);
+    amb_factory(0);ambr.view=2;ambr.page=2;amb_leds();
+    {unsigned q=led_pos[panel.btn[B_REC]];assert(q!=255);assert(!(fm1_led_dim[q>>3]&(1u<<(q&7))));}
+    ambr.view=1;ambr.page=4;ambr.edit_layer=0;ambr.recording=1;amb_leds();
+    {unsigned q=led_pos[panel.btn[B_REC]];assert(fm1_led[q>>3]&(1u<<(q&7)));}
+    song.playing=0;ambr.recording=0;ambr.view=0;amb.layer[0].solo_plus1=3;ambr.overwrite=1;ambr.slot=6;
+    amb_save();ambr.solo=-1;assert(amb_recall(6));assert(ambr.solo==2);
+    amb_factory(0);ambr.solo=-1;amb.layer[0].solo_plus1=0;
+    for(k=0;k<NTRK;k++)memset(trk[k].v,0,sizeof trk[k].v);
+    amb_prepare();for(k=0;k<4;k++){trk[k].engine=trk[k].eng_req;trk[k].xf_on=trk[k].xf=trk[k].xin=0;trk_note_on(&trk[k],k==3?36:48+k*4,80);}
+    for(i=0;i<40;i++){trk_note_on(&trk[i%4],48+(i%24),80);assert(voices_busy()<=4);}
+    printf("offsets: piece.policy=%zu piece.layer=%zu layer.bytes=%zu runtime.step=%zu\n",offsetof(amb_piece_t,policy),offsetof(amb_piece_t,layer),sizeof(amb_layer_t),offsetof(__typeof__(ambr),step));
     if(argc>1)f=fopen(argv[1],"wb");
     if(f) {amb_factory(0);seq_start();wav_hdr(f,FS*20);for(i=0;i<FS*20u/CTL;i++){mix_block(out,CTL);amb_output(out,CTL);for(k=0;k<CTL;k++)wav_put(f,out[k*2],out[k*2+1]);}fclose(f);seq_stop();}
     puts("AMB+ native: controls/roles/pages/recording/non-destructive generation/8-slot A-B recovery/6-scene DSP PASS");

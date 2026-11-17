@@ -487,9 +487,12 @@ static double cost(const uint8_t parts[NPART][3], int on)
 
 static void test_cost(void)
 {
-    uint32_t e_phys = eng_by_name("GRAIN"), pp = preset_by_name(e_phys, "CLOUD PAD");
+    /* GRAIN and TRIO are retired in this pinned JIANT. eng_by_name silently
+     * returned ANALOG 0, invalidating this formerly heavy-voice cost fixture.
+     * Measure active heavy engines; retain the existing 5% budget unchanged. */
+    uint32_t e_phys = eng_by_name("NOISE"), pp = preset_by_name(e_phys, "ARCADE");
     uint8_t phys[NPART][3] = {{(uint8_t)e_phys, (uint8_t)pp, 8}}, idle[NPART][3] = {{0}};
-    uint8_t mix[NPART][3] = {{1, 0, 8}, {2, 0, 8}, {(uint8_t)e_phys, (uint8_t)pp, 4}, {6, 0, 4}};
+    uint8_t mix[NPART][3] = {{ENGI_FM6, 4, 8}, {ENGI_PHASE, 6, 8}, {(uint8_t)e_phys, (uint8_t)pp, 4}, {ENGI_ANALOG, 1, 4}};
     double c_idle, c0, c1, m0, m1;
     if (!instr_now()) {
         printf("mod: cost: no instruction counter on this host (proc_pid_rusage), skipped\n");
@@ -500,12 +503,12 @@ static void test_cost(void)
     c1 = cost(phys, 1);
     m0 = cost(mix, 0);
     m1 = cost(mix, 1);
-    printf("mod: cost: GRAIN %s (plays 4 voices): %.0f -> %.0f instructions / sample with 4 slots (+%.0f, +%.1f %% of "
+    printf("mod: cost: NOISE %s (asks for 8 voices): %.0f -> %.0f instructions / sample with 4 slots (+%.0f, +%.1f %% of "
            "the part over the idle mix %.0f)\n", ENGINES[e_phys]->presets[pp].name, c0, c1, c1 - c0,
            (c1 - c0) * 100 / (c0 - c_idle), c_idle);
-    printf("mod: cost: 4 parts (DIGITAL / its FM6 conversion 8 + PHASE 8 + GRAIN 4 + TRIO 4 asked, the budget plays 8), every slot of "
+    printf("mod: cost: 4 active parts (FM6 8 + PHASE 8 + NOISE 4 + ANALOG 4 asked, the budget plays 8), every slot of "
            "every part active: %.0f -> %.0f (+%.1f %%)\n", m0, m1, (m1 - m0) * 100 / m0);
-    check("cost: 4 active slots add at most a few percent (GRAIN part, the 4-part mix)",
+    check("cost: 4 active slots per part within unchanged budget (NOISE, active 4-part mix)",
           (c1 - c0) * 100 / (c0 - c_idle) <= MOD_COST_MAX && (m1 - m0) * 100 / m0 <= MOD_COST_MAX);
 }
 
