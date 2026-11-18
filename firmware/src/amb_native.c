@@ -399,6 +399,10 @@ static void amb_layer_step(unsigned k,unsigned step,unsigned mask)
     }
     if(!l->generated){
         if(step%(1u<<l->speed) || !l->notes[(step>>l->speed)%16])return;
+        if(l->role<2){
+            gate=FS*(l->role==0?8u+l->macro[2]/4u:12u+l->macro[2]/3u);
+            if(amb_carry_note(k,l->notes[(step>>l->speed)%16],gate))return;
+        }
         amb_release(k);amb_note(k,l->notes[(step>>l->speed)%16],l->velocity[(step>>l->speed)%16],gate);return;
     }
     n=amb_generated_notes(k,step,mask,notes,&gate);
