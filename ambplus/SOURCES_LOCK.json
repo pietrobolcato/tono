@@ -1,8 +1,8 @@
 {
   "status": "DEVELOPMENT CANDIDATE; VALIDATION INCOMPLETE; NOT HARDWARE-VALIDATED",
   "flash_status": "NOT AUTHORISED",
-  "source_sha": "73c54f12d4298597bf88e7f68032d337f253379b",
-  "artifact_sha256": "59ada8c163f4bbc70c5e7d55d3100921b26eb12cb527e152bfe764e7e51ea440",
+  "source_sha": "fdcf12e3401590d6702283f8b90bd63567d7e393",
+  "artifact_sha256": "ecbb30daf128f2a5808e78a58249f3e01f8a0ed8373f7e2ed7e35eceb5ae2d3f",
   "jiant": {
     "url": "https://github.com/juanjiant-bit/JIANT",
     "commit": "beffdd0b32ffebce1d62fd608ffc653fc7feec82",
@@ -12,7 +12,7 @@
     "url": "https://github.com/charlesvestal/fm1-amb",
     "commit": "da0047dc468a7f4f299e0d54fd12bac0c0c11a96",
     "license": "MPL-2.0",
-    "files": "amb_harmony.h only; original notices retained"
+    "files": "amb_harmony.h, amb_garden.h, eng_sinefm.c, eng_softpulse.c, amb_space.h"
   },
   "emulator_source": {
     "url": "https://github.com/joakimeriksson/fm1-emu",
@@ -55,5 +55,9 @@
   ],
   "previous_implementation_sha": "ff4e3e5e979bfab7d974d06d908757a48d475ffb",
   "save_version": 4,
-  "save_payload_bytes": 1420
+  "save_payload_bytes": 1420,
+  "comparison_reference": {
+    "fm1_base_commit": "3ae2a65ddd02e15bf9ce925b5a7136d5d207ee25",
+    "recording_sha256": "75ac03ecb9761987f2ce2b56cb787afaa21503486166a9eee43247f198e0373f"
+  }
 }
