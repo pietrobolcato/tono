@@ -1,33 +1,31 @@
 # AMB+ implementation ledger
 
-DEVELOPMENT CANDIDATE — VALIDATION INCOMPLETE; NOT HARDWARE-VALIDATED.
-FLASH STATUS: NOT AUTHORISED. No physical device actions were run.
+Latest: v0.2 performance feedback development candidate, branch ambplus/performance-feedback.
+NOT HARDWARE-VALIDATED. FLASH STATUS: NOT AUTHORISED. No physical device actions were run.
 
-The native implementation and its tests are committed at `6e51711c37e50f18e473a70e635917390a4831a5`, branch `ambplus/complete-controls-sample`. Source and dependency pins are in SOURCES_LOCK.json. The exact package SHA256 is `20ce66b3092ada751e4be0c2c8422a2ce0bb0caaeaf07da1d892a2d88bf82d85`.
+Implementation source: f87a437b800fecaa7e97f43fcd5b79db95b7aaab.
+Package SHA256: 9a214073a3090515ba411d4bf3fb72b7b42e04c690922a8b505f4bbd60792294.
+Pinned source/dependencies/licenses: SOURCES_LOCK.json. Previous v0.1 package/source/evidence are preserved in ../../release/ambplus-0.1-development/.
 
-## Implemented and exercised
+## Implemented software
 
-- [x] Baseline build and exact-package hardware emulator audio/screen capture; baseline host suite executed and failures retained.
-- [x] Four assignable layers; five HOME targets, MASTER pickup, macros, mute/solo and panic.
-- [x] Native 240×240 bitmap UI: six EDIT and five GLO pages; contextual inputs/LEDs; 136-frame layout audit with no findings.
-- [x] 48 distinct recipe renders and six factory compositions using JIANT DSP; two original bundled PCM sources.
-- [x] Harmony/voice leading/evolution and 22 distinct deterministic event policies; manual state serialization remains unchanged by scheduling.
-- [x] Manual melodic/drum step recording, locks and independent drum kit selection.
-- [x] Shared native FX, layer sends and master EQ/protection. Strict timing acceptance remains failed.
-- [x] Version-2 whole-piece save, eight existing A/B objects, CRC/failure recovery tests, guarded overwrite and version-1 experimental migration.
-- [x] Exact-package Puya save/recall across emulator processes.
-- [x] Linux ASan/UBSan test of the full native fixture.
-- [ ] Strict timing acceptance: latest stress records peak 96%, two late halves, four shedding events; one late half is also observed at unchanged JIANT idle startup. No claim that the other late half is benign.
-- [ ] UC25 persistence: pinned JIANT rejects `0xB36014`; emulator save is refused with zero flash operations. No flash-driver whitelist was guessed.
-- [ ] Full upstream suite green: 157 golden renders unchanged, but 22 CPU-budget entries and two web mock schema tests fail. No golden or budget updates were made.
-- [ ] Human listening, interactive control acceptance and physical hardware certification.
+- Four active layers, seven roles, five HOME targets, MASTER pickup and retained target, macros, panic/mute/solo.
+- Native Phosphor six EDIT/five GLO pages and action LEDs; 160-frame layout audit with no findings.
+- 48 distinct audible recipes, six scenes, two original bundled PCM sources.
+- Harmony/voice leading/evolution, 22 deterministic policies, literal/manual locks and recording.
+- Shared real effects, sends, master EQ/protection; strict acceptance at 240 MHz remains failed.
+- Eight existing CRC/A-B save objects; 1400-byte v3 payload, migration from v1/v2 and guarded overwrite/recovery. Puya separate-process custom-pool recall passes; UC25 remains refused.
+- Feedback: wider HOME macro spans, whole-output warmth, high-sustain/activity Pad/Drone defaults, immediate sustained startup, HOME SUSTAIN including recorded melodies, generated capture before overdub, detailed engine/filter/play controls, visible LEDs/pool cues, live DSP-phase LFO, labelled FX diagrams, guarded per-track restore and editable shared HOME note pool.
+- Queued sustained harmony keeps envelopes/common tones and glides changed pitches over about 1.2 s.
 
-## Decisions and limits
+## Final checks
 
-The verified HAL and emulator expose KNOBS 1–4 as quadrature encoders, with only MASTER/battery ADC inputs. GENERATE uses the real encoders and 90 ms final settle; the generic absolute-pot pickup/bin/hysteresis decoder is separately tested but cannot be connected to nonexistent ADC inputs. This resolves the handoff's wiring contradiction using source evidence.
+- PASS build and byte-identical rebuild; targeted native tests, both Linux ASan/UBSan suites, 160 UI frames, Puya v3 save/recall and final exact-package 20-minute fast functional soak.
+- 240 MHz strict heavy stress: FAIL, peak 101%, 4 late / 5 shed. 30-second strict performance: 1 late / 1 shed. No audio_lost or full-scale output samples in the captures. Fuller sustained playback increases the importance of unresolved headroom.
+- Additional strict 320 MHz + timed LCD test: peak 73%, zero late/shed/audio_lost. Pinned JIANT supports an optional 320 MHz path, but the handoff specifies 240 MHz. Both results remain explicit; no physical clock claim/change is made.
+- Full upstream suite rerun: FAIL overall, 157 unchanged golden renders, 22 CPU-budget entries and two web-editor schema mismatches. Corrected pinned Python resolves the initial Pillow/manual infrastructure failure. No golden/budget rewrites.
+- Human sound/interaction acceptance and all physical acceptance: PENDING. Owner JEDEC/backups/recovery/signoff: absent. NO FLASH.
 
-Retired STRING is replaced by live PHASE/FM/analog recipes. The four-voice global budget is enforced under dense input; four simultaneous layers share it. Heavy shared FX can still exceed timing headroom. DSP output and distinct PCM hashes establish actual signal generation, not aesthetic quality or click-free operation across every possible gesture.
+The HAL/emulator expose quadrature KNOBS 1–4 and only MASTER/battery ADCs, resolving the handoff's contrary wiring claim. Generic absolute choice pickup/hysteresis is separately tested, not wired to invented ADC inputs. Retired STRING is replaced with functioning PHASE/FM/analog recipes. External microphone capture and fullscreen VISUAL alone remain intentionally deferred. AMB-1 helper imports retain MPL notices; no Shrub sources/assets were used.
 
-MPL-2.0 AMB-1 Euclid, chord-tone and voice-leading code is isolated in amb_harmony.h with original notices and complete license. Existing JIANT processing supplies spatial/tape effects. No Shrub materials were used. External capture and fullscreen VISUAL remain intentionally deferred.
-
-The root release folder contains the final report, complete feature matrix, human card, emulator launch script, checksums, source archive, WAV examples and native screenshots. Earlier failed candidates remain under TEST_REPORTS; only TEST_REPORTS/final matches the delivered package. See the final report for exact evidence and outstanding gates.
+See FEEDBACK_VALIDATION_REPORT.md, CONTROLS.md and ../../release/ambplus-0.2-feedback/ for logs, exact package, source archive, native screens, A/B WAVs, filled human card and software-only reproduction. The root handoff HTML remains a visual specification, not a playable firmware implementation.

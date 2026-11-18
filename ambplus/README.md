@@ -20,7 +20,7 @@ The targeted AMB+ tests exercise real C DSP and bitmap rendering against hardwar
 
 Eight 1400-byte AMB+ records fit the existing 3840-byte A/B payload capacity. Slots use existing project objects 0..3 at 0x97000..0x9efff and song objects 0..3 at 0xa0000..0xa7fff. No flash layout or reserved-sector bounds were changed. Writes occur only through explicit stopped SAVE/REC; AMB+ disables upstream session autosave and mutation. Old JIANT payloads are treated as occupied and incompatible, requiring explicit overwrite; they are never silently converted. Returning to JIANT will not interpret an AMB+ payload as its own project.
 
-AMB+ record version 2 stores complete parameters, roles, macros, manual patterns, harmony, conductor IDs/variation/seed, effects and EQ. A same-layout version-1 experimental record defaults the missing conductor semantics to the AMB defaults/variation 40. Unknown sizes, versions, invalid IDs or out-of-range parameters are rejected; A/B headers and payloads use upstream CRC and readback verification. There is no claim of a general converter for arbitrary external firmware song formats.
+AMB+ record version 3 stores complete parameters, roles, macros, manual patterns, harmony, conductor IDs/variation/seed, effects and EQ. A same-layout version-1 experimental record defaults the missing conductor semantics to the AMB defaults/variation 40. Version 1/2 records migrate to version 3 with the selected stock scale pool; version 3 uses two reserved bytes for the editable shared pool, keeping the 1400-byte payload unchanged. Old v0.1 does not read v3 records. Unknown sizes, versions, invalid IDs or out-of-range parameters are rejected; A/B headers and payloads use upstream CRC and readback verification. There is no claim of a general converter for arbitrary external firmware song formats.
 
 ## DSP/source choices
 
@@ -35,3 +35,5 @@ See CONTROLS.md, the final test report and the milestone card for validation and
 ## Candidate acceptance status
 
 The delivered development package is reproducible and emulator-tested, but validation is incomplete. Strict heavy-FX stress still records late halves and voice shedding. The global four-voice cap is enforced under dense input, so layers share a deliberately limited budget. The upstream suite reports 22 CPU-budget failures and two web mock schema failures; golden renders are unchanged. UC25HQ80 writes are refused by the pinned flash driver; only Puya persistence passes. Solo is included in the saved piece. See `../../release/ambplus-0.1-development/VALIDATION_REPORT.md` and FEATURE_MATRIX.md for evidence and open gates. No software result authorizes installation.
+
+The performance-feedback candidate is under `../../release/ambplus-0.2-feedback/`. See CONTROLS.md for HOME note-pool editing, SUSTAIN, generated overdub, detailed sound groups, track restore and emulator combinations. The previous v0.1 release and evidence remain preserved.
