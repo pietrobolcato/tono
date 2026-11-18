@@ -9,20 +9,12 @@ for AMB_TEST in amb_controls_test amb_policy_test amb_music_test; do
     cc -std=c11 -O2 -Wall -Wextra -Werror "tests/$AMB_TEST.c" -o "build/host/$AMB_TEST"
     "build/host/$AMB_TEST"
 done
-cc -O1 -w -Ibuild/gen -Ifirmware/src tests/amb_native_test.c -lm -o build/host/amb_native_test
-build/host/amb_native_test build/amb-demo.wav
-cc -O1 -w -Ibuild/gen -Ifirmware/src tests/amb_feedback_test.c -lm -o build/host/amb_feedback_test
-build/host/amb_feedback_test
-cc -O1 -w -Ibuild/gen -Ifirmware/src tests/amb_transition_test.c -lm -o build/host/amb_transition_test
-build/host/amb_transition_test
-cc -O1 -w -Ibuild/gen -Ifirmware/src tests/amb_normal_playback_test.c -lm -o build/host/amb_normal_playback_test
-build/host/amb_normal_playback_test
-cc -O1 -w -Ibuild/gen -Ifirmware/src tests/amb_handoff_test.c -lm -o build/host/amb_handoff_test
-build/host/amb_handoff_test
-cc -O1 -w -Ibuild/gen -Ifirmware/src tests/amb_min_release_test.c -lm -o build/host/amb_min_release_test
-build/host/amb_min_release_test
-cc -O1 -w -Ibuild/gen -Ifirmware/src tests/amb_texture_test.c -lm -o build/host/amb_texture_test
-build/host/amb_texture_test
-cc -O1 -w -Ibuild/gen -Ifirmware/src tests/amb_render_test.c -lm -o build/host/amb_render_test
-build/host/amb_render_test build/amb-ui
+for AMB_TEST in amb_native_test amb_feedback_test amb_transition_test amb_normal_playback_test amb_handoff_test amb_min_release_test amb_texture_test amb_ensemble_test amb_render_test; do
+    cc -O1 -w -Ibuild/gen -Ifirmware/src "tests/$AMB_TEST.c" -lm -o "build/host/$AMB_TEST"
+    case "$AMB_TEST" in
+        amb_native_test) build/host/amb_native_test build/amb-demo.wav ;;
+        amb_render_test) build/host/amb_render_test build/amb-ui ;;
+        *) "build/host/$AMB_TEST" ;;
+    esac
+done
 printf '%s\n' 'AMB+ targeted tests completed. Also run the full JIANT suite against an AMBPLUS=0 build and exact-package emulator tests; see ambplus/README.md.'

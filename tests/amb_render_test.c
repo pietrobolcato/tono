@@ -93,7 +93,19 @@ int main(int argc,char **argv)
     ambr.view=1;ambr.page=6;amb.layer_eq[0][0]=6;amb.layer_eq[0][2]=-3;ar_frame("layer_eq",dir,1);
     ambr.handoff[0]=1;ambr.view=1;ambr.page=1;ar_frame("release_pending",dir,1);ambr.handoff[0]=0;
     ambr.view=0;ambr.proposal=2;ar_frame("chord_proposal",dir,1);ambr.proposal=255;
-    for(style=0;style<14;style++){ambr.piece_preview=(uint8_t)style;snprintf(name,sizeof name,"preset_%u",style);ar_frame(name,dir,style==0 || style==13);}
+    for(style=0;style<NELEM(AMB_SCENE)+AMB_SLOTS;style++){ambr.piece_preview=(uint8_t)style;snprintf(name,sizeof name,"preset_%u",style);ar_frame(name,dir,style==0 || style==13);}
     ambr.piece_preview=255;ambr.view=3;for(style=0;style<8;style++){ambr.slot=(uint8_t)style;ambr.overwrite=style%2;snprintf(name,sizeof name,"save_%u",style);ar_frame(name,dir,1);}
+    amb_fixture_scene(7);ambr.view=4;ar_frame("ensemble",dir,1);
+    ambr.view=1;ambr.page=1;ambr.help=1;ar_frame("vowel_help",dir,1);
+    for(role=0;role<7;role++){
+        amb_patch(0,role,role==0?10:0);
+        for(page=0;page<7;page++)for(bank=0;bank<(page==1?(role==6?3u:2u):1u);bank++){
+            ambr.page=page;ambr.bank=bank;
+            for(fx=0;fx<(page==5?5u:1u);fx++){ambr.fx=fx;ar_frame("layer_help",dir,0);}
+        }
+    }
+    ambr.view=2;for(page=0;page<5;page++){
+        ambr.page=page;for(fx=0;fx<(page==3?4u:1u);fx++){ambr.fx=fx;ar_frame("global_help",dir,0);}
+    }
     printf("AMB+ native bitmap audit: %u frames, %u clipping/bounds/overlap findings\n",ar_frames,ar_bad);return ar_bad?1:0;
 }

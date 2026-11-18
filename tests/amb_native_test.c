@@ -81,14 +81,14 @@ int AMB_MAIN(int argc,char **argv)
     for(i=1;i<8;i++) {ambr.slot=(uint8_t)i;ambr.overwrite=0;amb_save();assert(amb_occupied(i));}
     for(i=0;i<8;i++) assert(amb_recall(i));
     amb.magic=0;assert(!amb_valid(&amb));amb=before;
-    for(scene=0;scene<6;scene++) {
+    for(scene=0;scene<NELEM(AMB_SCENE);scene++) {
         energy=0;amb_fixture_scene(scene);amb.master=650;assert(amb_valid(&amb));seq_start();
         for(i=0;i<FS*12u/CTL;i++) {mix_block(out,CTL);amb_output(out,CTL);for(k=0;k<CTL*2;k++) {assert(out[k]>=-30000 && out[k]<=30000);energy+=(int64_t)out[k]*out[k];}}
         assert(energy>1000000);printf("scene %u energy %lld PASS\n",scene,(long long)energy);seq_stop();amb_render(FS*2);
     }
     for(scene=0;scene<7;scene++) {
-        uint64_t hashes[8]={0};unsigned patch;
-        for(patch=0;patch<(scene==6?2u:8u);patch++) {
+        uint64_t hashes[NELEM(amb_pad_patches)]={0};unsigned patch;
+        for(patch=0;patch<(scene==6?2u:amb_patch_count(scene));patch++) {
             int32_t mono[CTL];uint64_t hash=1469598103934665603ull;
             amb_fixture_scene(0);song.playing=0;
             for(k=0;k<NTRK;k++)memset(&trk[k],0,sizeof trk[k]);
@@ -145,6 +145,6 @@ int AMB_MAIN(int argc,char **argv)
     printf("offsets: piece.policy=%zu piece.layer=%zu layer.bytes=%zu runtime.step=%zu\n",offsetof(amb_piece_t,policy),offsetof(amb_piece_t,layer),sizeof(amb_layer_t),offsetof(__typeof__(ambr),step));
     if(argc>1)f=fopen(argv[1],"wb");
     if(f) {amb_fixture_scene(0);seq_start();wav_hdr(f,FS*20);for(i=0;i<FS*20u/CTL;i++){mix_block(out,CTL);amb_output(out,CTL);for(k=0;k<CTL;k++)wav_put(f,out[k*2],out[k*2+1]);}fclose(f);seq_stop();}
-    puts("AMB+ native: controls/roles/pages/recording/non-destructive generation/8-slot A-B recovery/6-scene DSP PASS");
+    puts("AMB+ native: controls/roles/pages/recording/non-destructive generation/8-slot A-B recovery/factory catalog DSP PASS");
     return 0;
 }

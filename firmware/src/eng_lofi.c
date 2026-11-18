@@ -371,22 +371,26 @@ static __attribute__((noinline)) void lofi_float_render(track_t *t, voice_t *v, 
     v->ph[1] = ts;
 }
 
-static const param_desc_t *lofi_desc(const track_t *t, uint32_t k)
+static const param_desc_t *lofi_param_desc(const int16_t *p, uint32_t k)
 {
-    if (t->p[P_E1] == RW_FLOAT && (k == 0u || k == 2u || k == 3u))
+    if (p[P_E1] == RW_FLOAT && (k == 0u || k == 2u || k == 3u))
         return k == 0u ? &LOFI_FCHIP : k == 2u ? &LOFI_FALGO : &LOFI_VAR;
-    if (t->p[P_E1] == RW_BYTE && (k == 2u || k == 3u))
+    if (p[P_E1] == RW_BYTE && (k == 2u || k == 3u))
         return k == 2u ? &LOFI_ALGO : &LOFI_VAR;
-    if ((t->p[P_E1] == RW_BYTE || t->p[P_E1] == RW_FLOAT) && (k == 4u || k == 5u || k == 7u))   /* (0.5.4: MOTN,
+    if ((p[P_E1] == RW_BYTE || p[P_E1] == RW_FLOAT) && (k == 4u || k == 5u || k == 7u))   /* (0.5.4: MOTN,
                                                          * GRIT / DCY where an empty slot and a second RES were) */
-        return k == 4u ? &LOFI_MOTN : k == 7u ? &LOFI_LOOP : t->p[P_E1] == RW_BYTE ? &LOFI_GRIT : &LOFI_FDCY;
+        return k == 4u ? &LOFI_MOTN : k == 7u ? &LOFI_LOOP : p[P_E1] == RW_BYTE ? &LOFI_GRIT : &LOFI_FDCY;
     if (k == 4u)
         return &LOFI_NONE;
-    if (k == 2u && t->p[P_E1] == RW_WRAM)
+    if (k == 2u && p[P_E1] == RW_WRAM)
         return &LOFI_WAVNUM;
-    if (k == 3u && t->p[P_E0] == CHIP_STEP)
+    if (k == 3u && p[P_E0] == CHIP_STEP)
         return &LOFI_DCY;
     return 0;
+}
+static const param_desc_t *lofi_desc(const track_t *t, uint32_t k)
+{
+    return lofi_param_desc(t->p,k);
 }
 
 /* the stepped envelope: volume 15..0 in v->s[6] bits 0..3, its divider in bits 4..7, a 240 Hz

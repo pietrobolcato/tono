@@ -42,14 +42,18 @@ static const struct { uint32_t w[4]; uint8_t len; int16_t hi, lo; } NOISE_SEQ[8]
     {{0x0000001Du, 0x00000000u, 0x00000000u, 0x00000000u}, 7, 12288, -16384},
 };
 
-static const param_desc_t *noise_desc(const track_t *t, uint32_t k)
+static const param_desc_t *noise_param_desc(const int16_t *p, uint32_t k)
 {
-    int32_t mode = t->p[P_E0];
+    int32_t mode = p[P_E0];
     if (k == 5u && mode >= NZ_LFSR)
         return mode == NZ_LFSR ? &NOISE_LONG : &NOISE_META;
     if (k == 7u && mode >= NZ_LFSR)
         return &NOISE_CLK;
     return 0;
+}
+static const param_desc_t *noise_desc(const track_t *t, uint32_t k)
+{
+    return noise_param_desc(t->p,k);
 }
 
 /* phase increment of pitch p (1/16 semitone) past the table's top, up to one step a sample */
