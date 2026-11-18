@@ -70,6 +70,20 @@ int main(void)
         assert(amb.layer[0].patch==patch && amb_valid(&amb));
         assert(amb_patch_preset(&amb.layer[0])<ENGINES[amb.layer[0].engine]->npresets);
     }
+    /* New Pad selections keep sounding under a held key. Earlier FM Glass
+     * Haze snapshots still select their original FM operator program. */
+    assert(amb_patch_count(0)>=16);
+    for(unsigned i=13;i<=15;i++){
+        amb_fill_patch(&amb.layer[0],amb.key,0,0,i);
+        assert(amb.layer[0].engine==ENGI_ANALOG && amb.layer[0].base[P_VOICE]==V_POLY);
+    }
+    amb_fill_patch(&amb.layer[0],amb.key,0,0,3);
+    assert(amb.layer[0].engine==2 && amb_patch_preset(&amb.layer[0])==9);
+    amb.layer[0].engine=ENGI_FM6;
+    for(unsigned i=0;i<8;i++)amb.layer[0].base[P_E0+i]=ENG_FM6.presets[12].e[i];
+    assert(amb_valid(&amb) && amb_patch_preset(&amb.layer[0])==12);
+    amb_fixture_scene(10);
+    assert(amb_pool()==0x295 && amb.policy.active[0]==2 && amb.layer[2].role==2);
     amb_fixture_scene(6);assert(amb.scale==1 && amb.global[G_BPM]<70);
     amb_fixture_scene(7);assert(amb.scale==2 && amb.layer[0].engine==ENGI_VOICE);
     amb_save();saved=amb;amb_fixture_scene(0);assert(amb_recall(0));assert(!memcmp(&saved,&amb,sizeof amb));

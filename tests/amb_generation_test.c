@@ -40,7 +40,7 @@ static void catalog(void)
         printf("%s: events in 64 bars %u %u %u %u, lead phrases %u/32, first 8 bars %u\n",
             AMB_SCENE[scene],events[0],events[1],events[2],events[3],distinct,early);
         for(unsigned k=0;k<4;k++)assert(events[k]);
-        if(scene==6 || scene==7){assert(distinct>=12 && early>=5);}
+        if(scene==6 || scene==7 || scene==10){assert(distinct>=12 && early>=5);}
     }
 }
 
@@ -75,7 +75,7 @@ static void sounding_lead(unsigned scene)
 int main(void)
 {
     memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();catalog();
-    sounding_lead(6);sounding_lead(7);
+    sounding_lead(6);sounding_lead(7);sounding_lead(10);
     amb_fixture_scene(7);
     uint8_t notes[2];unsigned gate;
     for(unsigned key=0;key<12;key++)for(unsigned chord=0;chord<7;chord++){

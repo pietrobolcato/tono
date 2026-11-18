@@ -73,7 +73,7 @@ static const char *const AMB_ROLE[7] = {"PAD","DRONE","BELLS","BASS","DRUMS","TE
 static const char *const AMB_EDIT[7] = {"MODE","SOUND","ENVELOPE","LFO","PATTERN","FX","LAYER EQ"};
 static const char *const AMB_GLO[5] = {"EVOLVE","HARMONY","GENERATE","MASTER FX","EQ"};
 static const char *const AMB_MOOD[7] = {"homeward","warmer","brighter","suspended","deeper","open","darker"};
-static const char *const AMB_SCENE[] = {"Morning Air","Rain Study","Dark Water","Low Sun","Glass Room","Night Garden","Window Seats","Stone Cloister","Tidal Loom","Kite Strings"};
+static const char *const AMB_SCENE[] = {"Morning Air","Rain Study","Dark Water","Low Sun","Glass Room","Night Garden","Window Seats","Stone Cloister","Tidal Loom","Kite Strings","Departure Hall"};
 static const char *const AMB_MACRO[7][4] = {
     {"WARMTH","MOTION","SUSTAIN","SPACE"},{"WARMTH","DRIFT","SUSTAIN","SPACE"},
     {"SOFT","MOTION","SHIMMER","SPACE"},{"ROUND","PULSE","GLIDE","SPACE"},
@@ -125,6 +125,17 @@ static void amb_fill_patch(amb_layer_t *l,unsigned key,unsigned k,unsigned role,
     if(role!=0 && l->mode==AMB_CHANT)l->mode=2;
     l->base[P_FCUT]=r->color+25;l->base[P_FRES]=12;
     if(r->engine==0 && role!=6)l->base[P_E4]=r->color;
+    if(role==0 && patch>=13 && patch<=15){
+        /* The stock brass, triangle lead and organ provide the oscillator
+         * shapes. Voice them as held chords with restrained beating and drive. */
+        static const struct {uint8_t cents,mix,res,drive,chorus;int8_t interval,filter_env;} warm[]={
+            {5,54,21,22,17,0,16}, {3,32,13,28,8,-12,6}, {4,28,24,13,19,0,9}
+        };
+        unsigned n=patch-13;
+        l->base[P_VOICE]=V_POLY;l->base[P_E1]=warm[n].cents;l->base[P_E2]=warm[n].mix;
+        l->base[P_E5]=warm[n].res;l->base[P_E6]=warm[n].drive;l->base[P_E7]=warm[n].interval;
+        l->base[P_ED_FLT]=warm[n].filter_env;l->base[P_CHOR]=warm[n].chorus;
+    }
     if(role==1 || role==3)l->base[P_TRANS]=-12;
     if(role==3){l->base[P_VOICE]=V_MONO;l->base[P_GLIDE]=25+patch*5;}
     if(role==4){l->base[P_E2]=r->color;l->base[P_E3]=38+patch*4;l->base[P_E7]=0;}
@@ -136,10 +147,12 @@ static void amb_fill_patch(amb_layer_t *l,unsigned key,unsigned k,unsigned role,
  * selections use the revised unpitched recipes. Their names stay truthful. */
 static int amb_legacy_texture(const amb_layer_t *l)
 {return l->role==5 && l->engine==2 && (l->patch==2 || l->patch==4);}
+static int amb_legacy_glass(const amb_layer_t *l)
+{return l->role==0 && l->patch==3 && l->engine==ENGI_FM6;}
 static const char *amb_patch_name(const amb_layer_t *l)
 {return amb_legacy_texture(l)?(l->patch==2?"Glass Wind":"Distant Voices"):amb_recipe(l->role,l->patch)->name;}
 static unsigned amb_patch_preset(const amb_layer_t *l)
-{return amb_legacy_texture(l)?(l->patch==2?6u:8u):l->role<6?amb_recipe(l->role,l->patch)->preset:0;}
+{return amb_legacy_glass(l)?12u:amb_legacy_texture(l)?(l->patch==2?6u:8u):l->role<6?amb_recipe(l->role,l->patch)->preset:0;}
 static void amb_release(unsigned k);
 static int amb_tail_releasing(unsigned k){return k<4 && ambr.handoff[k];}
 static int amb_tail_any(void){return ambr.handoff[0] || ambr.handoff[1] || ambr.handoff[2] || ambr.handoff[3];}
@@ -199,7 +212,8 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
         {2,1,58,4,{1,5,0},96,28,{{2,8,2,93},{0,9,1,73},{1,11,2,56},{2,9,2,67}}},
         {2,2,62,5,{1,5,0},104,12,{{0,10,1,94},{1,8,3,67},{2,9,3,46},{5,0,2,28}}},
         {5,3,80,3,{5,5,3},82,58,{{0,12,1,67},{2,10,0,82},{3,8,2,77},{5,3,1,38}}},
-        {9,1,92,2,{1,2,0},64,32,{{2,9,0,91},{0,11,2,75},{3,8,1,75},{4,2,0,50}}}
+        {9,1,92,2,{1,2,0},64,32,{{2,9,0,91},{0,11,2,75},{3,8,1,75},{4,2,0,50}}},
+        {0,1,54,5,{2,5,0},97,22,{{2,8,0,85},{0,9,2,56},{2,8,0,62},{0,14,3,65}}}
     };
     _Static_assert(NELEM(AMB_SCENE)==6+NELEM(arrangements),"factory catalog");
     scene%=NELEM(AMB_SCENE);
@@ -225,6 +239,16 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
     /* Pitch and timing come from the live conductor for every factory layer. */
     if(scene==6)p->layer[0].density=46;
     if(scene==7)p->layer[0].mode=AMB_CHANT;
+    if(scene==10){
+        /* Two pianos on five- and eleven-step loops. The lower, closer
+         * instrument and the distant answer share a major pentatonic pool. */
+        p->layer[0].reserved=0x95;p->layer[1].reserved=0x02;
+        p->layer[0].base[P_TRANS]=-12;p->layer[0].base[P_PAN]=-18;
+        p->layer[2].base[P_PAN]=26;p->layer[2].base[P_E2]=38;
+        p->layer[2].base[P_REV]=87;p->layer[2].base[P_DLY]=12;
+        p->layer[1].mode=2;p->layer[3].mode=2;
+        p->policy.variation=18;p->evolve[1]=15;p->evolve[2]=12;
+    }
 }
 static amb_piece_t amb_pending;
 static volatile uint8_t amb_pending_ready;
@@ -718,7 +742,7 @@ static int amb_valid(const amb_piece_t *p)
         const amb_layer_t *l=&p->layer[k];
         if(l->role>6 || l->patch>=amb_patch_count(l->role) || !eng_ok(l->engine) || l->level>127 || l->generated>1 ||
            l->solo_plus1>4 || l->lfo_dest>3 || l->lfo_depth>100 || l->speed>3 || l->mode>(l->role==0?AMB_CHANT:4u) || l->density>100 || l->swing>100 || l->fill>100 || l->mutation>100 || l->follow>100) return 0;
-        if(!amb_legacy_texture(l) && l->engine!=(l->role==6?ENGI_AMB_SAMPLE:amb_recipe(l->role,l->patch)->engine))return 0;
+        if(!amb_legacy_texture(l) && !amb_legacy_glass(l) && l->engine!=(l->role==6?ENGI_AMB_SAMPLE:amb_recipe(l->role,l->patch)->engine))return 0;
         for(i=0;i<4;i++) if(l->macro[i]>127) return 0;
         for(i=0;i<16;i++) if(l->notes[i]>127 || l->velocity[i]>127) return 0;
         for(i=0;i<P_COUNT;i++) {

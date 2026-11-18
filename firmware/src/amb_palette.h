@@ -8,12 +8,14 @@ typedef struct {
 #define AR(n,e,p,a,r,l,v,d,c) {n,e,p,a,r,l,v,d,c}
 static const amb_recipe_t amb_pad_patches[] = {
   AR("Cloud Bloom",0,1,86,108,92,83,29,51),AR("Soft Choir",2,8,78,112,88,76,36,64),
-  AR("Velvet Saw",0,15,71,100,90,68,26,45),AR("Glass Haze",12,12,65,108,84,86,43,72),
+  AR("Velvet Saw",0,15,71,100,90,68,26,45),AR("Glass Haze",2,9,84,116,84,75,19,58),
   AR("Warm Strings",0,11,82,102,91,72,24,57),AR("Low Sun",0,22,94,114,93,79,35,35),
   AR("Slow Orbit",2,6,88,110,85,85,45,60),AR("Distant Light",0,3,102,118,90,92,32,63),
   AR("Open Aah",5,0,76,112,85,74,12,93),AR("Round Ooh",5,4,86,116,86,82,16,95),
   AR("Plainchant",5,5,52,108,91,86,8,97),AR("Reed Cloud",7,3,84,112,78,62,14,86),
-  AR("Float Garden",3,11,91,112,70,77,28,66)
+  AR("Float Garden",3,11,91,112,70,77,28,66),
+  AR("Amber Brass",0,9,74,116,87,55,12,43),AR("Cedar Triangle",0,21,81,116,94,58,8,61),
+  AR("Umber Pulse",0,24,90,116,82,62,15,37)
 };
 static const amb_recipe_t amb_drone_patches[] = {
   AR("Deep Current",0,22,110,120,90,75,35,28),AR("Hollow Earth",2,8,103,116,86,80,42,43),
