@@ -243,6 +243,7 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
     }
     /* Pitch and timing come from the live conductor for every factory layer. */
     if(scene==11){
+        p->eq[2]=-5;p->global[G_WIDTH]=102;p->global[G_RMOD]=126;
         p->master=1010;p->global[G_RTYPE]=5;p->global[G_DTYPE]=4;p->global[G_DFDBK]=59;
         p->layer[1].density=40;p->layer[3].density=35;p->policy.variation=35;
         p->layer[0].base[P_FCUT]=78;p->layer[2].base[P_TRANS]=0;p->layer[2].base[P_GLIDE]=20;

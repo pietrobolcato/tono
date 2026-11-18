@@ -7,6 +7,29 @@ static int in_pool(unsigned note)
     return (amb_pool() >> ((note+12-amb.key)%12))&1u;
 }
 
+/* Garden schedules free-running breaths and delayed strikes in audio frames.
+ * A sixteenth-only dry run cannot count them. Observe actual native voice
+ * starts after each mixer block, including short drum hits between beats. */
+static void garden_catalog(void)
+{
+    uint32_t age[4][NVOICE]={{0}};
+    unsigned events[4]={0};
+    int32_t output[2*CTL];
+    seq_start();
+    while(ambr.step<1024 || !ambr.last_play){
+        mix_block(output,CTL);
+        for(unsigned k=0;k<4;k++)for(unsigned v=0;v<NVOICE;v++){
+            uint32_t current=trk[k].v[v].age;
+            if(current!=age[k][v]){events[k]++;age[k][v]=current;}
+        }
+    }
+    seq_stop();amb_render(CTL);
+    printf("Garden: actual voice starts in 64 bars: Pad %u, Bells %u, Bass %u, Pulse %u\n",
+           events[0],events[1],events[2],events[3]);
+    /* The pedal changes with the 28–51 second drift or its optional fifth. */
+    assert(events[0]>20 && events[1]>20 && events[2]>=2 && events[2]<24 && events[3]>100);
+}
+
 static void catalog(void)
 {
     for(unsigned scene=0;scene<NELEM(AMB_SCENE);scene++){
@@ -17,6 +40,7 @@ static void catalog(void)
             assert(amb.layer[k].generated);
             trk[k].engine=amb.layer[k].engine;
         }
+        if(amb.policy.active[0]==8){garden_catalog();continue;}
         /* The actual sequencer writes its emitted pitched notes to PATTERN. */
         for(unsigned step=0;step<1024;step++){
             amb_participation_t parts[4];amb_participation(parts,step);

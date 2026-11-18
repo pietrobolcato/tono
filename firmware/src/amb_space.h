@@ -54,6 +54,8 @@ static __attribute__((noinline)) void pl_render(const int32_t *in, int32_t *out,
 {
     int decay = 19661 + GFX(GF_RSIZE) * 96, damping = clamp(32600 - GFX(GF_RDAMP) * 150, 5000, 32600);
     int diffusion = clamp(decay + 4915, 8192, 16384);
+    int width = 128 + song.g[G_WIDTH];
+    int excursion = 8192 + song.g[G_RMOD] * 192;
     for (unsigned i = 0; i < frames; i++) {
         if (plate.half) {
             int fbL = pl_read(PL_ER, PL(3163)), fbR = pl_read(PL_EL, PL(3720));
@@ -66,7 +68,7 @@ static __attribute__((noinline)) void pl_render(const int32_t *in, int32_t *out,
             plate.phase += 136714u;
             for (unsigned side = 0; side < 2; side++) {
                 unsigned ap = side ? PL_AR : PL_AL;
-                int z = pl_mod(ap, side ? PL(908) : PL(672), sine_i(plate.phase + side * 0x40000000u));
+                int z = pl_mod(ap, side ? PL(908) : PL(672), mulq15(sine_i(plate.phase + side * 0x40000000u), excursion));
                 int a = pl_pass(ap, x + mulq15(decay, side ? fbR : fbL), -22938, z);
                 int b = pl_read(ap + 1, pl_len[ap + 1]);
                 pl_write(ap + 1, a);
@@ -84,7 +86,7 @@ static __attribute__((noinline)) void pl_render(const int32_t *in, int32_t *out,
             plate.input = in[i];
         plate.half ^= 1;
         out[i] += (plate.left + plate.right) * 3 / 4;
-        int side = (plate.left - plate.right) * 3 / 4;
+        int side = (plate.left - plate.right) * 3 * width / 512;
         fx_sl[i] += side;
         fx_sr[i] -= side;
     }
