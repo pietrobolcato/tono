@@ -52,6 +52,8 @@ int main(int argc,char **argv)
     unsigned role,page,bank,target,fx,style;char name[80];const char *dir=argc>1?argv[1]:".";
     memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();
     for(target=0;target<5;target++){amb_target(target);snprintf(name,sizeof name,"home_%u",target);ar_frame(name,dir,1);}
+    amb_target(4);fm1_ms=10000;amb_master(0,0);amb_master(800,0);ar_frame("layer_level_feedback",dir,1);
+    fm1_ms+=1200;ar_frame("master_after_level_feedback",dir,1);
     for(role=0;role<7;role++){
         amb_patch(0,role,0);ambr.target=1;ambr.edit_layer=0;ambr.view=1;
         for(page=0;page<7;page++)for(bank=0;bank<(page==1?(role==6?3u:2u):1u);bank++)for(fx=0;fx<(page==5?5u:1u);fx++){
@@ -63,6 +65,8 @@ int main(int argc,char **argv)
         amb_patch(0,role,0);ambr.view=1;ambr.page=1;ambr.bank=1;
         for(bank=0;bank<3;bank++){ambr.detail=(uint8_t)bank;snprintf(name,sizeof name,"details_role_%u_group_%u",role,bank);ar_frame(name,dir,1);}
     }
+    amb_patch(0,5,2);ambr.view=1;ambr.page=1;ambr.bank=0;ar_frame("texture_high_air",dir,1);
+    ambr.page=4;ambr.recording=0;amb.layer[0].generated=0;amb.layer[0].notes[ambr.cursor]=60;ar_frame("texture_manual_clear",dir,1);
     ambr.view=1;ambr.page=0;ambr.reset_pending=1;ar_frame("track_restore",dir,1);ambr.reset_pending=0;
     ambr.view=1;ambr.page=3;for(style=0;style<5;style++){
         amb.layer[0].base[P_LWAVE]=(int16_t)style;trk[0].p[P_LWAVE]=(int16_t)style;trk[0].lfo_ph=0xc0000000u;

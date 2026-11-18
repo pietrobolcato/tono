@@ -437,6 +437,9 @@ static int fm6_done(track_t *t, voice_t *v)
     uint32_t tr = (uint32_t)(t - trk);
     if (!n || !n->live)
         return 1;
+#if AMBPLUS
+    if(amb_tail_releasing(tr))return 0; /* the replacement envelope owns completion */
+#endif
     if (!fm6_note_done(n, fm6_eff[tr].p, fm6_eff[tr].alg))
         return 0;
     n->live = 0;
@@ -453,15 +456,29 @@ static void fm6_render(track_t *t, voice_t *v, int32_t *out, uint32_t len, const
     if (!n || !n->live || len != FM6_N)
         return;
     p = fm6_eff[tr].p;
-    if (!v->gate && n->down)
-        fm6_note_key(n, p, 0);
+    if (!v->gate && n->down
+#if AMBPLUS
+        && !amb_tail_releasing(tr)
+#endif
+    )fm6_note_key(n, p, 0);
     lf = fm6_note_logfreq(m->pitch16 + (p[FP_TRNSP] - 24) * 16, m->fine);
     fb = clamp(fm6_eff[tr].fb + ((m->shape - (64 << 8)) >> 11), 0, 7);
     lvl = clamp(t->p[P_E2], -64, 63) * 24 + clamp(m->cutoff >> 8, -150, 150) * 16 +   /* microsteps */
           clamp((m->shape - (64 << 8)) >> 8, -150, 150) * 16;   /* (0.6.81) SHAPE: the modulators' depth too (the
                                                          * feedback alone was silent where its operator is quiet) */
-    if (!fm6_note_compute(n, p, bus, fm6_lfo_v[tr], fm6_lfo_d[tr], lf, fm6_eff[tr].alg, fb, fm6_eff[tr].dt, lvl << 16))
-        return;                                         /* every carrier below the threshold */
+    {
+        int active;
+#if AMBPLUS
+        if(amb_tail_releasing(tr)){
+            fm6_env_t saved[6];fm6_penv_t pitch;
+            memcpy(saved,n->env,sizeof saved);pitch=n->penv;
+            active=fm6_note_compute(n,p,bus,fm6_lfo_v[tr],fm6_lfo_d[tr],lf,fm6_eff[tr].alg,fb,fm6_eff[tr].dt,lvl<<16);
+            memcpy(n->env,saved,sizeof saved);n->penv=pitch;
+        }else
+#endif
+            active=fm6_note_compute(n,p,bus,fm6_lfo_v[tr],fm6_lfo_d[tr],lf,fm6_eff[tr].alg,fb,fm6_eff[tr].dt,lvl<<16);
+        if(!active)return;
+    }                                         /* every carrier below the threshold */
     /* the voice's amplitude ramp x VOICE_FS (one carrier at full: VOICE_FS / 2), six voices in unison ~ one */
     k = t->p[P_VOICE] == V_UNISON ? VOICE_FS * 2 / 5 : VOICE_FS;
     for (i = 0; i < FM6_N; i++) {                       /* the block's peak first: its trim from this block on */

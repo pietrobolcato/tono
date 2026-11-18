@@ -19,6 +19,10 @@ cc -O1 -w -Ibuild/gen -Ifirmware/src tests/amb_normal_playback_test.c -lm -o bui
 build/host/amb_normal_playback_test
 cc -O1 -w -Ibuild/gen -Ifirmware/src tests/amb_handoff_test.c -lm -o build/host/amb_handoff_test
 build/host/amb_handoff_test
+cc -O1 -w -Ibuild/gen -Ifirmware/src tests/amb_min_release_test.c -lm -o build/host/amb_min_release_test
+build/host/amb_min_release_test
+cc -O1 -w -Ibuild/gen -Ifirmware/src tests/amb_texture_test.c -lm -o build/host/amb_texture_test
+build/host/amb_texture_test
 cc -O1 -w -Ibuild/gen -Ifirmware/src tests/amb_render_test.c -lm -o build/host/amb_render_test
 build/host/amb_render_test build/amb-ui
 printf '%s\n' 'AMB+ targeted tests completed. Also run the full JIANT suite against an AMBPLUS=0 build and exact-package emulator tests; see ambplus/README.md.'

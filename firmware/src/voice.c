@@ -929,6 +929,13 @@ static void trk_fade_out(track_t *t)
 /* one control tick (CTL samples) of the amplitude envelope; returns Q15 */
 static int32_t env_tick(track_t *t, voice_t *v)
 {
+#if AMBPLUS
+    if(v->stage==3 && amb_tail_releasing((unsigned)(t-trk))){
+        v->env=amb_tail_envelope((unsigned)(t-trk),(unsigned)(v-t->v));
+        if(amb_tail_finished((unsigned)(t-trk))){v->env=0;v->active=v->stage=0;}
+        return v->env>>9;
+    }
+#endif
     const int16_t *p = t->p;
     int32_t sus = (int32_t)p[P_SUS] << 17;              /* Q24 */
     switch (v->stage) {
@@ -948,9 +955,6 @@ static int32_t env_tick(track_t *t, voice_t *v)
     case 3:
         {
             uint32_t rate=ENV_EXP[clamp(p[P_REL] + v->henv, 0, 127)];
-#if AMBPLUS
-            rate=amb_tail_coeff((unsigned)(t-trk),rate);
-#endif
             v->env -= mulq16(v->env,rate);
         }
         if (v->env < (1 << 12)) {

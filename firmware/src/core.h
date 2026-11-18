@@ -21,7 +21,8 @@ static void amb_master(int32_t raw, int boot);
 static void amb_output(int32_t *out, uint32_t n);
 static int amb_tail_releasing(unsigned k);
 static int amb_tail_any(void);
-static uint32_t amb_tail_coeff(unsigned k,uint32_t normal);
+static int32_t amb_tail_envelope(unsigned k,unsigned voice);
+static int amb_tail_finished(unsigned k);
 static void amb_layer_process(unsigned k,int32_t *b,uint32_t n);
 #endif
 
