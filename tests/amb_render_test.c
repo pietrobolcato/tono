@@ -56,7 +56,7 @@ static void ar_frame(const char *name,const char *dir,int save)
 static void ar_splash(const char *dir)
 {
     static uint16_t settled[240*240];
-    uint16_t start_pixel;
+    const unsigned sun_pixel=53*240+168;
     uint32_t palette=settings.palette,prefs=ui_prefs;
     settings.palette=UI_JIANT_INDEX;
     palette_set(settings.palette);
@@ -65,20 +65,20 @@ static void ar_splash(const char *dir)
     ui_prefs&=~PREF_ANIM_OFF;
     draw_splash();
     ar_save(ar_name,dir);ar_frames++;
-    start_pixel=host_screen[51*240+144];
+    assert(swap16(host_screen[sun_pixel])!=TONO_CLAY);
     assert(swap16(host_screen[0])==TONO_PAPER);
 
     ar_name="tono_boot_flight";
     splash_write(SPL_WRITE*3/4);
     ar_save(ar_name,dir);ar_frames++;
-    assert(host_screen[51*240+144]!=start_pixel);
+    assert(swap16(host_screen[sun_pixel])==TONO_CLAY);
     memcpy(settled,host_screen,sizeof settled);
 
     ar_name="tono_boot_final";
     splash_write(SPL_WRITE);
     ar_save(ar_name,dir);ar_frames++;
     assert(memcmp(settled,host_screen,sizeof settled));
-    assert(swap16(host_screen[51*240+144])==TONO_CLAY);
+    assert(swap16(host_screen[sun_pixel])==TONO_CLAY);
     memcpy(settled,host_screen,sizeof settled);
     {
         uint64_t sent=ui_sent_px;
@@ -112,6 +112,16 @@ int main(int argc,char **argv)
     unsigned role,page,bank,target,fx,style;char name[80];const char *dir=argc>1?argv[1]:".";
     memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();
     ar_splash(dir);
+    /* A scale edit changes the corresponding printed key and leaves the
+     * other eleven tiles intact. Sample the fill above each note label. */
+    ambr.view=2;ambr.page=1;
+    unsigned original_pool=amb_pool(),rel=1;
+    ar_frame("field_harmony",dir,0);
+    uint16_t fills[12];
+    for(unsigned j=0;j<12;j++)fills[j]=host_screen[106*240+15+j*18];
+    amb_pool_set(original_pool^(1u<<rel));ar_frame("field_harmony_edit",dir,0);
+    for(unsigned j=0;j<12;j++)assert((fills[j]!=host_screen[106*240+15+j*18])==(j==rel));
+    amb_fixture_scene(0);ambr.view=0;
     for(target=0;target<5;target++){amb_target(target);snprintf(name,sizeof name,"home_%u",target);ar_frame(name,dir,1);}
     amb_target(4);fm1_ms=10000;amb_master(0,0);amb_master(800,0);ar_frame("layer_level_feedback",dir,1);
     fm1_ms+=1200;ar_frame("master_after_level_feedback",dir,1);
