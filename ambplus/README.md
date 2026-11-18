@@ -1,6 +1,6 @@
 # Tono native firmware
 
-Tono is the instrument formerly named AMB+. Its 240×240 application startup shows an original geometric kingfisher print. The scene builds in layers over 800 ms and holds for 900 ms before HOME. The saved reduced-motion setting shows the finished artwork immediately. The startup also respects the grayscale palettes. The live screens print pine ink on warm paper, with sage selections and a dark guidance strip. Seven illustrated role symbols identify layers across HOME, ENSEMBLE, MODE and SOUND. [Field Guide release](../../release/tono-0.11/README.md).
+Tono is the instrument formerly named AMB+. Its 240×240 display uses an off-white panel, charcoal type and an orange activity index. The rotary startup animation settles over 800 ms and holds for 900 ms. Reduced motion opens on the settled dial. [Instrument Panel release](../../release/tono-0.12/README.md).
 
 The `ambplus/` scripts, build flag, save record format and package identity retain their established names for compatibility.
 
