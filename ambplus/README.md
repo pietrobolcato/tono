@@ -1,4 +1,8 @@
-# AMB+ native firmware
+# Tono native firmware
+
+Tono is the instrument formerly named AMB+. Its 240×240 application startup shows an original geometric lake and bird illustration, inspired by Dieter Braun's nature illustration and screen printing. The scene builds in layers over 800 ms and holds for 900 ms before HOME. The saved reduced-motion setting shows the finished artwork immediately. The startup also respects the grayscale palettes. The live controls use dark pine, warm paper, sage and amber.
+
+The `ambplus/` scripts, build flag, save record format and package identity retain their established names for compatibility.
 
 Build and open the exact firmware package:
 
@@ -14,7 +18,7 @@ The handoff's dependencies live beside this repository in `../dependencies/`: th
 
 The default `./build.sh` with AMBPLUS unset still builds upstream JIANT. This keeps the original regression/golden baseline available. For the complete upstream suite, build with `AMBPLUS=0`, then run `tests/run_tests.sh` with the SDK and Python dependencies available. Preserve the AMB+ candidate first. In this workspace, `../baseline-firmware` is a separate pinned worktree for those checks. Sanitizers are also run in Linux because this Mac's sanitizer probe stalled; the skip is explicitly reported rather than counted as a sanitizer pass.
 
-The targeted AMB+ tests exercise real C DSP and bitmap rendering against hardware stubs. They are noninteractive fixtures, not another playable synthesizer. The hardware emulator executes the actual pi32v2 firmware package, including flash command support, DMA, interrupts and the native LCD.
+The targeted Tono tests exercise real C DSP and bitmap rendering against hardware stubs. The hardware emulator executes the actual pi32v2 firmware package, including flash command support, DMA, interrupts and the native LCD. To capture the settled splash, run `fm1-live --fwsc /absolute/path/to/felucca.fwsc --midi none --shot 1400 --lcd-only` in an empty working directory. The capture is written to `work/lcd.ppm`.
 
 ## Implemented storage contract
 

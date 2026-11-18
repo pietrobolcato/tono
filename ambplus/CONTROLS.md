@@ -1,4 +1,4 @@
-# AMB+ v0.7 control card
+# Tono control card
 
 The playable instrument is the real `.fwsc` package in Joakim Eriksson's FM1 hardware emulator. The handoff HTML is a visual specification. Use one sounding instance at low volume; preserve unsaved emulator work before switching packages.
 

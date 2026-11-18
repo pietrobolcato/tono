@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* Bounds/overlap audit of AMB+'s real bitmap renderer at exactly 240x240. */
+/* Bounds/overlap audit of Tono's real bitmap renderer at exactly 240x240. */
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,13 +16,14 @@ static void ar_blit(int,int,unsigned);
 #define AMB_MAIN unused_amb_main
 #include "amb_native_test.c"
 typedef struct {int x0,y0,x1,y1;char s[40];} abox;
-static abox ar_boxes[100];static unsigned ar_n,ar_bad,ar_frames;static const char *ar_name;
+static abox ar_boxes[100];static unsigned ar_n,ar_bad,ar_frames,ar_tono_label;static const char *ar_name;
 static void ar_begin(void){ar_n=0;}
 static void ar_cover(int a,int b,int c,int d)
 {unsigned i;for(i=0;i<ar_n;i++)if(ar_boxes[i].x0>=a && ar_boxes[i].y0>=b && ar_boxes[i].x1<=c && ar_boxes[i].y1<=d)ar_boxes[i].s[0]=0;}
 static void ar_text(int a,int b,int c,int d,const char *s,unsigned f)
 {
     if(f&2u){printf("CLIPPED %s %s\n",ar_name,s);ar_bad++;}
+    if(!strcmp(s,"Tono"))ar_tono_label++;
     assert(ar_n<100);ar_boxes[ar_n]=(abox){a,b,c,d,{0}};strncpy(ar_boxes[ar_n++].s,s,39);
 }
 static void ar_blit(int x,int y,unsigned row)
@@ -37,20 +38,80 @@ static void ar_blit(int x,int y,unsigned row)
         }
     }
 }
-static void ar_frame(const char *name,const char *dir,int save)
+static void ar_save(const char *name,const char *dir)
 {
-    unsigned x,y;FILE *f;char path[256];ar_name=name;ambr.dirty=1;amb_draw();ar_frames++;
-    if(!save)return;
+    unsigned x,y;FILE *f;char path[256];
     snprintf(path,sizeof path,"%s/%s.ppm",dir,name);f=fopen(path,"wb");assert(f);fprintf(f,"P6\n240 240\n255\n");
     for(y=0;y<240;y++)for(x=0;x<240;x++){
         uint16_t c=swap16(host_screen[y*240+x]);unsigned char rgb[3]={(unsigned char)((c>>11)*255/31),(unsigned char)(((c>>5)&63)*255/63),(unsigned char)((c&31)*255/31)};fwrite(rgb,1,3,f);
     }
     fclose(f);
 }
+static void ar_frame(const char *name,const char *dir,int save)
+{
+    ar_name=name;ar_tono_label=0;ambr.dirty=1;amb_draw();ar_frames++;
+    assert(ar_tono_label==1);
+    if(save)ar_save(name,dir);
+}
+static void ar_splash(const char *dir)
+{
+    static uint16_t settled[240*240];
+    uint16_t start_pixel;
+    uint32_t palette=settings.palette,prefs=ui_prefs;
+    settings.palette=UI_JIANT_INDEX;
+    palette_set(settings.palette);
+    ar_name="tono_boot_start";
+    spl_anim=1;
+    ui_prefs&=~PREF_ANIM_OFF;
+    draw_splash();
+    ar_save(ar_name,dir);ar_frames++;
+    start_pixel=host_screen[51*240+144];
+    assert(swap16(host_screen[0])==TONO_PAPER);
+
+    ar_name="tono_boot_flight";
+    splash_write(SPL_WRITE*3/4);
+    ar_save(ar_name,dir);ar_frames++;
+    assert(host_screen[51*240+144]!=start_pixel);
+    memcpy(settled,host_screen,sizeof settled);
+
+    ar_name="tono_boot_final";
+    splash_write(SPL_WRITE);
+    ar_save(ar_name,dir);ar_frames++;
+    assert(memcmp(settled,host_screen,sizeof settled));
+    assert(swap16(host_screen[51*240+144])==TONO_CLAY);
+    memcpy(settled,host_screen,sizeof settled);
+    {
+        uint64_t sent=ui_sent_px;
+        splash_write(SPL_WRITE+SPL_HOLD-1);
+        assert(ui_sent_px==sent);
+        assert(!memcmp(settled,host_screen,sizeof settled));
+    }
+    ar_name="tono_boot_motion_off";
+    ui_prefs|=PREF_ANIM_OFF;
+    draw_splash();
+    splash_write(0);
+    assert(!memcmp(settled,host_screen,sizeof settled));
+    ar_frames++;
+
+    ar_name="tono_boot_mono";
+    settings.palette=UI_BW_INDEX;
+    palette_set(settings.palette);
+    draw_splash();
+    assert(swap16(host_screen[0])==T_BG && T_BG!=T_TEXT);
+    for(unsigned i=0;i<240*240;i++){
+        uint16_t c=swap16(host_screen[i]);
+        assert((c>>11)==(c&31u) && abs((int)((c>>5)&63u)/2-(int)(c&31u))<=1);
+    }
+    ar_save(ar_name,dir);ar_frames++;
+    settings.palette=palette;
+    palette_set(settings.palette);
+    ui_prefs=prefs;
+}
 int main(int argc,char **argv)
 {
     unsigned role,page,bank,target,fx,style;char name[80];const char *dir=argc>1?argv[1]:".";
     memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();
+    ar_splash(dir);
     for(target=0;target<5;target++){amb_target(target);snprintf(name,sizeof name,"home_%u",target);ar_frame(name,dir,1);}
     amb_target(4);fm1_ms=10000;amb_master(0,0);amb_master(800,0);ar_frame("layer_level_feedback",dir,1);
     fm1_ms+=1200;ar_frame("master_after_level_feedback",dir,1);
@@ -107,5 +168,5 @@ int main(int argc,char **argv)
     ambr.view=2;for(page=0;page<5;page++){
         ambr.page=page;for(fx=0;fx<(page==3?4u:1u);fx++){ambr.fx=fx;ar_frame("global_help",dir,0);}
     }
-    printf("AMB+ native bitmap audit: %u frames, %u clipping/bounds/overlap findings\n",ar_frames,ar_bad);return ar_bad?1:0;
+    printf("Tono native bitmap audit: %u frames, %u clipping/bounds/overlap findings\n",ar_frames,ar_bad);return ar_bad?1:0;
 }

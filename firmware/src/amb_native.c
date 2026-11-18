@@ -1202,12 +1202,12 @@ static void amb_leds(void)
     if(song.playing) lit[LED_PLAY_GREEN>>3]|=(uint8_t)(1u<<(LED_PLAY_GREEN&7u));
     for(k=0;k<FM1_NCOL;k++) {fm1_led[k]=lit[k];fm1_led_dim[k]=dim[k];fm1_led_breath[k]=breath[k];fm1_led_mid[k]=0;fm1_led_hi[k]=hi[k];}
 }
-#define ABG RGB(6,17,8)
-#define AINK RGB(215,255,164)
-#define ADIM RGB(135,177,113)
-#define ALINE RGB(49,79,48)
-#define ASEL RGB(28,58,35)
-#define AQUEUE RGB(235,205,140)
+#define ABG TONO_INK
+#define AINK TONO_PAPER
+#define ADIM TONO_SAGE
+#define ALINE TONO_RULE
+#define ASEL TONO_SELECT
+#define AQUEUE TONO_AMBER
 static void amb_text(int x,int y,const char *s,uint16_t color,unsigned maxchars)
 {
     char b[40];unsigned i=0;
@@ -1359,7 +1359,7 @@ static void amb_draw(void)
     if(!ambr.dirty && fm1_ms-ambr.last_draw<((ambr.view==4 || (ambr.view==1 && ambr.page==4))?50u:(ambr.view==1 && ambr.page==3)?80u:250u))return;
     ambr.last_draw=fm1_ms;ambr.dirty=0;
     cv_begin(240,147,ABG);
-    amb_text(8,8,"AMB+",AINK,8);
+    amb_text(8,8,TONO_NAME,AINK,8);
     amb_text(60,8,ambr.help?"HELP":ambr.view==4?"ENSEMBLE":ambr.view==0?"HOME":ambr.view==1?"EDIT":ambr.view==2?"GLOBAL":"SAVE",ADIM,8);
     if(ambr.view!=4)amb_number(146,8,ambr.view==0?ambr.target+1:ambr.view==3?ambr.slot+1:ambr.page+1,AINK);
     if(ambr.view!=4)amb_text(155,8,ambr.view==0?"/5":ambr.view==1?"/7":ambr.view==2?"/5":"/8",AINK,3);

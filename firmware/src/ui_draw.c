@@ -1778,6 +1778,9 @@ static void draw_columns(void)
 }
 
 
+#if AMBPLUS
+#include "ui_tono_splash.h"
+#else
 /* The power-on splash (main.c fm1_main, web/emu felucca_web.c; JIANT 0.5): the maker's signature ("Jiant FM1",
  * tools/gen_signature.py: 24 strokes, 214 points) written in the thermal colours, stroke by stroke as the hand went:
  * the line cold (cyan) where the pen started, hotter along its way (violet, red, orange) to yellow white where it
@@ -1934,6 +1937,7 @@ static void splash_write(uint32_t ms)
     splash_sig(ms >= SPL_WRITE ? 0x7FFFFFFF : (int32_t)((int64_t)sig_len() * ms / SPL_WRITE), ms);
     lcd_sync();
 }
+#endif
 
 /* UPDATE MODE countdown (main.c: OCT- + OCT+ held): over everything, the menu and the dialogs too */
 static void draw_uboot(void)

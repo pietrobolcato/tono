@@ -231,13 +231,21 @@ static int32_t menu_document(int32_t y, int draw)
     if (ui.menu == 3)
         return prof_document(y, draw);
     if (draw) {
+#if AMBPLUS
+        cv_text(6, y + 2, &AF_L, TONO_NAME, T_THEME);
+#else
         cv_text(6, y + 2, &AF_L, "JIANT FM", T_THEME);
+#endif
         cv_text(6, y + 38, &AF_S, "Firmware for the MVAVE FM-1", T_TEXT);
         cv_text(6, y + 58, &AF_M, FELUCCA_VERSION, T_THEME);
         cv_text_r(232, y + 61, &AF_S, __DATE__, T_MID, T_BG);
+#if AMBPLUS
+        cv_text(6, y + 82, &AF_S, "Built on JIANT by Juan Jiant", T_TEXT);
+#else
         cv_text(6, y + 82, &AF_S, "by Juan Jiant, Argentina", T_TEXT);   /* (0.6.96: the project's own) */
+#endif
         cv_text(6, y + 100, &AF_S, "Free, GPL-3.0-only, no warranty", T_TEXT);
-        cv_text(6, y + 118, &AF_S, "Made in Argentina", T_TEXT);
+        cv_text(6, y + 118, &AF_S, AMBPLUS ? "JIANT project links" : "Made in Argentina", T_TEXT);
         cv_text(6, y + 138, &AF_S, "github.com", T_MID);
         cv_text(6, y + 156, &AF_S, "/juanjiant-bit", T_MID);
         cv_text(6, y + 174, &AF_S, "/JIANT", T_MID);
