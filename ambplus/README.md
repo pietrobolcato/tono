@@ -29,7 +29,7 @@ AMB+ record version 4 stores complete layer parameters, roles, macros, manual pa
 
 ## DSP/source choices
 
-64 recipes use JIANT ANALOG, PHASE, WHEEL, NOISE, FM6, VOICE, LOFI and DRUM-X. All eleven factory pieces generate all four layers. Departure Hall uses unequal-length piano cycles, Stone Cloister has a modal chant generator and Window Seats generates its piano line. PHASE/FM/analog strings replace the retired STRING/resonator engine rather than exposing a dead STRING menu. Each drum part selects its own immutable kit, using existing per-part runtime voice state. Shared JIANT reverb, delay/tape drift, chorus, auto-pan and saturation remain the real DSP paths. Per-layer send pages expose the actual available send/filter/pan/drive controls; they do not claim separate per-layer reverbs or unsupported per-layer predelay/duck engines.
+There are 74 patch choices across Pad, Drone, Bells, Bass, Drums and Texture, plus two PCM sample sources. Twelve factory pieces generate all four layers. Garden combines the selectable Garden conductor with Sine FM Rhodes, Bell and Pedal patches, Soft Pulse drums, a stereo plate and tape delay. Six additional Sine FM recipes extend that palette to the Drone role and add keyboard, bell and bass variations. Departure Hall uses unequal-length piano cycles, Stone Cloister has a modal chant generator and Window Seats generates its piano line. PHASE/FM/analog strings replace the retired STRING/resonator engine rather than exposing a dead STRING menu. Each drum part selects its own immutable kit, using existing per-part runtime voice state. Shared JIANT reverb, delay/tape drift, chorus, auto-pan and saturation remain the real DSP paths. Per-layer send pages expose the actual available send/filter/pan/drive controls; they do not claim separate per-layer reverbs or unsupported per-layer predelay/duck engines.
 
 The SAMPLE engine appends ID 15, preserving all legacy engine numbers. Two original, offline-generated 0.743 s PCM sources consume 32768 bytes of flash and no PCM RAM or writable sample sectors. `tools/gen_amb_samples.py` reproduces them. No voice recording or microphone bytes are fabricated.
 
@@ -39,7 +39,7 @@ See CONTROLS.md, the final test report and the milestone card for validation and
 
 ## Candidate acceptance status
 
-The delivered development package is reproducible and emulator-tested, but validation is incomplete. Strict heavy-FX stress still records late halves and voice shedding. The global four-voice cap is enforced under dense input, so layers share a deliberately limited budget. The upstream suite reports 22 CPU-budget failures and two web mock schema failures; golden renders are unchanged. UC25HQ80 writes are refused by the pinned flash driver; only Puya persistence passes. Solo is included in the saved piece. See `../../release/ambplus-0.1-development/VALIDATION_REPORT.md` and FEATURE_MATRIX.md for evidence and open gates. No software result authorizes installation.
+Tono 0.10 and the earlier Garden release are documented in [the release validation report](../../release/tono-0.10/VALIDATION_REPORT.md) and [the preceding Garden report](GARDEN_VALIDATION_REPORT.md). For the current package and listening examples, see the [Tono playing guide](../../release/tono-0.10/README.md).
 
 The performance-feedback candidate is under `../../release/ambplus-0.2-feedback/`. See CONTROLS.md for HOME note-pool editing, SUSTAIN, generated overdub, detailed sound groups, track restore and emulator combinations. The previous v0.1 release and evidence remain preserved.
 

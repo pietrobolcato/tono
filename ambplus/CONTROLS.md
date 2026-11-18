@@ -43,3 +43,9 @@ Save **v4 is 1420 bytes**, within the existing 3840-byte A/B capacity and unchan
 The pinned HAL/emulator model knobs 1–4 as quadrature encoders; only MASTER is an absolute ADC pot. No analog wiring or external input was invented. The generic absolute selector decoder remains separately tested.
 
 FLASH STATUS: NOT AUTHORISED. This is an emulator control card; no physical device testing, save or installation is requested.
+
+## Garden and Tono sounds
+
+- Select **Garden** with PRESETS and confirm with REC. It starts in D Dorian at 72 BPM. In another piece, choose GLO → GENERATE → RHYTHM → GARDEN to use its timing and pitch choices with that piece’s current layers.
+- On EDIT → SOUND, Pad has Garden Rhodes, Sunroom Keys and Linen Pad. Drone has Skylight. Bells has Garden Bell, Willow Tine and Dew Bell. Bass has Garden Pedal and Linden Bass. Drums has Garden Pulse. Turn SELECT on the PATCH page to switch sounds.
+- In GLO → MASTER FX choose PLATE on the reverb bank or SHORT ECHO, TWO HEAD or ECHO+TAPE on the delay bank. The layer sends and shared return controls set how much you hear.
