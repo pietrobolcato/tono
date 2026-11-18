@@ -5,6 +5,11 @@ int main(void)
 {
     unsigned i,k,t,cap[4]={250,500,3000,6000};int32_t out[CTL*2];
     memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();
+    /* Q24 envelope x Q15 gain must retain full precision, without 32-bit
+     * multiplication overflow that would collapse the audible release. */
+    ambr.tail_env[0][0]=1<<24;ambr.tail_gain[0]=32768;assert(amb_tail_envelope(0,0)==1<<24);
+    ambr.tail_gain[0]=16384;assert(amb_tail_envelope(0,0)==1<<23);
+
     for(t=0;t<4;t++){
         song.playing=0;amb_fixture_scene(0);amb.release_ms=cap[t];
         amb_patch(0,3,0);amb_prepare();trk[0].engine=trk[0].eng_req;panic_req=0;

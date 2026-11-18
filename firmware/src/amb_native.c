@@ -170,7 +170,7 @@ static void amb_release(unsigned k);
 static int amb_tail_releasing(unsigned k){return k<4 && ambr.handoff[k];}
 static int amb_tail_any(void){return ambr.handoff[0] || ambr.handoff[1] || ambr.handoff[2] || ambr.handoff[3];}
 static int32_t amb_tail_envelope(unsigned k,unsigned voice)
-{return mulq15(ambr.tail_env[k][voice],ambr.tail_gain[k]);}
+{return mulq16(ambr.tail_env[k][voice],(uint32_t)ambr.tail_gain[k]<<1);}
 static int amb_tail_finished(unsigned k){return !ambr.tail_left[k];}
 static unsigned amb_track_active(unsigned k)
 {unsigned i,n=0;for(i=0;i<NVOICE;i++)n+=trk[k].v[i].active!=0;return n;}
