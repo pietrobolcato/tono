@@ -18,9 +18,10 @@ The targeted AMB+ tests exercise real C DSP and bitmap rendering against hardwar
 
 ## Implemented storage contract
 
-Eight 1400-byte AMB+ records fit the existing 3840-byte A/B payload capacity. Slots use existing project objects 0..3 at 0x97000..0x9efff and song objects 0..3 at 0xa0000..0xa7fff. No flash layout or reserved-sector bounds were changed. Writes occur only through explicit stopped SAVE/REC; AMB+ disables upstream session autosave and mutation. Old JIANT payloads are treated as occupied and incompatible, requiring explicit overwrite; they are never silently converted. Returning to JIANT will not interpret an AMB+ payload as its own project.
+Eight 1420-byte AMB+ records fit the existing 3840-byte A/B payload capacity. Slots use existing project objects 0..3 at 0x97000..0x9efff and song objects 0..3 at 0xa0000..0xa7fff. No flash layout or reserved-sector bounds were changed. Writes occur only through explicit stopped SAVE/REC; AMB+ disables upstream session autosave and mutation. Old JIANT payloads are treated as occupied and incompatible, requiring explicit overwrite; they are never silently converted. Returning to JIANT will not interpret an AMB+ payload as its own project.
 
-AMB+ record version 3 stores complete parameters, roles, macros, manual patterns, harmony, conductor IDs/variation/seed, effects and EQ. A same-layout version-1 experimental record defaults the missing conductor semantics to the AMB defaults/variation 40. Version 1/2 records migrate to version 3 with the selected stock scale pool; version 3 uses two reserved bytes for the editable shared pool, keeping the 1400-byte payload unchanged. Old v0.1 does not read v3 records. Unknown sizes, versions, invalid IDs or out-of-range parameters are rejected; A/B headers and payloads use upstream CRC and readback verification. There is no claim of a general converter for arbitrary external firmware song formats.
+AMB+ record version 4 stores complete layer parameters, roles, macros, manual patterns, harmony, conductor IDs/variation/seed, effects, master/layer EQ and the release cap. The original 1400-byte prefix remains intact; v4 appends 20 bytes for a 1420-byte payload. Versions 1–3 migrate with flat layer EQ and a 3000 ms cap; v1 gets default conductor semantics and v1/v2 get the stock scale pool. Older software cannot read v4. Keep old projects/exports and separate emulator state for rollback. Unknown sizes, versions, IDs or ranges are refused. Existing A/B CRC/readback verification and sector bounds are unchanged; no general external-firmware converter is claimed.
+
 
 ## DSP/source choices
 
@@ -38,4 +39,4 @@ The delivered development package is reproducible and emulator-tested, but valid
 
 The performance-feedback candidate is under `../../release/ambplus-0.2-feedback/`. See CONTROLS.md for HOME note-pool editing, SUSTAIN, generated overdub, detailed sound groups, track restore and emulator combinations. The previous v0.1 release and evidence remain preserved.
 
-Latest v0.4: `../../release/ambplus-0.4-natural-transitions/`. Read NATURAL_TRANSITIONS_VALIDATION_REPORT.md for normal envelope/tail behavior across user changes, direct parameter editing and the consolidated guidance footer. Save format v3 remains unchanged. Earlier releases/evidence are historical and preserved.
+Latest v0.5: `../../release/ambplus-0.5-release-handoff/`. See RELEASE_HANDOFF_VALIDATION_REPORT.md and CONTROLS.md for bounded old-engine releases, GLO tail cap, silent selected-step recording, corrected playhead and independent layer EQ. Save v4 appends 20 bytes (1420 total) in unchanged A/B sectors; old v1–v3 records migrate with flat layer EQ and a 3000 ms cap. Older firmware cannot read v4. Earlier releases/evidence remain preserved.
