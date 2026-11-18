@@ -82,8 +82,10 @@ int main(int argc,char **argv)
         }
     }
     ambr.view=2;ambr.page=2;ambr.notice[0]=0;fm1_ms=5000;
-    ambr.fade[0].stage=AMB_FADE_OUT;ar_frame("transition_out",dir,1);
-    ambr.fade[0].stage=AMB_FADE_IN;ar_frame("transition_in",dir,1);ambr.fade[0].stage=0;
+    ar_frame("generate_guidance",dir,1);
+    ambr.view=1;ambr.page=0;ambr.proposal=1;ar_frame("role_proposal",dir,1);ambr.proposal=255;
+    ambr.page=4;ambr.recording=1;ar_frame("pattern_recording",dir,1);ambr.recording=0;
+    amb_say("MASTER: PICKUP SAVED LEVEL");ar_frame("footer_notice",dir,1);ambr.notice[0]=0;
     ambr.view=0;ambr.proposal=2;ar_frame("chord_proposal",dir,1);ambr.proposal=255;
     for(style=0;style<14;style++){ambr.piece_preview=(uint8_t)style;snprintf(name,sizeof name,"preset_%u",style);ar_frame(name,dir,style==0 || style==13);}
     ambr.piece_preview=255;ambr.view=3;for(style=0;style<8;style++){ambr.slot=(uint8_t)style;ambr.overwrite=style%2;snprintf(name,sizeof name,"save_%u",style);ar_frame(name,dir,1);}

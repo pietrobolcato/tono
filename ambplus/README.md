@@ -38,4 +38,4 @@ The delivered development package is reproducible and emulator-tested, but valid
 
 The performance-feedback candidate is under `../../release/ambplus-0.2-feedback/`. See CONTROLS.md for HOME note-pool editing, SUSTAIN, generated overdub, detailed sound groups, track restore and emulator combinations. The previous v0.1 release and evidence remain preserved.
 
-Latest v0.3: `../../release/ambplus-0.3-transitions/`. Read TRANSITIONS_VALIDATION_REPORT.md for wet-tail source fades, the corrected AUTO progression, Pad voicing variety and visible MANUAL/AUTO switching. Save format v3 remains unchanged. Earlier releases/evidence are preserved.
+Latest v0.4: `../../release/ambplus-0.4-natural-transitions/`. Read NATURAL_TRANSITIONS_VALIDATION_REPORT.md for normal envelope/tail behavior across user changes, direct parameter editing and the consolidated guidance footer. Save format v3 remains unchanged. Earlier releases/evidence are historical and preserved.

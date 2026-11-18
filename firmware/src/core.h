@@ -19,7 +19,6 @@ static void amb_draw(void);
 static void amb_leds(void);
 static void amb_master(int32_t raw, int boot);
 static void amb_output(int32_t *out, uint32_t n);
-static void amb_source_gain(unsigned k,int32_t *level,int32_t *delta,uint32_t n);
 #endif
 
 /* ------------------------------------------------------------ sizes --- */

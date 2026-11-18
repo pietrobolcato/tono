@@ -23,16 +23,5 @@ int main(void)
         for(i=0;i<128;i++){unsigned pair=amb_pad_pair(0x414d4200u,a,i);assert(pair<6);pairs|=1u<<pair;h=(h^pair)*16777619u;}
         assert((pairs&(pairs-1))!=0);hashes[a]=h;for(i=0;i<a;i++)assert(hashes[i]!=h);
     }
-    {amb_fade_t f={0};unsigned prev=32768,done=0;
-        amb_fade_begin(&f,48000);assert(f.stage==AMB_FADE_OUT);
-        for(i=0;i<200000;i+=32){int event=amb_fade_tick(&f,32,48000);
-            assert(f.g0<=32768 && f.g1<=32768);
-            if(!done)assert(f.g1<=prev);else assert(f.g1>=prev);
-            assert((int)f.g1-(int)f.g0<64 && (int)f.g0-(int)f.g1<64);
-            if(event){assert(!done && f.g1==0);done=1;}prev=f.g1;
-        }assert(done && f.stage==0 && f.g1==32768);
-        amb_fade_begin(&f,48000);amb_fade_tick(&f,24000,48000);prev=f.g1;
-        amb_fade_begin(&f,48000);assert(f.g1==prev); /* requeue cannot jump gain */
-    }
-    puts("AMB+ music: diverse anti-repeat progression / 8 Pad motifs / continuous tail-bridge fades PASS");return 0;
+    puts("AMB+ music: diverse anti-repeat progression / 8 Pad motifs PASS");return 0;
 }

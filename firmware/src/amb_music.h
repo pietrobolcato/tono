@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* AMB+ event-level music and bounded source transitions; no saved layer access. */
+/* AMB+ event-level music; no saved layer access. */
 #ifndef AMB_MUSIC_H
 #define AMB_MUSIC_H
 #include <stdint.h>
@@ -35,31 +35,5 @@ static unsigned amb_pad_pair(uint32_t seed,unsigned phrase,unsigned turn)
     case 6:return ((turn%16)/3+turn/64)%6;
     default:return (turn/16)%6;
     }
-}
-enum {AMB_FADE_STABLE,AMB_FADE_OUT,AMB_FADE_IN};
-typedef struct {uint32_t pos;uint16_t from,g0,g1;uint8_t stage;} amb_fade_t;
-static void amb_fade_begin(amb_fade_t *f,unsigned rate)
-{
-    (void)rate;
-    if(f->stage==AMB_FADE_OUT)return; /* coalesce to latest target without a gain jump */
-    f->from=f->stage?f->g1:32768u;f->g0=f->g1=f->from;f->pos=0;f->stage=AMB_FADE_OUT;
-}
-/* Returns one at silence: retire old sources and start fresh notes here.
- * The shared wet buffers never pass through this fader. */
-static int amb_fade_tick(amb_fade_t *f,unsigned frames,unsigned rate)
-{
-    unsigned len,p,q;
-    if(!f->stage){f->g0=f->g1=32768;return 0;}
-    f->g0=f->g1;len=rate*(f->stage==AMB_FADE_OUT?6u:12u)/5u;
-    f->pos=f->pos+frames>len?len:f->pos+frames;
-    p=(f->pos<<15)/len; /* FM1 44.1 kHz / test 48 kHz: max < 2^32 */
-    q=(p*p)>>15;q=(q*(98304u-2u*p))>>15; /* smoothstep, zero slope at both ends */
-    f->g1=(uint16_t)(f->stage==AMB_FADE_OUT?((uint32_t)f->from*(32768u-q))>>15:q);
-    if(f->stage==AMB_FADE_OUT && f->g1>f->g0)f->g1=f->g0;
-    if(f->stage==AMB_FADE_IN && f->g1<f->g0)f->g1=f->g0;
-    if(f->pos<len)return 0;
-    f->pos=0;
-    if(f->stage==AMB_FADE_OUT){f->stage=AMB_FADE_IN;return 1;}
-    f->stage=AMB_FADE_STABLE;f->g1=32768;return 0;
 }
 #endif

@@ -10,7 +10,6 @@ int main(void)
     for(i=0;i<FS*35u/CTL;i++){
         mix_block(out,CTL);
         if(amb.chord!=old){changes++;old=amb.chord;}
-        for(k=0;k<4;k++)assert(!ambr.fade_request[k] && ambr.fade[k].stage==AMB_FADE_STABLE);
         for(k=0;k<NVOICE;k++)if(trk[0].v[k].active){
             assert(!trk[0].p[P_GLIDE]);
             assert(trk[0].v[k].pitch_cur==trk[0].v[k].pitch16); /* no forced sweep */
@@ -20,9 +19,8 @@ int main(void)
     assert(changes>=9 && energy>1000000);
     /* Changing tempo or a glide control is continuous editing, not a source transition. */
     ambr.view=2;ambr.page=1;amb_knob(2,1);amb_knob(3,1);
-    for(k=0;k<4;k++)assert(!ambr.fade_request[k]);
-    /* Explicit key/scale and chord changes still request the manual transition. */
-    amb_knob(0,1);assert(ambr.fade_request[0]);
+    /* Key and scale changes share the normal voicing path. */
+    amb_knob(0,1);amb_knob(1,1);
     printf("AUTO playback: %u chord changes, no source fades, no forced Pad portamento, continuous controls untouched PASS\n",changes);
     return 0;
 }

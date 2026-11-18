@@ -3,14 +3,14 @@
 #include "amb_native_test.c"
 int main(void)
 {
-    unsigned i,k,seen=1,last=99,current=0,zero=0;int32_t out[CTL*2];int64_t wet=0;
+    unsigned i,k,seen=1,last=99,current=0;int32_t out[CTL*2];int64_t wet=0;
     amb_layer_t manual;uint64_t hashes[8];
     memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();amb.auto_index=0;
     /* The actual runtime AUTO path must not reproduce the old 0 <-> 3 loop. */
     amb.auto_index=1;amb.evolve[0]=100;
     for(i=0;i<8*16;i++){
         if(ambr.step && ambr.step%16==0){last=current;current=amb.chord;}
-        amb_step();for(k=0;k<4;k++){assert(!ambr.fade_request[k]);assert(!ambr.fade[k].stage);}
+        amb_step();
         if(i%16==0 && i){assert(amb.chord!=current && amb.chord!=last);seen|=1u<<amb.chord;}
     }assert(seen==127);
     amb_factory(0);amb.auto_index=0;
@@ -34,25 +34,47 @@ int main(void)
     seq_start();for(i=0;i<FS*8u/CTL;i++)mix_block(out,CTL);
     {uint8_t old[4];uint32_t pitches[NVOICE];unsigned nk=ambr.held_n[0];assert(nk);
         memcpy(old,ambr.held[0],4);for(i=0;i<NVOICE;i++)pitches[i]=(uint32_t)trk[0].v[i].pitch16;
-        amb.chord=4;amb_revoice(AMB_USER_CHANGE);assert(ambr.fade_request[0] && !ambr.fade_request[2]);
+        amb.chord=4;amb_revoice();
         assert(!memcmp(old,ambr.held[0],4));for(i=0;i<NVOICE;i++)assert(pitches[i]==(uint32_t)trk[0].v[i].pitch16);
     }
     for(i=0;i<FS*5u/CTL;i++){
         mix_block(out,CTL);
-        if(!zero && ambr.fade[0].stage==AMB_FADE_IN && ambr.fade[0].g1==0){
-            int32_t lq=4096<<8,dl=0;zero=1;
-            assert(ambr.held_n[0]); /* a fresh incoming bed exists, at silence */
-            for(k=0;k<CTL;k++)wet+=(int64_t)fx_wet[k]*fx_wet[k];
-            {uint16_t old=ambr.fade[0].g0;ambr.fade[0].g0=0;amb_source_gain(0,&lq,&dl,CTL);ambr.fade[0].g0=old;}
-            assert(!lq && !dl); /* wet energy below must not be a dry source */
-        }
+        for(k=0;k<CTL;k++)wet+=(int64_t)fx_wet[k]*fx_wet[k];
     }
-    assert(zero && wet>1000 && ambr.fade[0].stage==AMB_FADE_STABLE);
-    assert(!memcmp(&manual,&amb.layer[2],sizeof manual));
-    printf("wet return energy at zero new-source gain: %lld PASS\n",(long long)wet);
-    /* GENERATE commit is still at the 4-bar boundary, with the same tail bridge. */
-    amb_factory(0);amb.auto_index=0;ambr.step=63;amb_policy_choose(&amb.policy,0,3,1);amb_step();assert(!ambr.fade_request[0]);
-    amb_step();assert(amb.policy.active[0]==3 && ambr.fade_request[0]);
+    assert(wet>1000);assert(!memcmp(&manual,&amb.layer[2],sizeof manual));
+    /* Exercise the actual input path. Neither harmony, patch, nor role edits
+     * may erase a shared FX state or buffer. Engine click protection stays. */
+    {static __typeof__(fx) before;static __typeof__(dly_u) delay;
+        static __typeof__(rev_comb) reverb;
+        unsigned old_patch=amb.layer[0].patch,level=amb.layer[0].level;
+        amb_target(1);ambr.view=2;ambr.page=1;
+        for(k=0;k<2;k++){
+            uint8_t held[4];memcpy(held,ambr.held[0],4);before=fx;delay=dly_u;memcpy(reverb,rev_comb,sizeof reverb);
+            amb_knob(k,1);
+            assert(!memcmp(held,ambr.held[0],4));assert(!memcmp(&before,&fx,sizeof fx));
+            assert(!memcmp(&delay,&dly_u,sizeof delay));assert(!memcmp(reverb,rev_comb,sizeof reverb));
+        }
+        ambr.view=1;ambr.page=1;ambr.bank=0;before=fx;delay=dly_u;memcpy(reverb,rev_comb,sizeof reverb);
+        turn(EN_SELECT,1);assert(amb.layer[0].patch==(old_patch+1)%8 && amb.layer[0].level==level);
+        assert(!memcmp(&before,&fx,sizeof fx));assert(!memcmp(&delay,&dly_u,sizeof delay));assert(!memcmp(reverb,rev_comb,sizeof reverb));
+        for(i=0;i<FS/CTL;i++)mix_block(out,CTL);
+        assert(trk[0].engine==amb.layer[0].engine && ambr.held_n[0]);
+        /* A parameter knob publishes its new value directly, without loading a patch. */
+        {unsigned id=amb_sound_id(&amb.layer[0],0,1),old=amb.layer[0].base[id];before=fx;
+            amb_knob(1,1);assert(amb.layer[0].base[id]!=old);amb_prepare();
+            assert(trk[0].p[id]==amb.layer[0].base[id]);assert(!memcmp(&before,&fx,sizeof fx));}
+        ambr.page=0;before=fx;delay=dly_u;memcpy(reverb,rev_comb,sizeof reverb);
+        turn(EN_ALGO,1);assert(amb.layer[0].role==0 && ambr.proposal==1);
+        assert(!memcmp(&before,&fx,sizeof fx));press(B_REC);assert(amb.layer[0].role==1);
+        assert(!memcmp(&before,&fx,sizeof fx));assert(!memcmp(&delay,&dly_u,sizeof delay));assert(!memcmp(reverb,rev_comb,sizeof reverb));
+        for(i=0;i<FS/CTL;i++)mix_block(out,CTL);
+        assert(trk[0].engine==amb.layer[0].engine && ambr.held_n[0]);
+    }
+    /* Style commits occur at four bars without forcibly retiring held voices. */
+    amb_factory(0);amb.auto_index=0;ambr.step=63;
+    for(k=0;k<3;k++)amb_policy_choose(&amb.policy,k,3,1);
+    amb_step();for(k=0;k<3;k++)assert(amb.policy.active[k]!=3);
+    amb_step();for(k=0;k<3;k++)assert(amb.policy.active[k]==3);
     /* Either EDIT or a second SEQ press returns to AUTO without deleting manual notes. */
     amb_factory(0);song.playing=0;amb_target(1);ambr.view=1;ambr.page=4;
     amb.layer[0].generated=0;amb.layer[0].notes[3]=61;manual=amb.layer[0];press(B_EDIT);assert(amb.layer[0].generated);
@@ -66,5 +88,5 @@ int main(void)
         trk_note_on(&trk[1],48,70);trk_note_on(&trk[2],64,70);trk_note_on(&trk[3],36,70);
         amb.policy.active[1]=1;amb_layer_step(0,16,1);assert(v->stage==2 && v->env==12345 && v->pitch_cur==v->pitch16);assert(voices_busy()<=4);
     }
-    puts("AMB+ transitions: AUTO has no source fade; user changes retain tails; real wet tails / fresh source fade-in / manual locks / four-bar style changes / AUTO return PASS");return 0;
+    puts("AMB+ transitions: natural envelopes for AUTO and user changes / shared FX retained through key, scale, patch, role / immediate controls / manual locks / four-bar style changes / AUTO return PASS");return 0;
 }

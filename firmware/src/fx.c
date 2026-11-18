@@ -1988,9 +1988,6 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
                 mod_end(t);
             return;
         }
-#if AMBPLUS
-        amb_source_gain(ti,&lq,&dl,n); /* dry source + sends; never the shared wet return */
-#endif
         int32_t lq0 = lq, gl0 = gl, gr0 = gr;           /* (0.7.5: uin_mix, the same ramps) */
         if (dx_xon && ENGINES[t->engine] == &ENG_DRUM)  /* (0.6.48) IMAGE, SENDs: from the same ramps as below */
         {
