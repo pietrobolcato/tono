@@ -15,6 +15,8 @@ cc -O1 -w -Ibuild/gen -Ifirmware/src tests/amb_feedback_test.c -lm -o build/host
 build/host/amb_feedback_test
 cc -O1 -w -Ibuild/gen -Ifirmware/src tests/amb_transition_test.c -lm -o build/host/amb_transition_test
 build/host/amb_transition_test
+cc -O1 -w -Ibuild/gen -Ifirmware/src tests/amb_normal_playback_test.c -lm -o build/host/amb_normal_playback_test
+build/host/amb_normal_playback_test
 cc -O1 -w -Ibuild/gen -Ifirmware/src tests/amb_render_test.c -lm -o build/host/amb_render_test
 build/host/amb_render_test build/amb-ui
 printf '%s\n' 'AMB+ targeted tests completed. Also run the full JIANT suite against an AMBPLUS=0 build and exact-package emulator tests; see ambplus/README.md.'

@@ -10,7 +10,8 @@ int main(void)
     amb.auto_index=1;amb.evolve[0]=100;
     for(i=0;i<8*16;i++){
         if(ambr.step && ambr.step%16==0){last=current;current=amb.chord;}
-        amb_step();if(i%16==0 && i){assert(amb.chord!=current && amb.chord!=last);seen|=1u<<amb.chord;}
+        amb_step();for(k=0;k<4;k++){assert(!ambr.fade_request[k]);assert(!ambr.fade[k].stage);}
+        if(i%16==0 && i){assert(amb.chord!=current && amb.chord!=last);seen|=1u<<amb.chord;}
     }assert(seen==127);
     amb_factory(0);amb.auto_index=0;
     manual=amb.layer[0];
@@ -33,7 +34,7 @@ int main(void)
     seq_start();for(i=0;i<FS*8u/CTL;i++)mix_block(out,CTL);
     {uint8_t old[4];uint32_t pitches[NVOICE];unsigned nk=ambr.held_n[0];assert(nk);
         memcpy(old,ambr.held[0],4);for(i=0;i<NVOICE;i++)pitches[i]=(uint32_t)trk[0].v[i].pitch16;
-        amb.chord=4;amb_revoice();assert(ambr.fade_request[0] && !ambr.fade_request[2]);
+        amb.chord=4;amb_revoice(AMB_USER_CHANGE);assert(ambr.fade_request[0] && !ambr.fade_request[2]);
         assert(!memcmp(old,ambr.held[0],4));for(i=0;i<NVOICE;i++)assert(pitches[i]==(uint32_t)trk[0].v[i].pitch16);
     }
     for(i=0;i<FS*5u/CTL;i++){
@@ -59,10 +60,11 @@ int main(void)
     /* Voice pressure must not restart the one Pad tone that survived. */
     amb_factory(0);amb.auto_index=0;amb_prepare();for(k=0;k<NTRK;k++)memset(trk[k].v,0,sizeof trk[k].v);
     for(k=0;k<4;k++)trk[k].engine=trk[k].eng_req;
-    amb_note(0,60,70,FS*4);{voice_t *v=0;
-        for(i=0;i<NVOICE;i++)if(trk[0].v[i].active)v=&trk[0].v[i];assert(v);v->env=12345;v->stage=2;v->pitch_cur=60*16;
+    {uint8_t notes[2];unsigned gate;amb.policy.active[1]=1;assert(amb_generated_notes(0,16,1,notes,&gate)==2);amb_note(0,notes[0],70,FS*4);}
+    {voice_t *v=0;
+        for(i=0;i<NVOICE;i++)if(trk[0].v[i].active)v=&trk[0].v[i];assert(v);v->env=12345;v->stage=2;v->pitch_cur=v->pitch16;
         trk_note_on(&trk[1],48,70);trk_note_on(&trk[2],64,70);trk_note_on(&trk[3],36,70);
-        amb.policy.active[1]=1;amb_layer_step(0,16,1);assert(v->stage==2 && v->env==12345 && v->pitch_cur==60*16);assert(voices_busy()<=4);
+        amb.policy.active[1]=1;amb_layer_step(0,16,1);assert(v->stage==2 && v->env==12345 && v->pitch_cur==v->pitch16);assert(voices_busy()<=4);
     }
-    puts("AMB+ transitions: real wet tails / fresh source fade-in / manual locks / four-bar style changes / AUTO return PASS");return 0;
+    puts("AMB+ transitions: AUTO has no source fade; user changes retain tails; real wet tails / fresh source fade-in / manual locks / four-bar style changes / AUTO return PASS");return 0;
 }

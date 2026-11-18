@@ -32,7 +32,8 @@ int main(void)
     amb_factory(0);amb_prepare();trk[0].engine=trk[0].eng_req;amb_release(0);
     amb_note(0,60,70,FS*4);{voice_t *v=0;for(i=0;i<NVOICE;i++)if(trk[0].v[i].active&&trk[0].v[i].note==60)v=&trk[0].v[i];assert(v);
       v->env=12345;v->pitch_cur=60*16;ambr.transition[0]=FS*2;
-      assert(amb_carry_note(0,62,FS*4));assert(v->env==12345&&v->note==62&&v->pitch16==62*16&&v->pitch_cur==60*16);}
+      assert(!amb_carry_note(0,62,FS*4));assert(v->env==12345&&v->note==60&&v->pitch16==60*16&&v->pitch_cur==60*16);
+      assert(amb_carry_note(0,60,FS*5) && ambr.off[0]==FS*5);}
     amb_factory(0);ambr.view=0;amb_input();assert(song.grid==2);
     fm1_in.notes=1u<<8;keyboard_block();assert(kb_note[8]==KB_SILENT);fm1_in.notes=0;keyboard_block();
     {uint8_t notes[2];unsigned gate=0;assert(amb_generated_notes(0,0,1,notes,&gate)>0);assert(gate>=FS*16u);}
@@ -41,7 +42,7 @@ int main(void)
     assert(!st_save(amb_object(1),&amb,sizeof amb));assert(amb_recall(1));assert(amb.version==3 && amb_pool()==AMB_SCALE[amb.scale]);
     /* Scale edits and bar harmony may change voicing, never locked literal notes. */
     amb_factory(0);amb.layer[2].generated=0;amb.layer[2].notes[4]=61;saved=amb.layer[2];
-    amb_pool_set(amb_pool()|2u);amb.chord=3;amb_revoice();assert(!memcmp(&saved,&amb.layer[2],sizeof saved));
+    amb_pool_set(amb_pool()|2u);amb.chord=3;amb_revoice(AMB_AUTOMATIC);assert(!memcmp(&saved,&amb.layer[2],sizeof saved));
     /* Cancel restore through a different page before any confirmation. */
     ambr.view=1;ambr.page=0;press(B_EDIT);assert(ambr.reset_pending);press(B_SCL);assert(!ambr.reset_pending);
     amb_factory(0);amb_prepare();for(k=0;k<4;k++){trk[k].engine=trk[k].eng_req;memset(trk[k].v,0,sizeof trk[k].v);}
