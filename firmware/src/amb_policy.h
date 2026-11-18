@@ -4,8 +4,8 @@
 #ifndef AMB_POLICY_H
 #define AMB_POLICY_H
 #include <stdint.h>
-static const char *const AMB_RHYTHMS[8] = {
-    "AMB DRIFT", "EUCLIDEAN", "ODD LOOPS", "POLYRHYTHM", "SPARSE", "TIDAL", "BROKEN", "SLOW CLOCK"};
+static const char *const AMB_RHYTHMS[] = {
+    "AMB DRIFT", "EUCLIDEAN", "ODD LOOPS", "POLYRHYTHM", "SPARSE", "TIDAL", "BROKEN", "SLOW CLOCK","GARDEN"};
 static const char *const AMB_PHRASES[8] = {
     "AMB BREATHE", "LONG ARC", "WANDER", "BLOOM", "CALL ANSWER", "DRIFT SHIFT", "MEMORY", "MINIMAL"};
 static const char *const AMB_INTERPLAY[6] = {
@@ -28,9 +28,10 @@ static void amb_policy_init(amb_policy_t *p, uint32_t seed)
     p->variation = 40;
     for (i = 0; i < 3; i++) { p->active[i] = 0; p->pending[i] = 255; }
 }
+static unsigned amb_style_count(unsigned family){return family==0?9u:family==1?8u:6u;}
 static void amb_policy_choose(amb_policy_t *p, unsigned family, unsigned style, int playing)
 {
-    unsigned n = family == 2 ? 6 : 8;
+    unsigned n = amb_style_count(family);
     if (family > 2 || style >= n) return;
     if (!playing) { p->active[family] = (uint8_t)style; p->pending[family] = 255; }
     else p->pending[family] = style == p->active[family] ? 255 : (uint8_t)style;
@@ -65,6 +66,7 @@ static int amb_rhythm_event(const amb_policy_t *p, uint32_t t, unsigned layer, u
         return r < (density * (15u + ph) / 160u) && t % 2u == 0;
     case 6: ph = (t + layer * 3u) % 23u;
         return ph == 0 || ph == 5 || ph == 13 || (ph == 18 && r < density);
+    case 8: return (t % 4u)==0; /* quarter-note bell loop clock in the rhythm preview */
     case 7: return (t + layer * 4u) % 32u == 0;
     }
 }

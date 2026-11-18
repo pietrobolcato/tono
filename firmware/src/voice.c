@@ -340,7 +340,13 @@ static uint32_t voice_cap(void)
     /* Four ambient parts plus long release tails reached 94% / two late
      * halves in strict 240 MHz emulation. Keep the existing fade/steal
      * machinery and arrays; bound simultaneous voices before overload. */
-    if (c > 4u) c = 4u;
+    if (c > 4u) {
+        unsigned extra=0;
+        for(unsigned k=0;k<4;k++)if(trk[k].engine==ENGI_SINEFM)
+            for(unsigned v=0;v<NVOICE;v++)extra+=trk[k].v[v].active!=0;
+        if(extra>4)extra=4;
+        if(c>4+extra)c=4+extra;
+    }
 #endif
     return c < gov_cap ? c : gov_cap;
 }

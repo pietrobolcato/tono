@@ -1131,13 +1131,22 @@ static __attribute__((noinline)) void rev_cloud(const int32_t *rev_in, int32_t *
         shim_fb[i] = t[i];                               /* (the tail into the line, next block) */
     }
 }
+/* The delay's block peak and longest outstanding repeat are shared by its models. */
+static int32_t fxg_dpk;
+static uint32_t fxg_hold;
 /* the model ty's block into out */
+#if AMBPLUS
+#include "amb_space.h"
+#endif
 static void rev_run(uint32_t ty, const int32_t *rev_in, int32_t *out, uint32_t n)
 {
     switch (ty) {
     case 1: rev_spring(rev_in, out, n); if (song.g[G_RWIDE]) rev_spring_side(n, song.g[G_RWIDE]); break;
     case 2: rev_shimmer(rev_in, out, n); break;
     case 3: rev_reso(rev_in, out, n); break;
+    #if AMBPLUS
+    case 5: pl_render(rev_in,out,n);break;
+#endif
     case 4: rev_cloud(rev_in, out, n); break;
     default:
         if (song.g[G_RMOD] || song.g[G_RWIDE]) rev_room_mod(rev_in, out, n, song.g[G_RWIDE]);
@@ -1150,6 +1159,9 @@ static void rev_run(uint32_t ty, const int32_t *rev_in, int32_t *out, uint32_t n
 static void rev_state_clear(void)
 {
     uint32_t i;
+#if AMBPLUS
+    memset(&plate,0,sizeof plate);
+#endif
     for (i = 0; i < sizeof rev_comb / 2u; i++)
         rev_comb[i] = 0;
     for (i = 0; i < sizeof rev_u.ap / 2u; i++)          /* (int16: 997 of them, an odd count the int32 view misses one of) */
@@ -1187,6 +1199,9 @@ static __attribute__((noinline)) void rev_line_clear(uint32_t n)
  * ROOM, SPRING and RESO nothing, the pre-delay's line runs on as it always has */
 static uint32_t rev_line_dirty(uint32_t from, uint32_t to)
 {
+#if AMBPLUS
+    if(from==5 || to==5)return CL_LEN;
+#endif
     return to == 4u ? CL_LEN : to == 2u ? SH_LEN : from == 2u || from == 4u ? RPRE_LEN : 0u;
 }
 /* every buffer and state of the reverb silenced (fx_trip, the tests) */
@@ -1229,12 +1244,12 @@ static inline int32_t cho_ens(const int16_t *buf, uint32_t w, uint32_t ph, int32
 #define FXG_QUIET3 ((uint32_t)FS * 8u / CTL)
 #define FXG_FLOOR3 1024
 static uint32_t fxg_quiet;
-static int32_t fxg_dpk;                              /* (0.6.89) the delay line's peak this block (fx_buses) */
+
 static int32_t fxg_g = 32767;
 /* (0.8.4) TIME past the quiet's 1.5 s (blocks, else 0), FEEDBK not 0; the blocks since something was sent or a repeat
  * over the floor went round the loop again: while that is within TIME, an echo is still to come back, the gate stays
  * open (a long delay's repeats come back at their level, not faded in after the gap). TIME up to 1.5 s as before */
-static uint32_t fxg_hold, fxg_dact;
+static uint32_t fxg_dact;
 static uint8_t fxg_fb;
 #define fxg_dly (prf.fxg_dly)                           /* (0.9.14: fx_rest; prof.c's object: no new global) */
 static void fx_gate(int32_t *wet, uint32_t n)
@@ -1532,11 +1547,18 @@ static int32_t fx_glide(int32_t cur, int32_t to, uint32_t n)
  * Their lines and states silenced over the first blocks of it (a part each: rev_state_clear, the delay's line a quarter
  * at a time, CLOUD's line), so the next send starts from silence: held, the residue the gate had shut (up to -30 dB
  * after 8 s) came back with it, a ghost of the last chord a pause later. Out of line: the buses' two copies call it */
+static unsigned effective_reverb(unsigned rt)
+{
+#if AMBPLUS
+    if(rt==5)return LOAD_EFF()==LOAD_ECO?1u:5u;
+#endif
+    return REV_LITE[LOAD_EFF()%3u][rt<=4?rt:0];
+}
 static __attribute__((noinline)) int fx_rest(int32_t any, int32_t *wet, uint32_t n)
 {
-    uint32_t rt = (uint32_t)song.g[G_RTYPE] <= 4u ? (uint32_t)song.g[G_RTYPE] : 0u, ph = prf.rest_ph;
+    uint32_t rt = (uint32_t)song.g[G_RTYPE], ph = prf.rest_ph;
     if (any || fxg_g || fxg_dly || GFX(GF_DFDBK) >= 100 || fx.dsw || (rt == 4u && GFX(GF_RSIZE) >= 127) ||
-        REV_LITE[LOAD_EFF() % 3u][rt] != fx.rtype) {
+        effective_reverb(rt) != fx.rtype) {
         prf.rest_ph = 0;
         return 0;
     }
@@ -1544,6 +1566,9 @@ static __attribute__((noinline)) int fx_rest(int32_t any, int32_t *wet, uint32_t
     if (ph == 0u) {
         rev_state_clear();
         memset(cho_buf, 0, sizeof cho_buf);
+#if AMBPLUS
+        tape_reset(tape_fx.kind);
+#endif
         memset(&dlo, 0, sizeof dlo);
         fx.dt1 = fx.dt2 = fx.rt1 = fx.rt2 = 0;
         fx.dly_lp = fx.dly_hp = fx.rf_lp = fx.rpre_s = fx.cl_lp = fx.cl_half = 0;
@@ -1557,6 +1582,24 @@ static __attribute__((noinline)) int fx_rest(int32_t any, int32_t *wet, uint32_t
     prf_cur.fxrest++;                                   /* (PROFILE: FX REST) */
     return 1;
 }
+#if AMBPLUS
+static __attribute__((noinline)) unsigned tape_select(void)
+{
+    unsigned tape=song.g[G_DTYPE]>=2?(unsigned)song.g[G_DTYPE]:0;
+    if(tape!=tape_fx.kind){
+        if(!tape){fx.dsw=2;fx.dsw_n=0;fx.dsw_to=fx.dr_sh;}
+        tape_reset(tape);
+    }
+    return tape;
+}
+static __attribute__((noinline)) void tape_bus(unsigned tape,const int32_t *input,unsigned n,unsigned dl,int fb)
+{
+    unsigned time=(unsigned)GFX(GF_DTIME);
+    uint32_t samples=time<DT_FREE?div_samples(time):dl;
+    while(samples>(TAPE_LENGTH-8)*4)samples/=2;
+    tape_run(tape,input,dlo_x,dlo_xr,n,samples,clamp(fb,0,30500));
+}
+#endif
 static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in, const int32_t *dly_in, const int32_t *rev_in, int32_t *wet,
                      uint32_t n)
 {
@@ -1590,7 +1633,13 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
     int32_t cs = song.g[G_CSTER], cw = 80 + wd / 2;    /* (0.6.9) the chorus's side: 0 as before, - to mono, + ~2x */
     cw = cs >= 0 ? cw + cs * 2 : (cw * (64 + cs)) >> 6;
     uint32_t dro = wd && !png ? div_samples(3) * (uint32_t)wd / 127u : 0u, dr;   /* the right echo: up to 1/32 later */
-    int dly_lo_on = dly_rate(&dl, &dr, dro, png, gr);   /* (0.8.4) the line's rate; TIME within what it holds */
+    int dly_lo_on;
+#if AMBPLUS
+    unsigned tape=tape_select();
+    if(tape){dly_lo_on=1;dr=dl;}
+    else
+#endif
+    dly_lo_on = dly_rate(&dl, &dr, dro, png, gr);   /* (0.8.4) the line's rate; TIME within what it holds */
     fxg_fb = fb > 0;
     {   /* (0.8.4) TONE's filter at the line's rate: the same Hz an octave (14 of the table) up the table each halving */
         int32_t to = 14 * (int32_t)fx.dr_sh;
@@ -1647,6 +1696,10 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
         }
         rev_in = rpre_out;
     }
+#if AMBPLUS
+    if(tape){tape_bus(tape,dly_in,n,dl,fb);
+    }else
+#endif
     if (dly_lo_on) {                                    /* (0.8.4) the delay at half / a quarter rate, or changing its
                                                          * rate: its block first (dly_lo), the loop below takes it */
         dlyk_t k;
@@ -1734,8 +1787,7 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
             fx_sr[i] -= side;
         }
     }
-    rt = (uint32_t)song.g[G_RTYPE] <= 4u ? song.g[G_RTYPE] : 0;
-    rt = REV_LITE[LOAD_EFF() % 3u][rt];                   /* (0.6.29) LOAD LITE: SHIMMER, CLOUD as ROOM, RESO as SPRING; ECO:
+    rt = effective_reverb((unsigned)song.g[G_RTYPE]);                   /* (0.6.29) LOAD LITE: SHIMMER, CLOUD as ROOM, RESO as SPRING; ECO:
                                                          * all SPRING */
     if (rt != fx.rtype) {                               /* the model changed: the old one's block fades out, */
         int32_t *t = fx_tmp, g = 65536, d = 65536 / (int32_t)n;   /* its buffers are cleared, the new */
@@ -2356,6 +2408,9 @@ static __attribute__((noinline)) void fx_trip(uint32_t c1, uint32_t n)
     fx.dly_lp = fx.dly_hp = fx.rf_lp = fx.rpre_s = fx.cl_lp = fx.cl_half = 0;
     fx_bad = 0;
     fx_trips++;
+#if AMBPLUS
+    tape_reset(tape_fx.kind);
+#endif
     if (c1) {
 #if FELUCCA_DUAL_CORE
         fm1_mc_lost = 1u;                                /* CORES 1 (BAD READ) */

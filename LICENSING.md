@@ -62,6 +62,10 @@ All by Hügelton Instruments (Leo Kuroshita), in this tree:
 On the device, HOME held > ABOUT opens the information screen; turning PRESETS scrolls on into
 CREDITS, a short list of these authors, licences and source URLs.
 
+## AMB+ Garden modules
+
+The harmony helpers, generative loops, sine-FM voices, soft percussion, tape echo and stereo plate adapt Charles Vestal’s fm1-amb at commit `da0047dc468a7f4f299e0d54fd12bac0c0c11a96`. The plate follows the FoMni-1 implementation of Jon Dattorro’s 1997 design. The source files `amb_harmony.h`, `amb_garden.h`, `eng_sinefm.c`, `eng_softpulse.c` and `amb_space.h` retain MPL-2.0. The full license is in `LICENSES/MPL-2.0-AMB.txt`.
+
 ## JieLi SDK files in the packages (Apache-2.0)
 
 A `.fwsc` package made by `tools/build.py` (with `tools/fm1pkg_make.py`; this is the package the

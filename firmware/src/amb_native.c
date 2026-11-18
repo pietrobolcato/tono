@@ -73,7 +73,7 @@ static const char *const AMB_ROLE[7] = {"PAD","DRONE","BELLS","BASS","DRUMS","TE
 static const char *const AMB_EDIT[7] = {"MODE","SOUND","ENVELOPE","LFO","PATTERN","FX","LAYER EQ"};
 static const char *const AMB_GLO[5] = {"EVOLVE","HARMONY","GENERATE","MASTER FX","EQ"};
 static const char *const AMB_MOOD[7] = {"homeward","warmer","brighter","suspended","deeper","open","darker"};
-static const char *const AMB_SCENE[] = {"Morning Air","Rain Study","Dark Water","Low Sun","Glass Room","Night Garden","Window Seats","Stone Cloister","Tidal Loom","Kite Strings","Departure Hall"};
+static const char *const AMB_SCENE[] = {"Morning Air","Rain Study","Dark Water","Low Sun","Glass Room","Night Garden","Window Seats","Stone Cloister","Tidal Loom","Kite Strings","Departure Hall","Garden"};
 static const char *const AMB_MACRO[7][4] = {
     {"WARMTH","MOTION","SUSTAIN","SPACE"},{"WARMTH","DRIFT","SUSTAIN","SPACE"},
     {"SOFT","MOTION","SHIMMER","SPACE"},{"ROUND","PULSE","GLIDE","SPACE"},
@@ -138,7 +138,9 @@ static void amb_fill_patch(amb_layer_t *l,unsigned key,unsigned k,unsigned role,
     }
     if(role==1 || role==3)l->base[P_TRANS]=-12;
     if(role==3){l->base[P_VOICE]=V_MONO;l->base[P_GLIDE]=25+patch*5;}
-    if(role==4){l->base[P_E2]=r->color;l->base[P_E3]=38+patch*4;l->base[P_E7]=0;}
+    if(l->engine==ENGI_SINEFM){l->base[P_CHOR]=0;l->base[P_DRIFT]=127;}
+    if(l->engine==ENGI_SOFTPULSE){l->base[P_DIST]=l->base[P_CHOR]=0;}
+    else if(role==4){l->base[P_E2]=r->color;l->base[P_E3]=38+patch*4;l->base[P_E7]=0;}
     l->lfo_dest=0;l->lfo_depth=6;
     if(role==6){l->base[P_E4]=0;l->base[P_E5]=100;l->base[P_E6]=40;l->base[P_E7]=85;l->base[P_LN7]=100;l->base[P_LN6]=20;}
     for(i=0;i<4;i++)l->macro[i]=64;
@@ -161,9 +163,11 @@ static int32_t amb_tail_envelope(unsigned k,unsigned voice)
 static int amb_tail_finished(unsigned k){return !ambr.tail_left[k];}
 static unsigned amb_track_active(unsigned k)
 {unsigned i,n=0;for(i=0;i<NVOICE;i++)n+=trk[k].v[i].active!=0;return n;}
+static void garden_cancel(unsigned k);
 static void amb_begin_change(unsigned k)
 {
     unsigned i,frames;
+    garden_cancel(k);
     ambr.grid_cue[k]=(amb_grid_cue_t){0};
     if(ambr.handoff[k])return;
     if(!amb_track_active(k)){amb_release(k);ambr.due[k]=0;return;}
@@ -213,7 +217,8 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
         {2,2,62,5,{1,5,0},104,12,{{0,10,1,94},{1,8,3,67},{2,9,3,46},{5,0,2,28}}},
         {5,3,80,3,{5,5,3},82,58,{{0,12,1,67},{2,10,0,82},{3,8,2,77},{5,3,1,38}}},
         {9,1,92,2,{1,2,0},64,32,{{2,9,0,91},{0,11,2,75},{3,8,1,75},{4,2,0,50}}},
-        {0,1,54,5,{2,5,0},97,22,{{2,8,0,85},{0,9,2,56},{2,8,0,62},{0,14,3,65}}}
+        {0,1,54,5,{2,5,0},97,22,{{2,8,0,85},{0,9,2,56},{2,8,0,62},{0,14,3,65}}},
+        {2,2,72,4,{8,0,0},102,57,{{0,16,1,89},{2,11,2,94},{3,9,1,67},{4,8,1,84}}}
     };
     _Static_assert(NELEM(AMB_SCENE)==6+NELEM(arrangements),"factory catalog");
     scene%=NELEM(AMB_SCENE);
@@ -237,6 +242,13 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
         l->level=arr?arr->chair[i][3]:(uint8_t)l->base[P_LEVEL];
     }
     /* Pitch and timing come from the live conductor for every factory layer. */
+    if(scene==11){
+        p->master=1010;p->global[G_RTYPE]=5;p->global[G_DTYPE]=4;p->global[G_DFDBK]=59;
+        p->layer[1].density=40;p->layer[3].density=35;p->policy.variation=35;
+        p->layer[0].base[P_FCUT]=78;p->layer[2].base[P_TRANS]=0;p->layer[2].base[P_GLIDE]=20;
+        for(i=0;i<4;i++)p->layer[i].base[P_PAN]=0;
+        p->layer[0].base[P_PAN]=-8;p->layer[1].base[P_PAN]=10;
+    }
     if(scene==6)p->layer[0].density=46;
     if(scene==7)p->layer[0].mode=AMB_CHANT;
     if(scene==10){
@@ -270,6 +282,7 @@ static void amb_install(const amb_piece_t *p)
     ambr.solo=(int8_t)amb.layer[0].solo_plus1-1;ambr.chord_q=ambr.proposal=255;
     for(k=0;k<4;k++)if(!ambr.handoff[k])amb_apply_patch(k);
     amb_pickup_arm(&ambr.pickup,ambr.target?amb.layer[ambr.target-1].level*1023u/127u:amb.master);
+    if(amb.policy.active[0]==8)for(k=0;k<4;k++)ambr.voicing[k]=50+(int)k*7;
     amb_revoice();ambr.loading=0;ambr.dirty=1;
 }
 static void amb_start_factory(unsigned scene)
@@ -349,9 +362,12 @@ static void amb_prepare(void)
         t->p[P_CHOR]=(int16_t)clamp(l->base[P_CHOR]+motion/2,0,100);
         if(l->engine==12)t->p[P_E2]=(int16_t)clamp(l->base[P_E2]-warm/2,-64,63);
         if(l->engine==11)t->p[P_E1]=(int16_t)clamp(l->base[P_E1]-warm,0,127);
+        if(l->engine==ENGI_SINEFM)t->p[P_E1]=(int16_t)clamp(l->base[P_E1]-warm/2,0,127);
         if(l->engine==2)t->p[P_E2]=(int16_t)clamp(l->base[P_E2]-warm,0,127);
         if(l->engine==7)t->p[P_E3]=(int16_t)clamp(l->base[P_E3]-warm/8,-8,8);
         if(l->role==0 || l->role==1)t->p[P_SUS]=(int16_t)clamp(l->base[P_SUS]+bloom/3,40,127);
+        if(l->engine==ENGI_SOFTPULSE && t->p[P_ROOT]!=l->base[P_ROOT])t->p[P_ROOT]=l->base[P_ROOT];
+        if(l->engine==ENGI_SOFTPULSE)t->p[P_E2]=clamp(l->base[P_E2]-warm,0,127);
         if(l->role==4) t->p[P_E4]=(int16_t)clamp(l->base[P_E4]+bloom/3,0,108);
         if(l->role==6) {
             t->p[P_ATK]=l->base[P_ATK];
@@ -522,8 +538,10 @@ static void amb_capture_generated(unsigned k)
 {
     amb_layer_t *l=&amb.layer[k];unsigned i,n=0;
     for(i=0;i<16;i++)n+=ambr.recent[k][i]!=0;
-    if(ambr.recent_valid[k] && n){memcpy(l->notes,ambr.recent[k],16);memcpy(l->velocity,ambr.recent_vel[k],16);}
-    else {
+    if(ambr.recent_valid[k] && (n || amb.policy.active[0]==8)){memcpy(l->notes,ambr.recent[k],16);memcpy(l->velocity,ambr.recent_vel[k],16);}
+    else if(amb.policy.active[0]==8 && l->role!=5){
+        memset(l->notes,0,sizeof l->notes);
+    }else {
         amb_participation_t parts[4];amb_grid_cue_t cue={0};
         unsigned stride=1u<<l->speed,period=16*stride,base=ambr.step-ambr.step%period;
         for(unsigned offset=0;offset<period;offset++){
@@ -539,8 +557,9 @@ static void amb_capture_generated(unsigned k)
     /* A very sparse phrase can contain no event in this window. Seed its
      * current actual voicing rather than opening an empty recording. */
     for(i=n=0;i<16;i++)n+=l->notes[i]!=0;
-    if(!n){l->notes[0]=(uint8_t)(ambr.voicing[k]+(l->role==2?12:0));l->velocity[0]=70;}
+    if(!n && (amb.policy.active[0]!=8 || !ambr.recent_valid[k])){l->notes[0]=(uint8_t)(ambr.voicing[k]+(l->role==2?12:0));l->velocity[0]=70;}
 }
+#include "amb_garden.h"
 static void amb_layer_step(unsigned k,unsigned step,unsigned mask)
 {
     amb_layer_t *l=&amb.layer[k];unsigned i,tick=step%16,bar=step/16,gate=FS/2,n;uint8_t notes[2];
@@ -548,6 +567,7 @@ static void amb_layer_step(unsigned k,unsigned step,unsigned mask)
         ambr.grid_cue[k]=(amb_grid_cue_t){0};return;
     }
     if(!(step%(1u<<l->speed))){ambr.playhead[k]=(uint8_t)((step>>l->speed)%16);ambr.playhead_valid[k]=1;}
+    if(l->generated && amb.policy.active[0]==8 && l->role!=5){garden_step(k,step);return;}
     if(l->role==4){
         ambr.playhead[k]=(uint8_t)(step%16);ambr.playhead_valid[k]=1;
         static const uint8_t drum[4]={36,38,42,50};
@@ -579,7 +599,7 @@ static void amb_step(void)
     if(ambr.step%16==0) {
         if(amb_pending_ready){amb_install(&amb_pending);amb_pending_ready=0;amb_say("PRESET RECALLED ON BAR");}
         else if(ambr.chord_q!=255) { amb.chord=ambr.chord_q;ambr.chord_q=255;amb_revoice(); }
-        else if(bar && AMB_AUTO[amb.auto_index] && bar%AMB_AUTO[amb.auto_index]==0 && amb_hash(amb.policy.seed+bar)%100u<amb.evolve[0]) {
+        else if(amb.policy.active[0]!=8 && bar && AMB_AUTO[amb.auto_index] && bar%AMB_AUTO[amb.auto_index]==0 && amb_hash(amb.policy.seed+bar)%100u<amb.evolve[0]) {
             int scale[12];unsigned count=(unsigned)amb_scale(amb_pool(),scale);
             amb.chord=(uint8_t)amb_walk_next(&ambr.harmony_walk,amb.policy.seed,amb.chord,count);amb_revoice();
         }
@@ -588,6 +608,8 @@ static void amb_step(void)
         amb_policy_boundary(&amb.policy,ambr.step);
         if(memcmp(before,amb.policy.active,3))for(k=0;k<4;k++)if(amb.layer[k].generated)amb_begin_change(k);
     }
+    if(amb.policy.active[0]==8)garden_harmony(ambr.step);
+    else garden_drift.limit=0;
     amb_participation(part,ambr.step);
     mask=amb_policy_events(&amb.policy,ambr.step,part);
     for(k=0;k<4;k++) {
@@ -612,6 +634,7 @@ static void amb_clock(uint32_t n)
     for(k=0;k<4;k++) if(ambr.off[k]) {
         if(ambr.off[k]<=n) amb_release(k); else ambr.off[k]-=n;
     }
+    for(k=0;k<4;k++)garden_advance(k,n);
     if(!song.playing) {
         for(k=0;k<4;k++)ambr.due[k]=0;
         if(ambr.last_play) for(k=0;k<4;k++) amb_release(k);
@@ -624,7 +647,7 @@ static void amb_clock(uint32_t n)
     }
     for(k=0;k<4;k++)if(ambr.foundation_pending[k] && !ambr.handoff[k] && trk[k].engine==amb.layer[k].engine){
         ambr.foundation_pending[k]=0;
-        if(amb.layer[k].generated && !ambr.held_n[k])amb_layer_step(k,ambr.step-(ambr.step%((amb.layer[k].role==1?8u:2u)<<amb.layer[k].speed)),1u<<k);
+        if((amb.policy.active[0]!=8 || amb.layer[k].role==5) && amb.layer[k].generated && !ambr.held_n[k])amb_layer_step(k,ambr.step-(ambr.step%((amb.layer[k].role==1?8u:2u)<<amb.layer[k].speed)),1u<<k);
     }
     for(k=0;k<4;k++)if(ambr.due[k]) {
         if(ambr.due[k]<=n) {ambr.due[k]=0;amb_layer_step(k,ambr.due_step[k],ambr.due_mask[k]);}
@@ -724,7 +747,7 @@ static int amb_valid(const amb_piece_t *p)
 {
     unsigned k,i;
     if(p->magic!=AMB_MAGIC || (p->version<1 || p->version>AMB_VERSION) ||
-       p->master>1023 || p->key>11 || p->scale>3 || p->chord>6 || p->auto_index>7) return 0;
+       p->master>1023 || p->key>11 || p->scale>3 || p->chord>11 || p->auto_index>7) return 0;
     if(p->version>=3 && (((unsigned)p->layer[1].reserved>15u) ||
        ((p->layer[0].reserved || p->layer[1].reserved) && !(p->layer[0].reserved&1u))))return 0;
     if(p->version>=3){unsigned m=p->layer[0].reserved|((unsigned)p->layer[1].reserved<<8),n=0;
@@ -734,8 +757,8 @@ static int amb_valid(const amb_piece_t *p)
         for(k=0;k<4;k++)for(i=0;i<4;i++)if(p->layer_eq[k][i]<-12 || p->layer_eq[k][i]>12)return 0;
     }
     if(p->policy.variation>100) return 0;
-    for(i=0;i<3;i++) if(p->policy.active[i]>=(i==2?6:8) ||
-        (p->policy.pending[i]!=255 && p->policy.pending[i]>=(i==2?6:8))) return 0;
+    for(i=0;i<3;i++) if(p->policy.active[i]>=amb_style_count(i) ||
+        (p->policy.pending[i]!=255 && p->policy.pending[i]>=amb_style_count(i))) return 0;
     for(i=0;i<4;i++) if(p->eq[i]<-12 || p->eq[i]>12 || p->evolve[i]>100) return 0;
     for(i=0;i<G_COUNT;i++) if(p->global[i]<GP[i].min || p->global[i]>GP[i].max) return 0;
     for(k=0;k<4;k++) {
@@ -944,7 +967,7 @@ static void amb_knob(unsigned knob,int delta)
         } else if(ambr.page==2) {
             if(knob<3) {
                 unsigned cur=ambr.gen_edit[knob]?ambr.gen_candidate[knob]:amb.policy.pending[knob]!=255?amb.policy.pending[knob]:amb.policy.active[knob];
-                ambr.gen_candidate[knob]=(uint8_t)amb_wrap((int)cur+delta,knob==2?6:8);
+                ambr.gen_candidate[knob]=(uint8_t)amb_wrap((int)cur+delta,amb_style_count(knob));
                 ambr.gen_edit[knob]=1;ambr.gen_time[knob]=fm1_ms;
             } else amb.policy.variation=(uint8_t)clamp(amb.policy.variation+delta*2,0,100);
         } else if(ambr.page==3) {
@@ -1479,7 +1502,7 @@ static void amb_draw(void)
         } else if(ambr.view==2 && ambr.page==3) {
             static const char *const modules[4]={"REVERB","DELAY / TAPE","MOTION","WARMTH"};
             amb_text(12,64,modules[ambr.fx%4],AINK,30);
-            amb_text(12,88,ambr.fx%4==0?N_RTYPE[fx.rtype<5?fx.rtype:0]:ambr.fx%4==1?N_DLYTYPE[amb.global[G_DTYPE]]:"SHARED MASTER PROCESSING",ADIM,34);
+            amb_text(12,88,ambr.fx%4==0?N_RTYPE[fx.rtype<NELEM(N_RTYPE)?fx.rtype:0]:ambr.fx%4==1?N_DLYTYPE[amb.global[G_DTYPE]]:"SHARED MASTER PROCESSING",ADIM,34);
             amb_text(12,121,(ambr.fx%4==0 && fx.rtype!=amb.global[G_RTYPE])?"ECO: LIGHTER EFFECT ACTIVE":"SAME STATE AS HOME MASTER",ADIM,34);
         } else if(ambr.view==2 && ambr.page==1) {
             amb_text(12,64,"TONAL CENTRE",ADIM,24);amb_text(12,84,N_NOTE[amb.key],AINK,4);

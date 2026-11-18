@@ -18,7 +18,7 @@ int main(void)
 {
     amb_policy_t p;
     unsigned family, style, j, step;
-    uint64_t hashes[8];
+    uint64_t hashes[9];
     amb_policy_init(&p, 42);
     amb_policy_choose(&p, 0, 5, 1);
     amb_policy_choose(&p, 0, 7, 1);
@@ -30,7 +30,7 @@ int main(void)
     amb_policy_choose(&p, 0, 7, 1);
     assert(p.pending[0] == 255);
     for (family = 0; family < 3; family++) {
-        for (style = 0; style < (family == 2 ? 6u : 8u); style++) {
+        for (style = 0; style < amb_style_count(family); style++) {
             amb_policy_init(&p, 42);
             amb_policy_choose(&p, family, style, 0);
             hashes[style] = trace(&p);
@@ -60,6 +60,6 @@ int main(void)
         for (step = 0; step < 100000; step++) assert(!(amb_policy_events(&p,step,l) & 5u));
         assert(!memcmp(l,before,sizeof l));
     }
-    puts("AMB+ policies: all 22 distinct/repeatable, phrase queue/cancel, opt-in immutability, Euclid, harmony PASS");
+    puts("AMB+ policies: all 23 distinct/repeatable, phrase queue/cancel, opt-in immutability, Euclid, harmony PASS");
     return 0;
 }

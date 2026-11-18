@@ -76,8 +76,8 @@ int main(int argc,char **argv)
         ambr.page=(uint8_t)page;ambr.fx=(uint8_t)fx;snprintf(name,sizeof name,"global_%u_fx_%u",page,fx);ar_frame(name,dir,1);
     }
     ambr.page=2;
-    for(page=0;page<3;page++)for(style=0;style<(page==2?6u:8u);style++){
-        amb_policy_choose(&amb.policy,page,style,0);snprintf(name,sizeof name,"generate_%u_%u",page,style);ar_frame(name,dir,style==7 || style==5);
+    for(page=0;page<3;page++)for(style=0;style<amb_style_count(page);style++){
+        amb_policy_choose(&amb.policy,page,style,0);snprintf(name,sizeof name,"generate_%u_%u",page,style);ar_frame(name,dir,style>=7 || style==5);
     }
     for(role=0;role<7;role++){
         amb_patch(0,role,0);ambr.view=1;ambr.page=4;

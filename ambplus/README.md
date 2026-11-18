@@ -29,7 +29,7 @@ AMB+ record version 4 stores complete layer parameters, roles, macros, manual pa
 
 The SAMPLE engine appends ID 15, preserving all legacy engine numbers. Two original, offline-generated 0.743 s PCM sources consume 32768 bytes of flash and no PCM RAM or writable sample sectors. `tools/gen_amb_samples.py` reproduces them. No voice recording or microphone bytes are fabricated.
 
-The AMB-1 Euclidean and voice-leading helpers remain in `firmware/src/amb_harmony.h` under MPL-2.0, pinned to da0047dc468a7f4f299e0d54fd12bac0c0c11a96. Its notice and full license are included. All AMB+ scheduling/runtime additions are GPL-3.0-only with JIANT; see LICENSING.md and LICENSES/. No Shrub sources, samples, presets or dependencies were used.
+The AMB-1 Euclidean and voice-leading helpers remain in `firmware/src/amb_harmony.h` under MPL-2.0, pinned to da0047dc468a7f4f299e0d54fd12bac0c0c11a96. Its notice and full license are included. The Garden conductor, Sine FM and Soft Pulse voices and shared space effects also retain MPL-2.0; see LICENSING.md and LICENSES/. No Shrub sources, samples, presets or dependencies were used.
 
 See CONTROLS.md, the final test report and the milestone card for validation and remaining acceptance work. No successful software test authorizes hardware installation.
 

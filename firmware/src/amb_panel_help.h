@@ -11,7 +11,9 @@ static const char *amb_param_hint(const amb_layer_t *l,unsigned id)
         [10]={"Morph the drum kit","Tune the kit","Dark to bright","Length of each hit","Noise in the hit","FM at the attack","Wavefold the hit","Drum saturation"},
         [11]={"Noise generator","Noise brightness","Noise filter frequency","Filter peak","Pitch tracking","Grain density or register","Internal noise movement","Resolution or clock"},
         [12]={"Operator routing","Operator feedback","Modulation amount","Modulator frequency ratio","Modulator envelope time","Velocity to modulation","Spread carrier tuning","FM voice source"},
-        [15]={"Bundled audio source","Playback character","Pitch in semitones","Repeat the sample","Start of playback","End of playback","Soften loop joins","Sample brightness"}
+        [15]={"Bundled audio source","Playback character","Pitch in semitones","Repeat the sample","Start of playback","End of playback","Soften loop joins","Sample brightness"},
+        [16]={"Modulator pitch ratio","Sustained FM brightness","Swell (-) or strike (+)","Transient length","Fine tuning in cents","Second harmonic level","Sub octave level","Carrier feedback"},
+        [17]={"Metal in the hats","Tune kick and metal","Hat filter frequency","Length of each hit","Noise in the hats","Kick pitch drop","Extra harmonic","Pulse saturation"}
     };
     if(l->role==4 && id>=P_LN0 && id<=P_LN7)return "Level of this drum voice";
     if(l->engine==3 && id>=P_E0){

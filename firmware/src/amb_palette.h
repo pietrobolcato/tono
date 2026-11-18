@@ -15,7 +15,8 @@ static const amb_recipe_t amb_pad_patches[] = {
   AR("Plainchant",5,5,52,108,91,86,8,97),AR("Reed Cloud",7,3,84,112,78,62,14,86),
   AR("Float Garden",3,11,91,112,70,77,28,66),
   AR("Amber Brass",0,9,74,116,87,55,12,43),AR("Cedar Triangle",0,21,81,116,94,58,8,61),
-  AR("Umber Pulse",0,24,90,116,82,62,15,37)
+  AR("Umber Pulse",0,24,90,116,82,62,15,37),
+  AR("Garden Rhodes",ENGI_SINEFM,0,116,111,88,62,30,80)
 };
 static const amb_recipe_t amb_drone_patches[] = {
   AR("Deep Current",0,22,110,120,90,75,35,28),AR("Hollow Earth",2,8,103,116,86,80,42,43),
@@ -31,20 +32,23 @@ static const amb_recipe_t amb_bells_patches[] = {
   AR("Soft FM",12,0,8,98,86,80,39,61),AR("Resonant Dust",12,10,1,89,84,73,49,54),
   AR("Floating Metal",0,13,2,106,82,92,56,85),AR("Night Sparks",12,7,0,90,84,83,62,70),
   AR("Felt Piano",2,8,12,90,94,76,21,92),AR("Nylon Harp",2,13,9,91,84,58,19,80),
-  AR("Porcelain",3,15,15,85,75,70,34,88)
+  AR("Porcelain",3,15,15,85,75,70,34,88),
+  AR("Garden Bell",ENGI_SINEFM,1,22,102,86,80,94,90)
 };
 static const amb_recipe_t amb_bass_patches[] = {
   AR("Round Sub",0,7,8,65,101,20,14,32),AR("Soft Pulse",0,2,14,72,96,28,23,39),
   AR("Breathing Low",0,19,48,88,96,38,26,35),AR("Warm Fifth",0,14,20,79,93,34,28,43),
   AR("Faded Mono",2,7,9,69,92,23,19,48),AR("Slow Glide",0,21,25,86,94,42,34,46),
   AR("Low Echo",12,2,12,83,90,36,49,53),AR("Root Bed",0,22,62,98,97,46,22,29),
-  AR("Reed Pedal",7,9,28,77,84,34,9,72)
+  AR("Reed Pedal",7,9,28,77,84,34,9,72),
+  AR("Garden Pedal",ENGI_SINEFM,2,112,99,78,12,0,84)
 };
 static const amb_recipe_t amb_drums_patches[] = {
   AR("Dust Steps",10,3,0,75,86,42,23,45),AR("Soft Pulse",10,2,0,81,91,34,19,52),
   AR("Brush Rain",10,5,0,70,82,64,32,60),AR("Broken Clock",10,8,0,62,81,51,46,68),
   AR("Slow Ritual",10,6,0,88,88,58,40,43),AR("Hollow Perc",10,0,0,74,84,70,35,55),
-  AR("Hidden Beat",10,1,0,66,82,38,29,49),AR("Sparse Ticks",10,7,0,59,77,65,54,73)
+  AR("Hidden Beat",10,1,0,66,82,38,29,49),AR("Sparse Ticks",10,7,0,59,77,65,54,73),
+  AR("Garden Pulse",ENGI_SOFTPULSE,0,0,60,76,28,9,64)
 };
 static const amb_recipe_t amb_texture_patches[] = {
   AR("Ocean Air",11,4,110,117,83,89,38,42),AR("Tape Mist",11,7,98,114,82,81,46,55),

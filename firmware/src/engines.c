@@ -15,6 +15,8 @@
 #include "eng_animal.c"         /* (JIANT 0.8.3) ANIMAL: animal calls (CMOS PULSE WHSTL WING GLOTT) */
 #if AMBPLUS
 #include "eng_amb_sample.c"
+#include "eng_sinefm.c"
+#include "eng_softpulse.c"
 #endif
 #include "fm4_convert.c"        /* DIGITAL's tables, and its sounds -> FM6 */
 #if FELUCCA_FM4
@@ -68,7 +70,9 @@ static const engine_t *const ENGINES[NENGINES] = {
     &ENG_GONE,                   /* 13: reserved (SLICE, retired in JIANT) */
     &ENG_ANIMAL,                 /* 14 (ENGI_ANIMAL, JIANT 0.8.3) */
 #if AMBPLUS
-    &ENG_AMB_SAMPLE,             /* 15: original, bounded, read-only example PCM */
+    &ENG_AMB_SAMPLE,             /* 15: bounded read-only PCM */
+    &ENG_SINEFM,                 /* 16 */
+    &ENG_SOFTPULSE,              /* 17 */
 #endif
 };
 
@@ -90,7 +94,7 @@ static const uint8_t ENGINE_ORDER[NENG_SHOWN] = {
     ENGI_PHASE, ENGI_WHEEL,      /* PHASE WHEEL */
     ENGI_NOISE,                  /* NOISE */
 #if AMBPLUS
-    ENGI_AMB_SAMPLE,
+    ENGI_AMB_SAMPLE, ENGI_SINEFM, ENGI_SOFTPULSE,
 #endif
 #if FELUCCA_FM4
     ENGI_DIGITAL,                /* DIGITAL (retired, FELUCCA_FM4 builds only): after the rest */
