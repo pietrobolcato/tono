@@ -16,7 +16,9 @@ static const amb_recipe_t amb_pad_patches[] = {
   AR("Float Garden",3,11,91,112,70,77,28,66),
   AR("Amber Brass",0,9,74,116,87,55,12,43),AR("Cedar Triangle",0,21,81,116,94,58,8,61),
   AR("Umber Pulse",0,24,90,116,82,62,15,37),
-  AR("Garden Rhodes",ENGI_SINEFM,0,116,111,88,62,30,80)
+  AR("Garden Rhodes",ENGI_SINEFM,0,116,111,88,62,30,80),
+  AR("Sunroom Keys",ENGI_SINEFM,3,22,101,88,49,15,85),
+  AR("Linen Pad",ENGI_SINEFM,4,91,116,85,69,19,75)
 };
 static const amb_recipe_t amb_drone_patches[] = {
   AR("Deep Current",0,22,110,120,90,75,35,28),AR("Hollow Earth",2,8,103,116,86,80,42,43),
@@ -24,7 +26,8 @@ static const amb_recipe_t amb_drone_patches[] = {
   AR("Underwater",2,6,105,120,86,87,39,40),AR("Harmonic Bed",7,2,97,115,78,82,34,67),
   AR("Dark Air",11,4,110,124,84,87,43,30),AR("Warm Voltage",0,19,100,117,91,72,33,43),
   AR("Low Ooh",5,4,90,118,90,70,12,91),AR("Chapel Aah",5,0,88,120,84,83,9,89),
-  AR("Cantus",5,5,64,114,87,88,10,92),AR("Slow Chip",3,12,94,110,76,62,20,78)
+  AR("Cantus",5,5,64,114,87,88,10,92),AR("Slow Chip",3,12,94,110,76,62,20,78),
+  AR("Skylight",ENGI_SINEFM,5,102,116,80,75,11,88)
 };
 static const amb_recipe_t amb_bells_patches[] = {
   AR("Felt Glass",12,11,0,100,86,88,45,65),AR("Distant Chime",12,8,4,110,80,94,53,79),
@@ -33,7 +36,9 @@ static const amb_recipe_t amb_bells_patches[] = {
   AR("Floating Metal",0,13,2,106,82,92,56,85),AR("Night Sparks",12,7,0,90,84,83,62,70),
   AR("Felt Piano",2,8,12,90,94,76,21,92),AR("Nylon Harp",2,13,9,91,84,58,19,80),
   AR("Porcelain",3,15,15,85,75,70,34,88),
-  AR("Garden Bell",ENGI_SINEFM,1,22,102,86,80,94,90)
+  AR("Garden Bell",ENGI_SINEFM,1,22,102,86,80,94,90),
+  AR("Willow Tine",ENGI_SINEFM,6,3,91,86,58,24,76),
+  AR("Dew Bell",ENGI_SINEFM,7,13,103,81,82,44,94)
 };
 static const amb_recipe_t amb_bass_patches[] = {
   AR("Round Sub",0,7,8,65,101,20,14,32),AR("Soft Pulse",0,2,14,72,96,28,23,39),
@@ -41,7 +46,8 @@ static const amb_recipe_t amb_bass_patches[] = {
   AR("Faded Mono",2,7,9,69,92,23,19,48),AR("Slow Glide",0,21,25,86,94,42,34,46),
   AR("Low Echo",12,2,12,83,90,36,49,53),AR("Root Bed",0,22,62,98,97,46,22,29),
   AR("Reed Pedal",7,9,28,77,84,34,9,72),
-  AR("Garden Pedal",ENGI_SINEFM,2,112,99,78,12,0,84)
+  AR("Garden Pedal",ENGI_SINEFM,2,112,99,78,12,0,84),
+  AR("Linden Bass",ENGI_SINEFM,8,27,88,86,19,0,71)
 };
 static const amb_recipe_t amb_drums_patches[] = {
   AR("Dust Steps",10,3,0,75,86,42,23,45),AR("Soft Pulse",10,2,0,81,91,34,19,52),

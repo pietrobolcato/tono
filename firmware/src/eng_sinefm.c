@@ -45,7 +45,16 @@ static void sf_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const vm
 static const preset_t SF_PATCHES[] = {
     {"GARDEN RHODES", {0, 22, -18, 114, -3, 20, 0, 0}, {97, 90, 126, 111}, 0, TAG(PAD), FX(0, 12, 20, 65), 0, 0},
     {"GARDEN BELL", {2, 0, 39, 68, 0, 0, 0, 0}, {22, 109, 0, 102}, 0, TAG(BELL), FX(0, 0, 85, 70), 0, 0},
-    {"GARDEN PEDAL", {0, 0, 0, 80, 0, 26, 85, 0}, {90, 90, 125, 90}, 0, TAG(BASS), FX(0, 0, 0, 8), 0, 0}};
+    {"GARDEN PEDAL", {0, 0, 0, 80, 0, 26, 85, 0}, {90, 90, 125, 90}, 0, TAG(BASS), FX(0, 0, 0, 8), 0, 0},
+    /* Original Tono voices. Positive contours soften after the strike;
+     * negative contours let the upper harmonics bloom with a held note. */
+    {"SUNROOM KEYS", {1, 8, 47, 72, 0, 19, 0, 0}, {22, 84, 110, 101}, 0, TAG(KEYS), FX(0, 0, 15, 49), 0, 0},
+    {"LINEN PAD", {0, 6, -32, 108, -1, 32, 5, 0}, {91, 105, 119, 116}, 0, TAG(PAD), FX(0, 0, 19, 69), 0, 0},
+    {"SKYLIGHT", {1, 9, -36, 118, 0, 46, 0, 2}, {102, 108, 120, 116}, 0, TAG(PAD), FX(0, 0, 11, 75), 0, 0},
+    {"WILLOW TINE", {1, 2, 52, 53, 0, 16, 0, 0}, {3, 73, 0, 91}, 0, TAG(BELL), FX(0, 0, 24, 58), 0, 0},
+    {"DEW BELL", {4, 0, 32, 84, 2, 7, 0, 0}, {13, 97, 0, 103}, 0, TAG(BELL), FX(0, 0, 44, 82), 0, 0},
+    {"LINDEN BASS", {0, 4, 23, 56, 0, 52, 9, 0}, {27, 84, 103, 88}, 0, TAG(BASS), FX(0, 0, 0, 19), 0, 0}
+};
 static const engine_t ENG_SINEFM = {.name = "SINE FM",
                                     .page_title = {"OPERATOR", "COLOR"},
                                     .edit = {{"RATIO", F_ENUM, 0, 4, 0, SF_RAT, 0},
