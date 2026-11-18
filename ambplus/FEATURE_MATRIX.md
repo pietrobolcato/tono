@@ -1,6 +1,6 @@
 # Required feature acceptance matrix
 
-Latest v0.2 behavior and measurements: FEEDBACK_VALIDATION_REPORT.md. Per-feature PASS means the stated software test level; human musical acceptance remains pending.
+Latest v0.3 behavior and measurements: TRANSITIONS_VALIDATION_REPORT.md. Per-feature PASS means the stated software test level; human musical acceptance remains pending.
 
 PASS below means exercised in the stated software test level. It never means hardware certification. The overall stable release gate is BLOCKED. Only microphone capture and fullscreen VISUAL were intentionally deferred.
 
@@ -18,16 +18,18 @@ PASS below means exercised in the stated software test level. It never means har
 | Pitched/drum recording, off-scale notes, manual locks | PASS in native C | Step/lane/REC fixtures and serialized preservation; real GPIO scripted note/role controls in package soak |
 | Shared FX, layer sends, EQ, output protection | PARTIAL | Real JIANT DSP plus master EQ, unclipped captured output; heavy-FX strict timing gate fails |
 | Smooth tails / no jumps across all combinations | PARTIAL | Native ramps, fade/voice-steal tests and unclipped capture; no exhaustive transition or human listening acceptance |
-| Native Phosphor six EDIT / five GLO pages | PASS renderer; PARTIAL interactive acceptance | 160-frame native bitmap audit at 240×240 with zero bounds/overlap findings; package LCD captures; desktop UI control was not comprehensively exercised manually |
+| Native Phosphor six EDIT / five GLO pages | PASS renderer; PARTIAL interactive acceptance | 176-frame native bitmap audit at 240×240 with zero bounds/overlap findings; package LCD captures; desktop UI control was not comprehensively exercised manually |
 | Contextual LEDs / scale cues | PASS in native fixture | Real HAL key map used; REC inert on GENERATE, active during recording; physical LED acceptance outstanding |
 | PRESETS recall at bar / SAVE overwrite guards | PASS in native C | Staged complete recall, cancellation, selected slot overwrite and failed-write tests |
 | Eight saves, CRC and versioning | PASS Puya software; BLOCKED UC25 | 1400 B vs existing 3840 B capacity; all eight A/B slots tested; separate-process Puya payload equality. UC25 has zero writes and SAVE REFUSED |
 | Resource layout / no reserved-sector changes | PASS static/build | App/RAM budgets pass; HAL flash driver, linker layout, loader and package builder unchanged |
 | Dense voice bound | PASS in native C | 40-note fixture enforces global cap of four |
 | DSP golden / full host regression | PARTIAL / FAIL overall | 157 unchanged golden renders; 22 CPU-budget entries and two web-editor mock failures remain in baseline suite |
-| Strict worst-case timing | FAIL | Peak 101%, max 2935 µs, 4 late halves, 5 sheds in 60 s; audio_lost=0; not a release pass |
+| Strict worst-case timing | FAIL | Peak 96%, max 2811 µs, 3 late halves, 2 sheds in 60 s; audio_lost=0; not a release pass |
 | 20-minute exact-package soak | See report | Script and diagnostics included; fast emulation is a functional stability level, separate from strict timing |
 | Shared HOME pitch-class pool / track restore / overdub | PASS native + exact-package coverage | Editable pool drives voicing and persists; per-track restore/cancel; REC captures generated melody and keeps other slots; v3 migration |
 | Physical FM1 / chip / backups / recovery | BLOCKED | No owner JEDEC, two verified backups, exported settings, stock image or recovery/signoff evidence supplied |
 | External microphone/voice capture | DEFERRED by scope | UI states unavailable; no simulated capture |
 | Fullscreen VISUAL | DEFERRED by scope | Page ID reserved |
+
+AUTO progression, 6 Pad pairs/8 motifs, actual wet-tail/source fades and reversible MANUAL/AUTO mode: PASS native behavioral tests and exact-package coverage; human musical acceptance pending. Strict 320 MHz passes; retained 240 MHz timing fails.

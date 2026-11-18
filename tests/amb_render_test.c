@@ -75,6 +75,15 @@ int main(int argc,char **argv)
     for(page=0;page<3;page++)for(style=0;style<(page==2?6u:8u);style++){
         amb_policy_choose(&amb.policy,page,style,0);snprintf(name,sizeof name,"generate_%u_%u",page,style);ar_frame(name,dir,style==7 || style==5);
     }
+    for(role=0;role<7;role++){
+        amb_patch(0,role,0);ambr.view=1;ambr.page=4;
+        for(bank=0;bank<2;bank++){
+            amb.layer[0].generated=(uint8_t)bank;snprintf(name,sizeof name,"pattern_role_%u_%s",role,bank?"auto":"manual");ar_frame(name,dir,1);
+        }
+    }
+    ambr.view=2;ambr.page=2;ambr.notice[0]=0;fm1_ms=5000;
+    ambr.fade[0].stage=AMB_FADE_OUT;ar_frame("transition_out",dir,1);
+    ambr.fade[0].stage=AMB_FADE_IN;ar_frame("transition_in",dir,1);ambr.fade[0].stage=0;
     ambr.view=0;ambr.proposal=2;ar_frame("chord_proposal",dir,1);ambr.proposal=255;
     for(style=0;style<14;style++){ambr.piece_preview=(uint8_t)style;snprintf(name,sizeof name,"preset_%u",style);ar_frame(name,dir,style==0 || style==13);}
     ambr.piece_preview=255;ambr.view=3;for(style=0;style<8;style++){ambr.slot=(uint8_t)style;ambr.overwrite=style%2;snprintf(name,sizeof name,"save_%u",style);ar_frame(name,dir,1);}

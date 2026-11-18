@@ -37,3 +37,11 @@ FLASH STATUS: NOT AUTHORISED. This control card is for the emulator until the ow
 - **Emulator combinations:** hold computer **7** (HOME), then press **Z** (OCT−) for mute or **X** (OCT+) for solo. Hold 7 and use left/right for cross-layer editing in EDIT. You can also hold 7 while clicking a panel button. The mouse alone holds one control at a time; no separate HTML latch is involved.
 
 Saves are now version 3, still 1400 bytes in the same eight existing A/B objects. Version 1/2 records load with their saved musical settings and stock scale pool; old v0.1 firmware cannot read version 3 records. Keep old projects/backups for rollback. New factory sustain defaults apply when loading a factory piece/patch; existing user envelopes are preserved.
+
+## v0.3 overrides: musical transitions and AUTO return
+
+Queued chords, committed GENERATE styles and generated pitched-mode/speed changes now use a **1.2 s source fade-out → existing wet tail → 2.4 s source fade-in**. Reverb/delay returns are never reset or globally faded. Fresh synth voices enter only after the source reaches zero; no extra voices/buffered fake tails are added. This replaces v0.2's pitch-glide-only chord change. Manual locked layers do not follow or fade during global changes. A dry layer fades its dry source without forced wet effects.
+
+AUTO harmony no longer uses the erroneous 0↔3 progression table. The seeded weighted degree bag avoids immediate repeats and A–B–A, traversing seven different degrees in the first seven-note-scale cycle. Harmonic notes still come from your fixed key/scale or edited shared pool using the licensed AMB-1 helper. GENERATE governs timing/phrasing/interplay, not a new key or scale; its eight PHRASES now also choose Pad motifs/voicing pairs. Six pairs and slow register motion replace the fixed pair; surviving Pad voices are not retriggered just because the upper tone was stolen.
+
+On EDIT/PATTERN, **EDIT or SEQ again toggles MANUAL/AUTO**. Manual notes and drum lanes stay intact while AUTO plays; toggle back to reuse them. REC from AUTO captures a new generated snapshot for overdub, so use the mode toggle to return to existing edits. Both mode directions use the tail bridge. Runtime progression-bag/transport state is not a saved audio snapshot; v3 musical settings/manual payloads remain compatible with v0.2.

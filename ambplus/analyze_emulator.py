@@ -33,7 +33,7 @@ if 'amb' in symbols:
  'active_styles':list(blob[12:15]),'pending_styles':list(blob[15:18]),'variation':blob[18],
  'key':blob[22],'scale':blob[23],'chord':blob[24],
  'custom_note_pool_relative':(blob[195]|blob[501]<<8) if struct.unpack_from('<I',blob,4)[0]>=3 else 0,
- 'layers':[{'role':blob[176+i*306],'patch':blob[177+i*306],'engine':blob[178+i*306],
+ 'layers':[{'role':blob[176+i*306],'patch':blob[177+i*306],'engine':blob[178+i*306],'generated':blob[179+i*306],
  'manual_and_patch_sha256':hashlib.sha256(blob[176+i*306:176+(i+1)*306]).hexdigest()} for i in range(4)]}
 if args.audio:
  a=array.array('h',args.audio.read_bytes());frames=len(a)//2
