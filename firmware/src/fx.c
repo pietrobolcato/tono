@@ -1977,6 +1977,9 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
         if ((duck_g0 < 32767 || duck_g1 < 32767) && ENGINES[t->engine] != &ENG_DRUM)   /* DUCK: the kick's */
             lq = duck_ramp(l0 >> 8, mp_lvl[ti] >> 8, &dl);
         track_dist(t, b, n);
+#if AMBPLUS
+        amb_layer_process(ti,b,n);
+#endif
         int32_t pm0 = 32768, pm1 = 32768;               /* (0.6.48: drum_mix's; pf.mg counts only while muting) */
         if ((pf.mute >> (t - trk)) & 1u) {
             pm0 = pf.mg[ti];

@@ -13,7 +13,7 @@ int main(void)
         amb_step();
         if(i%16==0 && i){assert(amb.chord!=current && amb.chord!=last);seen|=1u<<amb.chord;}
     }assert(seen==127);
-    amb_factory(0);amb.auto_index=0;
+    amb_fixture_scene(0);amb.auto_index=0;
     manual=amb.layer[0];
     for(k=0;k<8;k++){
         uint64_t hash=1469598103934665603ull;unsigned distinct=0;uint16_t pairs[64];
@@ -28,7 +28,7 @@ int main(void)
         assert(distinct>=3);hashes[k]=hash;for(i=0;i<k;i++)assert(hash!=hashes[i]);
     }assert(!memcmp(&manual,&amb.layer[0],sizeof manual));
     /* Global harmony changes leave a locked manual pattern and its gain alone. */
-    amb_factory(0);amb.auto_index=0;amb.layer[2].generated=0;amb.layer[2].notes[7]=61;manual=amb.layer[2];
+    amb_fixture_scene(0);amb.auto_index=0;amb.layer[2].generated=0;amb.layer[2].notes[7]=61;manual=amb.layer[2];
     ambr.solo=0;amb_prepare();for(k=0;k<NTRK;k++)memset(trk[k].v,0,sizeof trk[k].v);
     for(k=0;k<4;k++)trk[k].engine=trk[k].eng_req;
     seq_start();for(i=0;i<FS*8u/CTL;i++)mix_block(out,CTL);
@@ -57,7 +57,7 @@ int main(void)
         ambr.view=1;ambr.page=1;ambr.bank=0;before=fx;delay=dly_u;memcpy(reverb,rev_comb,sizeof reverb);
         turn(EN_SELECT,1);assert(amb.layer[0].patch==(old_patch+1)%8 && amb.layer[0].level==level);
         assert(!memcmp(&before,&fx,sizeof fx));assert(!memcmp(&delay,&dly_u,sizeof delay));assert(!memcmp(reverb,rev_comb,sizeof reverb));
-        for(i=0;i<FS/CTL;i++)mix_block(out,CTL);
+        for(i=0;i<FS*4u/CTL;i++)mix_block(out,CTL);
         assert(trk[0].engine==amb.layer[0].engine && ambr.held_n[0]);
         /* A parameter knob publishes its new value directly, without loading a patch. */
         {unsigned id=amb_sound_id(&amb.layer[0],0,1),old=amb.layer[0].base[id];before=fx;
@@ -67,20 +67,20 @@ int main(void)
         turn(EN_ALGO,1);assert(amb.layer[0].role==0 && ambr.proposal==1);
         assert(!memcmp(&before,&fx,sizeof fx));press(B_REC);assert(amb.layer[0].role==1);
         assert(!memcmp(&before,&fx,sizeof fx));assert(!memcmp(&delay,&dly_u,sizeof delay));assert(!memcmp(reverb,rev_comb,sizeof reverb));
-        for(i=0;i<FS/CTL;i++)mix_block(out,CTL);
+        for(i=0;i<FS*4u/CTL;i++)mix_block(out,CTL);
         assert(trk[0].engine==amb.layer[0].engine && ambr.held_n[0]);
     }
     /* Style commits occur at four bars without forcibly retiring held voices. */
-    amb_factory(0);amb.auto_index=0;ambr.step=63;
+    amb_fixture_scene(0);amb.auto_index=0;ambr.step=63;
     for(k=0;k<3;k++)amb_policy_choose(&amb.policy,k,3,1);
     amb_step();for(k=0;k<3;k++)assert(amb.policy.active[k]!=3);
     amb_step();for(k=0;k<3;k++)assert(amb.policy.active[k]==3);
     /* Either EDIT or a second SEQ press returns to AUTO without deleting manual notes. */
-    amb_factory(0);song.playing=0;amb_target(1);ambr.view=1;ambr.page=4;
+    amb_fixture_scene(0);song.playing=0;amb_target(1);ambr.view=1;ambr.page=4;
     amb.layer[0].generated=0;amb.layer[0].notes[3]=61;manual=amb.layer[0];press(B_EDIT);assert(amb.layer[0].generated);
     assert(!memcmp(manual.notes,amb.layer[0].notes,16));press(B_SEQ);assert(!amb.layer[0].generated);assert(!memcmp(manual.notes,amb.layer[0].notes,16));
     /* Voice pressure must not restart the one Pad tone that survived. */
-    amb_factory(0);amb.auto_index=0;amb_prepare();for(k=0;k<NTRK;k++)memset(trk[k].v,0,sizeof trk[k].v);
+    amb_fixture_scene(0);amb.auto_index=0;amb_prepare();for(k=0;k<NTRK;k++)memset(trk[k].v,0,sizeof trk[k].v);
     for(k=0;k<4;k++)trk[k].engine=trk[k].eng_req;
     {uint8_t notes[2];unsigned gate;amb.policy.active[1]=1;assert(amb_generated_notes(0,16,1,notes,&gate)==2);amb_note(0,notes[0],70,FS*4);}
     {voice_t *v=0;

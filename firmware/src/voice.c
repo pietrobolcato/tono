@@ -372,6 +372,9 @@ static uint32_t voice_victim(const track_t *self, int soft, track_t **pp)
         track_t *t = &trk[p];
         uint32_t mode = trk_vmode(t);
         uint32_t low = mode == V_POLY ? lowest_held(t) : NVOICE;
+#if AMBPLUS
+        if(amb_tail_releasing(p))continue; /* finish a user-requested sound release */
+#endif
         if (soft && t == self)
             continue;
         for (i = 0; i < NVOICE; i++) {
@@ -690,6 +693,12 @@ static volatile uint8_t asleep_hit;                     /* (0.6.28) a note went 
                                                          * silenced track's voices end, it costs nothing) */
 static void trk_note_on(track_t *t, uint32_t note, uint32_t vel)
 {
+#if AMBPLUS
+    if(amb_tail_releasing((unsigned)(t-trk)))return;
+    if(amb_tail_any() && voices_busy()>=voice_cap()){
+        track_t *victim=0;if(voice_victim(t,0,&victim)==NVOICE)return;
+    }
+#endif
     uint32_t any = 0, i, mode = trk_vmode(t);
     if ((uint32_t)(t - trk) >= trk_live && !t->p[P_MUTE]) {
         asleep_hit = 1;                                 /* (0.6.28) a note for a track asleep: the UI says so */
@@ -937,7 +946,13 @@ static int32_t env_tick(track_t *t, voice_t *v)
             v->stage = 1;
         break;
     case 3:
-        v->env -= mulq16(v->env, ENV_EXP[clamp(p[P_REL] + v->henv, 0, 127)]);
+        {
+            uint32_t rate=ENV_EXP[clamp(p[P_REL] + v->henv, 0, 127)];
+#if AMBPLUS
+            rate=amb_tail_coeff((unsigned)(t-trk),rate);
+#endif
+            v->env -= mulq16(v->env,rate);
+        }
         if (v->env < (1 << 12)) {
             v->env = 0;
             v->stage = 0;
@@ -1037,7 +1052,11 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
                     v->env = v->env_out = 0;
                     continue;
                 }
-                if (v->stage != 4u) {                   /* (0.6.74: given up, env_tick's fade) */
+                if (v->stage != 4u
+#if AMBPLUS
+                    && !amb_tail_releasing(ti)
+#endif
+                ) {                   /* (0.6.74: given up, env_tick's fade) */
                     v->env = 1 << 24;                   /* (the ADSR's release never ends it) */
                     env = 32767;
                 }

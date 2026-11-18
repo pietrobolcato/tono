@@ -54,7 +54,7 @@ int main(int argc,char **argv)
     for(target=0;target<5;target++){amb_target(target);snprintf(name,sizeof name,"home_%u",target);ar_frame(name,dir,1);}
     for(role=0;role<7;role++){
         amb_patch(0,role,0);ambr.target=1;ambr.edit_layer=0;ambr.view=1;
-        for(page=0;page<6;page++)for(bank=0;bank<(page==1?(role==6?3u:2u):1u);bank++)for(fx=0;fx<(page==5?5u:1u);fx++){
+        for(page=0;page<7;page++)for(bank=0;bank<(page==1?(role==6?3u:2u):1u);bank++)for(fx=0;fx<(page==5?5u:1u);fx++){
             ambr.page=(uint8_t)page;ambr.bank=(uint8_t)bank;ambr.fx=(uint8_t)fx;
             snprintf(name,sizeof name,"role_%u_page_%u_bank_%u_fx_%u",role,page,bank,fx);ar_frame(name,dir,role==0 || role==6);
         }
@@ -86,6 +86,8 @@ int main(int argc,char **argv)
     ambr.view=1;ambr.page=0;ambr.proposal=1;ar_frame("role_proposal",dir,1);ambr.proposal=255;
     ambr.page=4;ambr.recording=1;ar_frame("pattern_recording",dir,1);ambr.recording=0;
     amb_say("MASTER: PICKUP SAVED LEVEL");ar_frame("footer_notice",dir,1);ambr.notice[0]=0;
+    ambr.view=1;ambr.page=6;amb.layer_eq[0][0]=6;amb.layer_eq[0][2]=-3;ar_frame("layer_eq",dir,1);
+    ambr.handoff[0]=1;ambr.view=1;ambr.page=1;ar_frame("release_pending",dir,1);ambr.handoff[0]=0;
     ambr.view=0;ambr.proposal=2;ar_frame("chord_proposal",dir,1);ambr.proposal=255;
     for(style=0;style<14;style++){ambr.piece_preview=(uint8_t)style;snprintf(name,sizeof name,"preset_%u",style);ar_frame(name,dir,style==0 || style==13);}
     ambr.piece_preview=255;ambr.view=3;for(style=0;style<8;style++){ambr.slot=(uint8_t)style;ambr.overwrite=style%2;snprintf(name,sizeof name,"save_%u",style);ar_frame(name,dir,1);}

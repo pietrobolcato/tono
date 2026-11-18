@@ -34,6 +34,10 @@ static int st_prog(uint32_t off,const void *src,uint32_t n)
 }
 #include "../firmware/src/storage.c"
 #include "../firmware/src/amb_native.c"
+/* Deterministic fixture setup: discard prior synthetic audio before starting
+ * the next independent case. UI controls still call the real amb_factory. */
+static void amb_fixture_scene(unsigned scene)
+{unsigned k;for(k=0;k<NTRK;k++)memset(trk[k].v,0,sizeof trk[k].v);memset(ambr.handoff,0,sizeof ambr.handoff);amb_factory(scene);}
 static void amb_render(unsigned frames)
 {
     int32_t out[CTL*2];unsigned i;
@@ -62,14 +66,14 @@ int AMB_MAIN(int argc,char **argv)
     ambr.view=0;amb_target(1);press(B_EDIT);assert(ambr.view==1 && ambr.page==0);
     turn(EN_ALGO,2);assert(amb.layer[0].role==0);press(B_REC);assert(amb.layer[0].role==2);
     press(B_SCL);assert(ambr.page==1);turn(EN_SELECT,1);assert(amb.layer[0].patch==1);
-    for(i=0;i<6;i++)press(B_SCL);assert(ambr.page==1);
-    amb_factory(0);ambr.view=1;ambr.page=4;ambr.edit_layer=2;press(B_REC);assert(ambr.recording);
+    for(i=0;i<7;i++)press(B_SCL);assert(ambr.page==1);
+    amb_fixture_scene(0);ambr.view=1;ambr.page=4;ambr.edit_layer=2;press(B_REC);assert(ambr.recording);
     host_notes=1u<<8;amb_input();assert(amb.layer[2].notes[0]==61 && !amb.layer[2].generated);
     press(B_REC);assert(!ambr.recording);
     before=amb;
     for(i=0;i<1000;i++) {amb_policy_choose(&amb.policy,i%3,i%(i%3==2?6:8),1);amb_policy_boundary(&amb.policy,i);amb_step();}
     assert(!memcmp(before.layer,amb.layer,sizeof amb.layer));
-    song.playing=0;amb_factory(0);ambr.view=3;ambr.slot=0;amb_save();assert(amb_writes==1);
+    song.playing=0;amb_fixture_scene(0);ambr.view=3;ambr.slot=0;amb_save();assert(amb_writes==1);
     before=amb;amb.master=333;amb_save();assert(ambr.overwrite && amb_writes==1);amb_save();assert(amb_writes==2);
     assert(amb_recall(0));assert(amb.master==333);
     amb.master=444;ambr.overwrite=1;amb_flash_fail=2;amb_save();amb_flash_fail=-1;
@@ -78,7 +82,7 @@ int AMB_MAIN(int argc,char **argv)
     for(i=0;i<8;i++) assert(amb_recall(i));
     amb.magic=0;assert(!amb_valid(&amb));amb=before;
     for(scene=0;scene<6;scene++) {
-        energy=0;amb_factory(scene);amb.master=650;assert(amb_valid(&amb));seq_start();
+        energy=0;amb_fixture_scene(scene);amb.master=650;assert(amb_valid(&amb));seq_start();
         for(i=0;i<FS*12u/CTL;i++) {mix_block(out,CTL);amb_output(out,CTL);for(k=0;k<CTL*2;k++) {assert(out[k]>=-30000 && out[k]<=30000);energy+=(int64_t)out[k]*out[k];}}
         assert(energy>1000000);printf("scene %u energy %lld PASS\n",scene,(long long)energy);seq_stop();amb_render(FS*2);
     }
@@ -86,7 +90,7 @@ int AMB_MAIN(int argc,char **argv)
         uint64_t hashes[8]={0};unsigned patch;
         for(patch=0;patch<(scene==6?2u:8u);patch++) {
             int32_t mono[CTL];uint64_t hash=1469598103934665603ull;
-            amb_factory(0);song.playing=0;
+            amb_fixture_scene(0);song.playing=0;
             for(k=0;k<NTRK;k++)memset(&trk[k],0,sizeof trk[k]);
             amb_patch(0,scene,scene==6?0:patch);
             if(scene==6)amb.layer[0].base[P_E0]=(int16_t)patch;
@@ -103,7 +107,7 @@ int AMB_MAIN(int argc,char **argv)
         }
     }
     for(k=0;k<4;k++) {
-        amb_factory(0);amb_patch(k,6,0);amb_prepare();trk[k].engine=ENGI_AMB_SAMPLE;
+        amb_fixture_scene(0);amb_patch(k,6,0);amb_prepare();trk[k].engine=ENGI_AMB_SAMPLE;
         assert(amb_valid(&amb));
         for(i=0;i<4;i++) {
             amb.layer[k].base[P_E1]=(int16_t)i;amb_base_revision[k]++;
@@ -111,36 +115,36 @@ int AMB_MAIN(int argc,char **argv)
         }
     }
     /* Whole-state macro sweep leaves all deep baselines intact. */
-    amb_factory(0);before=amb;
+    amb_fixture_scene(0);before=amb;
     for(i=0;i<128;i++) {
         for(k=0;k<4;k++)amb.layer[k].macro[i%4]=(uint8_t)i;
         amb_prepare();
         for(k=0;k<4;k++)assert(!memcmp(before.layer[k].base,amb.layer[k].base,sizeof amb.layer[k].base));
     }
-    amb_factory(0);amb.layer[0].swing=100;ambr.step=1;amb_step();assert(ambr.due[0]>0);
+    amb_fixture_scene(0);amb.layer[0].swing=100;ambr.step=1;amb_step();assert(ambr.due[0]>0);
     ambr.view=2;ambr.page=2;before=amb;turn(EN_ALGO,4);press(B_REC);assert(!memcmp(&before,&amb,sizeof amb));
-    amb_factory(0);ambr.view=0;seq_start();ambr.step=9;ambr.piece_preview=2;amb_rec();
+    amb_fixture_scene(0);ambr.view=0;seq_start();ambr.step=9;ambr.piece_preview=2;amb_rec();
     assert(amb_pending_ready && amb.key==0);
     while(ambr.step<16)amb_step();assert(amb.key==0);
     amb_step();assert(!amb_pending_ready && amb.key==2 && song.playing);
     seq_stop();ambr.last_play=0;
-    amb_factory(0);amb.layer[0].level=0;amb_patch(0,2,0);assert(amb.layer[0].level==0);
-    amb_factory(0);song.playing=0;amb.version=1;memset(&amb.policy,0,sizeof amb.policy);
-    assert(!st_save(amb_object(7),&amb,sizeof amb));assert(amb_recall(7));
+    amb_fixture_scene(0);amb.layer[0].level=0;amb_patch(0,2,0);assert(amb.layer[0].level==0);
+    amb_fixture_scene(0);song.playing=0;amb.version=1;memset(&amb.policy,0,sizeof amb.policy);
+    assert(!st_save(amb_object(7),&amb,1400));assert(amb_recall(7));
     assert(amb.version==AMB_VERSION && amb.policy.variation==40 && amb.policy.active[0]==0 && amb.policy.pending[0]==255);
-    amb_factory(0);ambr.view=2;ambr.page=2;amb_leds();
+    amb_fixture_scene(0);ambr.view=2;ambr.page=2;amb_leds();
     {unsigned q=led_pos[panel.btn[B_REC]];assert(q!=255);assert(!(fm1_led_dim[q>>3]&(1u<<(q&7))));}
     ambr.view=1;ambr.page=4;ambr.edit_layer=0;ambr.recording=1;amb_leds();
     {unsigned q=led_pos[panel.btn[B_REC]];assert(fm1_led[q>>3]&(1u<<(q&7)));}
     song.playing=0;ambr.recording=0;ambr.view=0;amb.layer[0].solo_plus1=3;ambr.overwrite=1;ambr.slot=6;
     amb_save();ambr.solo=-1;assert(amb_recall(6));assert(ambr.solo==2);
-    amb_factory(0);ambr.solo=-1;amb.layer[0].solo_plus1=0;
+    amb_fixture_scene(0);ambr.solo=-1;amb.layer[0].solo_plus1=0;
     for(k=0;k<NTRK;k++)memset(trk[k].v,0,sizeof trk[k].v);
     amb_prepare();for(k=0;k<4;k++){trk[k].engine=trk[k].eng_req;trk[k].xf_on=trk[k].xf=trk[k].xin=0;trk_note_on(&trk[k],k==3?36:48+k*4,80);}
     for(i=0;i<40;i++){trk_note_on(&trk[i%4],48+(i%24),80);assert(voices_busy()<=4);}
     printf("offsets: piece.policy=%zu piece.layer=%zu layer.bytes=%zu runtime.step=%zu\n",offsetof(amb_piece_t,policy),offsetof(amb_piece_t,layer),sizeof(amb_layer_t),offsetof(__typeof__(ambr),step));
     if(argc>1)f=fopen(argv[1],"wb");
-    if(f) {amb_factory(0);seq_start();wav_hdr(f,FS*20);for(i=0;i<FS*20u/CTL;i++){mix_block(out,CTL);amb_output(out,CTL);for(k=0;k<CTL;k++)wav_put(f,out[k*2],out[k*2+1]);}fclose(f);seq_stop();}
+    if(f) {amb_fixture_scene(0);seq_start();wav_hdr(f,FS*20);for(i=0;i<FS*20u/CTL;i++){mix_block(out,CTL);amb_output(out,CTL);for(k=0;k<CTL;k++)wav_put(f,out[k*2],out[k*2+1]);}fclose(f);seq_stop();}
     puts("AMB+ native: controls/roles/pages/recording/non-destructive generation/8-slot A-B recovery/6-scene DSP PASS");
     return 0;
 }
