@@ -44,5 +44,8 @@ int main(void)
     amb_pool_set(amb_pool()|2u);amb.chord=3;amb_revoice();assert(!memcmp(&saved,&amb.layer[2],sizeof saved));
     /* Cancel restore through a different page before any confirmation. */
     ambr.view=1;ambr.page=0;press(B_EDIT);assert(ambr.reset_pending);press(B_SCL);assert(!ambr.reset_pending);
+    amb_factory(0);amb_prepare();for(k=0;k<4;k++){trk[k].engine=trk[k].eng_req;memset(trk[k].v,0,sizeof trk[k].v);}
+    song.playing=1;ambr.last_play=0;amb_clock(CTL);assert(ambr.held_n[0] && ambr.held_n[1]);assert(ambr.off[0]>FS*16u);
+    amb_release(2);ambr.solo=0;amb_layer_step(2,0,15);assert(!ambr.held_n[2]);song.playing=0;
     puts("AMB+ feedback: LEDs/generated overdub/note pool/track restore/live LFO/macros/sustain/harmony carry PASS");return 0;
 }

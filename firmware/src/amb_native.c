@@ -38,7 +38,7 @@ static struct {
     uint32_t phase, step, off[4], due[4], due_step[4], play_t, last_draw, notice_ms;
     uint8_t due_mask[4];
     uint32_t applied_revision[4], transition[4];
-    uint8_t recent[4][16], recent_vel[4][16], recent_valid[4], reset_pending, detail;
+    uint8_t recent[4][16], recent_vel[4][16], recent_valid[4], reset_pending, detail, foundation_pending[4];
     uint8_t loading, last_play, target, edit_layer, view, page, bank, fx, lane, cursor, recording;
     uint8_t proposal, chord_q, piece_preview, slot, overwrite, dirty, panic, play_used, home_used;
     uint8_t gen_candidate[3], gen_edit[3];
@@ -145,15 +145,16 @@ static void amb_fill_patch(amb_layer_t *l,unsigned key,unsigned k,unsigned role,
     if(role==6){l->base[P_E4]=0;l->base[P_E5]=100;l->base[P_E6]=40;l->base[P_E7]=85;l->base[P_LN7]=100;l->base[P_LN6]=20;}
     for(i=0;i<4;i++)l->macro[i]=64;
 }
+static void amb_release(unsigned k);
 static void amb_patch(unsigned k,unsigned role,unsigned patch)
 {
     amb_layer_t *l=&amb.layer[k];track_t *t=&trk[k];
-    ambr.loading=1;load_begin(t,LOAD_SOUND);
+    ambr.loading=1;amb_release(k);load_begin(t,LOAD_SOUND);
     amb_fill_patch(l,amb.key,k,role,patch);
     t->eng_req=l->engine;t->preset=role<6?AMB_PATCH[role][patch%8].preset:0;
     memcpy(t->p,l->base,sizeof t->p);fm6_track_loaded(t);
     panic_req|=(uint8_t)(1u<<k);load_end(t);ambr.loading=0;ambr.dirty=1;
-    amb_base_revision[k]++;
+    amb_base_revision[k]++;ambr.foundation_pending[k]=(uint8_t)(role<2);
 }
 static void amb_make_scene(amb_piece_t *p,unsigned scene)
 {
@@ -190,7 +191,7 @@ static void amb_install(const amb_piece_t *p)
         trk[k].preset=amb.layer[k].role<6?AMB_PATCH[amb.layer[k].role][amb.layer[k].patch].preset:0;
         memcpy(trk[k].p,amb.layer[k].base,sizeof trk[k].p);
         fm6_track_loaded(&trk[k]);panic_req|=(uint8_t)(1u<<k);
-        amb_base_revision[k]++;
+        amb_base_revision[k]++;ambr.foundation_pending[k]=(uint8_t)(amb.layer[k].role<2);
     }
     amb_pickup_arm(&ambr.pickup,ambr.target?amb.layer[ambr.target-1].level*1023u/127u:amb.master);
     amb_revoice();ambr.loading=0;ambr.dirty=1;
@@ -361,7 +362,7 @@ static unsigned amb_generated_notes(unsigned k,unsigned step,unsigned mask,uint8
 }
 static void amb_participation(amb_participation_t *part,unsigned step)
 {
-    unsigned k;for(k=0;k<4;k++)part[k]=(amb_participation_t){amb.layer[k].generated,(uint8_t)clamp(amb.layer[k].density+
+    unsigned k;for(k=0;k<4;k++)part[k]=(amb_participation_t){amb.layer[k].generated && !amb.layer[k].base[P_MUTE] && (ambr.solo<0 || (unsigned)ambr.solo==k),(uint8_t)clamp(amb.layer[k].density+
         ((amb.layer[k].role==4)?(ambr.macro_smooth[k][1]/256-64)/2:
          (amb.layer[k].role==0 || amb.layer[k].role==1)?(ambr.macro_smooth[k][2]/256-64)/2:0)+
         ((int)amb_triangle(step/16,32)-50)*amb.evolve[2]/500,0,100)};
@@ -388,7 +389,7 @@ static void amb_capture_generated(unsigned k)
 static void amb_layer_step(unsigned k,unsigned step,unsigned mask)
 {
     amb_layer_t *l=&amb.layer[k];unsigned i,tick=step%16,bar=step/16,gate=FS/2,n;uint8_t notes[2];
-    if(trk[k].engine!=l->engine)return;
+    if(trk[k].engine!=l->engine || l->base[P_MUTE] || (ambr.solo>=0 && (unsigned)ambr.solo!=k))return;
     if(l->role==4){
         static const uint8_t drum[4]={36,38,42,50};
         if(!l->generated){for(i=0;i<4;i++)if((l->drums[i]>>tick)&1u)trk_note_on(&trk[k],drum[i],64+i*4);}
@@ -450,7 +451,15 @@ static void amb_clock(uint32_t n)
         if(ambr.last_play) for(k=0;k<4;k++) amb_release(k);
         ambr.last_play=0;return;
     }
-    if(!ambr.last_play) {ambr.phase=ambr.step=0;ambr.last_play=1;amb_step();}
+    if(!ambr.last_play){
+        ambr.phase=ambr.step=0;ambr.last_play=1;
+        for(k=0;k<4;k++)ambr.foundation_pending[k]=(uint8_t)(amb.layer[k].role<2 && amb.layer[k].generated);
+        amb_step();
+    }
+    for(k=0;k<4;k++)if(ambr.foundation_pending[k] && trk[k].engine==amb.layer[k].engine){
+        ambr.foundation_pending[k]=0;
+        if(amb.layer[k].generated && !ambr.held_n[k])amb_layer_step(k,0,1u<<k);
+    }
     for(k=0;k<4;k++)if(ambr.due[k]) {
         if(ambr.due[k]<=n) {ambr.due[k]=0;amb_layer_step(k,ambr.due_step[k],ambr.due_mask[k]);}
         else ambr.due[k]-=n;
@@ -653,7 +662,7 @@ static void amb_rec(void)
         amb.layer[0].solo_plus1=(uint8_t)solo;amb.layer[0].reserved=p0;amb.layer[1].reserved=p1;
         trk[k].eng_req=amb.layer[k].engine;trk[k].preset=amb.layer[k].role<6?AMB_PATCH[amb.layer[k].role][amb.layer[k].patch].preset:0;
         memcpy(trk[k].p,amb.layer[k].base,sizeof trk[k].p);fm6_track_loaded(&trk[k]);panic_req|=(uint8_t)(1u<<k);
-        amb_base_revision[k]++;ambr.recent_valid[k]=0;ambr.reset_pending=0;ambr.loading=0;
+        amb_base_revision[k]++;ambr.foundation_pending[k]=(uint8_t)(amb.layer[k].role<2);ambr.recent_valid[k]=0;ambr.reset_pending=0;ambr.loading=0;
         if(ambr.target==k+1)amb_pickup_arm(&ambr.pickup,amb.layer[k].level*1023u/127u);
         amb_say("TRACK RESTORED TO LOADED PIECE");return;
     }
@@ -716,8 +725,11 @@ static void amb_input(void)
             ambr.home_used=1;
             if(ambr.target) {
                 k=ambr.target-1;
-                if(b==B_OCTDN) amb.layer[k].base[P_MUTE]=!amb.layer[k].base[P_MUTE];
-                else {ambr.solo=ambr.solo==(int)k?-1:(int8_t)k;amb.layer[0].solo_plus1=(uint8_t)(ambr.solo+1);}
+                if(b==B_OCTDN){amb.layer[k].base[P_MUTE]=!amb.layer[k].base[P_MUTE];if(amb.layer[k].base[P_MUTE])amb_release(k);else ambr.foundation_pending[k]=(uint8_t)(amb.layer[k].role<2);}
+                else {unsigned j;ambr.solo=ambr.solo==(int)k?-1:(int8_t)k;amb.layer[0].solo_plus1=(uint8_t)(ambr.solo+1);
+                    for(j=0;j<4;j++)if(ambr.solo>=0 && j!=(unsigned)ambr.solo)amb_release(j);
+                    else ambr.foundation_pending[j]=(uint8_t)(amb.layer[j].role<2);
+                }
             }
         } else if(b==B_EDIT) {
             if(ambr.view==1 && ambr.page==0){ambr.reset_pending^=1;ambr.proposal=255;}
