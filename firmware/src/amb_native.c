@@ -1204,11 +1204,11 @@ static void amb_leds(void)
 }
 #define ABG TONO_PAPER
 #define AINK TONO_INK
-#define ADIM RGB(51,80,72)
-#define ALINE RGB(145,151,123)
-#define ASEL RGB(197,203,169)
-#define AQUEUE RGB(139,59,40)
-static const uint16_t field_color[]={RGB(160,71,43),RGB(48,103,99),RGB(155,101,42),RGB(76,92,112)};
+#define ADIM RGB(68,69,67)
+#define ALINE RGB(174,175,171)
+#define ASEL RGB(209,210,205)
+#define AQUEUE RGB(145,54,9)
+
 
 static void field_curve(int x0,int y0,int x1,int y1,int floor,uint16_t fill)
 {
@@ -1364,65 +1364,8 @@ static void amb_guidance(const amb_layer_t *l,const char **first,const char **se
     *first=a;*second=b;
 }
 
-/* Small silhouettes identify roles in the two performance views. Their
- * shape carries the distinction even when the print colors look similar. */
-static void amb_role_mark(int x,int y,unsigned role,uint16_t ink)
-{
-#define MARK(a,b) ((tono_point){x+(a),y+(b)})
-    switch(role){
-    case 0: /* Pad: leaf */
-        tono_triangle(MARK(1,13),MARK(15,1),MARK(13,11),ink);
-        tono_triangle(MARK(1,13),MARK(13,11),MARK(4,16),ink);
-        cv_line(x+1,y+16,x+6,y+11,ink);
-        break;
-    case 1: /* Drone: firs */
-        tono_triangle(MARK(0,14),MARK(6,2),MARK(12,14),ink);
-        tono_triangle(MARK(9,14),MARK(13,6),MARK(17,14),ink);
-        cv_rect(x+5,y+13,2,3,ink);cv_rect(x+13,y+13,1,3,ink);
-        break;
-    case 2: /* Bells: stars */
-        tono_triangle(MARK(2,7),MARK(8,0),MARK(14,7),ink);
-        tono_triangle(MARK(2,7),MARK(14,7),MARK(8,14),ink);
-        cv_rect(x+14,y+12,3,3,ink);cv_rect(x+1,y+13,2,2,ink);
-        break;
-    case 3: /* Bass: strata */
-        for(int row=0;row<3;row++)cv_rect(x+2*row,y+3+4*row,17-3*row,3,ink);
-        break;
-    case 4: /* Drums: seeds */
-        cv_rect(x+1,y+2,5,5,ink);cv_rect(x+11,y+2,5,3,ink);
-        cv_rect(x+1,y+10,3,5,ink);cv_rect(x+8,y+8,8,7,ink);
-        break;
-    case 5: /* Texture: flecks */
-        for(int row=0;row<4;row++)for(int col=0;col<4;col++)
-            cv_rect(x+4*col+(row+col)%2,y+4*row+(col%2),1+(row+col)%3,2,ink);
-        break;
-    default: /* Sample: a wave */
-        cv_line_t(x,y+10,x+6,y+4,ink,2);cv_line_t(x+6,y+4,x+10,y+10,ink,2);
-        cv_line_t(x+10,y+10,x+16,y+5,ink,2);cv_rect(x+1,y+15,15,1,ink);
-        break;
-    }
-#undef MARK
-}
-
-/* A small landscape plate. Silhouettes distinguish the seven layer roles
- * even on a grayscale display. Draw only inside the patch page's art well. */
-static void field_plate(int x,int y,unsigned role)
-{
-    uint16_t color=field_color[role%4];
-    cv_rect(x,y,84,54,ASEL);
-    for(int j=-8;j<=8;j++){
-        int half=8;
-        while(half*half+j*j>65)half--;
-        cv_rect(x+62-half,y+12+j,2*half+1,1,TONO_CLAY);
-    }
-    for(int i=0;i<84;i++){
-        int hill=30+(i>23?i-23:23-i)/3,bank=42+(i>66?i-66:66-i)/5;
-        if(hill<54)cv_rect(x+i,y+hill,1,54-hill,ALINE);
-        cv_rect(x+i,y+bank,1,54-bank,color);
-    }
-    amb_role_mark(x+12,y+8,role,AINK);
-}
-
+/* Layer numbers are shared by HOME and ENSEMBLE. The orange mark tracks
+ * the selected target, including when several tracks have the same role. */
 static void amb_draw_home(void)
 {
     unsigned target=amb_level_feedback(),value=target?amb.layer[target-1].level:amb.master;
@@ -1436,11 +1379,9 @@ static void amb_draw_home(void)
         const unsigned role=amb.layer[target-1].role;
         label[0]='L';label[1]=(char)('0'+target);label[2]=' ';
         str_cpy(label+3,AMB_ROLE[role],sizeof label-3);
-        amb_role_mark(16,37,role,ink);
+        tono_disc(24,45,4,ink);
     }else{
-        tono_round(17,37,15,13,4,ink);
-        cv_rect(14,50,21,2,ink);
-        cv_rect(18,54,13,1,ink);
+        tono_disc(24,45,6,ink);
     }
     amb_text(44,36,label,AINK,14);amb_number(207,36,value*100u/max,AINK);
     cv_rect(44,52,181,3,ALINE);cv_rect(44,52,181u*value/max,3,ink);
@@ -1451,7 +1392,7 @@ static void amb_draw_home(void)
         int selected=ambr.target==k+1;
         cv_rect(x,y,110,29,selected?ASEL:ABG);
         cv_rect(x,y,110,1,selected?AINK:ALINE);
-        amb_role_mark(x+4,y+7,layer->role,field_color[layer->role%4]);
+        if(selected)tono_disc(x+9,y+10,3,TONO_ORANGE);
         amb_number(x+27,y+4,k+1,ADIM);
         amb_text(x+39,y+4,AMB_ROLE[layer->role],AINK,8);
         amb_text(x+27,y+15,layer->role==6?N_AS_SOURCE[layer->base[P_E0]&1]:amb_patch_name(layer),ADIM,14);
@@ -1478,7 +1419,7 @@ static void amb_draw_ensemble(void)
         for(unsigned i=0;i<NVOICE;i++)if(track->v[i].active){active++;held+=track->v[i].gate!=0;}
         cv_rect(8,y,224,20,k%2?ASEL:ABG);
         cv_rect(8,y+19,224,1,ALINE);
-        amb_role_mark(11,y+1,role,field_color[role%4]);
+        if(held && !muted)tono_disc(18,y+9,3,TONO_ORANGE);
         amb_number(35,y+5,k+1,ADIM);amb_text(46,y+5,AMB_ROLE[role],AINK,8);
         cv_rect(102,y+8,74,4,ALINE);cv_rect(102,y+8,width,4,AINK);
         amb_text(192,y+5,muted?"MUTE":ambr.handoff[k]?"TAIL":held?"NOTE":active?"REL":"REST",
@@ -1492,13 +1433,13 @@ static void amb_draw(void)
     if(!ambr.dirty && fm1_ms-ambr.last_draw<((ambr.view==4 || (ambr.view==1 && ambr.page==4))?50u:(ambr.view==1 && ambr.page==3)?80u:250u))return;
     ambr.last_draw=fm1_ms;ambr.dirty=0;
     cv_begin(240,147,ABG);
-    cv_rect(0,0,240,25,AINK);cv_bg=AINK;
-    cv_rect(0,22,240,3,field_color[ambr.view%4]);
-    amb_text(8,8,TONO_NAME,ABG,8);
-    amb_text(60,8,ambr.help?"HELP":ambr.view==4?"ENSEMBLE":ambr.view==0?"HOME":ambr.view==1?"EDIT":ambr.view==2?"GLOBAL":"SAVE",TONO_SAGE,8);
-    if(ambr.view!=4)amb_number(146,8,ambr.view==0?ambr.target+1:ambr.view==3?ambr.slot+1:ambr.page+1,ABG);
-    if(ambr.view!=4)amb_text(155,8,ambr.view==0?"/5":ambr.view==1?"/7":ambr.view==2?"/5":"/8",ABG,3);
-    amb_text(182,8,song.playing?">":"-",TONO_SAGE,1);amb_number(211,8,amb.global[G_BPM],ABG);
+
+
+    amb_text(8,8,TONO_NAME,AINK,8);
+    amb_text(60,8,ambr.help?"HELP":ambr.view==4?"ENSEMBLE":ambr.view==0?"HOME":ambr.view==1?"EDIT":ambr.view==2?"GLOBAL":"SAVE",ADIM,8);
+    if(ambr.view!=4)amb_number(146,8,ambr.view==0?ambr.target+1:ambr.view==3?ambr.slot+1:ambr.page+1,AINK);
+    if(ambr.view!=4)amb_text(155,8,ambr.view==0?"/5":ambr.view==1?"/7":ambr.view==2?"/5":"/8",AINK,3);
+    amb_text(182,8,song.playing?">":"-",song.playing?AQUEUE:ADIM,1);amb_number(211,8,amb.global[G_BPM],AINK);
     cv_rect(8,25,224,1,ALINE);cv_bg=ABG;
     if(ambr.help){
         if(ambr.view==3 || ambr.reset_pending || ambr.piece_preview!=255){
@@ -1520,7 +1461,7 @@ static void amb_draw(void)
         else amb_text(9,35,ambr.view==2?AMB_GLO[ambr.page]:"USER SAVE DESTINATION",AINK,32);
         cv_rect(8,48,224,1,ALINE);
         if(ambr.view==1 && ambr.page==0) {
-            field_plate(12,91,l->role);if(ambr.proposal!=255)field_plate(130,91,ambr.proposal);
+            cv_rect(12,97,83,1,ALINE);if(ambr.proposal!=255)cv_rect(130,97,83,2,TONO_ORANGE);
             amb_text(12,58,ambr.handoff[ambr.edit_layer]?"NEXT":"CURRENT",ADIM,12);amb_text(130,58,"PROPOSED",ADIM,12);
             amb_text(12,78,AMB_ROLE[l->role],AINK,12);amb_text(130,78,ambr.proposal==255?"-":AMB_ROLE[ambr.proposal],AQUEUE,12);
         } else if(ambr.view==1 && ambr.page==1) {
@@ -1531,10 +1472,10 @@ static void amb_draw(void)
                     unsigned id=amb_sound_id(l,1,i);const param_desc_t *d=amb_param_desc(l,id);char val[24];const char *unit=0;
                     int width=(l->base[id]-d->min)*78/(d->max-d->min?d->max-d->min:1);param_format(d,l->base[id],val,&unit);
                     amb_text(12,73+i*18,d->label,ADIM,10);amb_text(76,73+i*18,val,AINK,10);
-                    cv_rect(150,76+i*18,78,4,ALINE);cv_rect(150,76+i*18,width,4,field_color[i]);
+                    cv_rect(150,76+i*18,78,4,ALINE);cv_rect(150,76+i*18,width,4,AINK);
                 }
             }else{
-                field_plate(142,52,l->role);
+                
                 amb_text(12,60,l->role==6?(ambr.bank==0?"SOURCE":ambr.bank==1?"PLAYBACK":"CHARACTER"):"PATCH",ADIM,12);
                 cv_text(12,76,&AF_M,l->role==6?N_AS_SOURCE[l->base[P_E0]&1]:amb_patch_name(l),AINK);
                 amb_text(12,102,ENGINES[l->engine]->name,ADIM,12);amb_number(188,113,l->patch+1,AINK);
@@ -1571,7 +1512,7 @@ static void amb_draw(void)
                 int on=l->role==4?(l->drums[ambr.lane]>>i)&1u:(l->generated?ambr.recent[ambr.edit_layer][i]:l->notes[i])!=0;
                 int base=119;
                 cv_rect(12+i*14,base,10,3,ALINE);
-                if(on){int h=(l->generated || l->role==4)?17:9+(int)(l->velocity[i]*12/127);cv_rect(12+i*14,base-h,10,h+3,field_color[i/4]);}
+                if(on){int h=(l->generated || l->role==4)?17:9+(int)(l->velocity[i]*12/127);cv_rect(12+i*14,base-h,10,h+3,AINK);}
                 if(!(i%4))cv_rect(12+i*14,96,10,1,ADIM);
                 if((l->role!=4 || !l->generated) && i==ambr.cursor)cv_rect(12+i*14,133,10,1,ADIM);
                 if(song.playing && ambr.playhead_valid[ambr.edit_layer] && i==ambr.playhead[ambr.edit_layer])cv_rect(12+i*14,127,10,2,AQUEUE);
@@ -1594,7 +1535,7 @@ static void amb_draw(void)
             for(k=0;k<3;k++) {
                 unsigned style=ambr.gen_edit[k]?ambr.gen_candidate[k]:amb.policy.pending[k]!=255?amb.policy.pending[k]:amb.policy.active[k];
                 unsigned pending=ambr.gen_edit[k] || amb.policy.pending[k]!=255;
-                cv_rect(7,52+k*30,2,24,field_color[k]);
+                cv_rect(7,52+k*30,2,24,AINK);
                 amb_text(10,54+k*30,k==0?"RHYTHM":k==1?"PHRASE":"INTERPLAY",ADIM,10);
                 amb_text(78,54+k*30,k==0?AMB_RHYTHMS[style]:k==1?AMB_PHRASES[style]:AMB_INTERPLAY[style],pending?AQUEUE:AINK,24);
                 if(pending) amb_text(230,54+k*30,"Q",AQUEUE,1);
@@ -1606,13 +1547,13 @@ static void amb_draw(void)
                     for(i=0;i<27;i++) {
                         if(k==0) {
                             int on=amb_rhythm_event(&preview,i,0,40);
-                            cv_rect(11+i*8,72-(on?6:1),5,on?6:1,on?field_color[k]:ALINE);
+                            cv_rect(11+i*8,72-(on?6:1),5,on?6:1,on?AINK:ALINE);
                         } else if(k==1) {
                             int y=102-(amb_phrase_event(&preview,i*16,0)?5:0);
                             if(i)field_curve(3+i*8,last,11+i*8,y,105,ASEL);last=y;
                         } else {
                             unsigned m=amb_policy_events(&preview,i,parts),j;
-                            for(j=0;j<3;j++)cv_rect(11+i*8,127+j*4,5,2,(m>>j)&1u?field_color[j]:ALINE);
+                            for(j=0;j<3;j++)cv_rect(11+i*8,127+j*4,5,2,(m>>j)&1u?AINK:ALINE);
                         }
                     }
                 }
@@ -1625,13 +1566,13 @@ static void amb_draw(void)
             {const unsigned params[]={G_RSIZE,G_DMIX,G_CDEPTH,G_CLIP};
                 unsigned id=params[ambr.fx%4];
                 unsigned val=clamp(amb.global[id],0,GP[id].max);
-                for(i=0;i<22;i++){int h=3+(int)i/3;cv_rect(13+9*i,114-h,7,h,i*(unsigned)GP[id].max<22u*val?field_color[ambr.fx%4]:ASEL);}
+                for(i=0;i<22;i++){int h=3+(int)i/3;cv_rect(13+9*i,114-h,7,h,i*(unsigned)GP[id].max<22u*val?AINK:ASEL);}
             }
             amb_text(12,121,(ambr.fx%4==0 && fx.rtype!=amb.global[G_RTYPE])?"ECO: LIGHTER EFFECT ACTIVE":"SAME STATE AS HOME MASTER",ADIM,34);
         } else if(ambr.view==2 && ambr.page==1) {
             for(i=0;i<12;i++){
                 unsigned in=(amb_pool()>>i)&1u;int x=12+18*i;
-                cv_rect(x,104,16,29,in?field_color[i%4]:ASEL);cv_bg=in?field_color[i%4]:ASEL;
+                cv_rect(x,104,16,29,in?AINK:ASEL);cv_bg=in?AINK:ASEL;
                 amb_text(x+1,114,N_NOTE[(amb.key+i)%12],in?ABG:AINK,2);cv_bg=ABG;
             }
             amb_text(12,64,"TONAL CENTRE",ADIM,24);cv_text(12,77,&AF_M,N_NOTE[amb.key],AINK);
@@ -1660,7 +1601,7 @@ static void amb_draw(void)
         amb_chord_label(ambr.proposal,b);amb_text(18,96,b,AINK,16);amb_text(115,96,AMB_MOOD[ambr.proposal],ADIM,16);
     }
     cv_blit_cells(0,0);
-    cv_begin(240,93,AINK);
+    cv_begin(240,93,ABG);
     cv_rect(8,0,224,1,ALINE);
     {const char *first,*second,*status="";char notice[38];unsigned j;
         amb_guidance(l,&first,&second);
@@ -1672,22 +1613,22 @@ static void amb_draw(void)
         }else if(!ambr.pickup.picked)status="MASTER: PICKUP SAVED LEVEL";
         else if(ambr.view==0)status="HOME + EDIT FOR KNOB HELP";
         else if(ambr.view==1 && ambr.page==1 && l->role==6)status="BUNDLED PCM / MIC UNAVAILABLE";
-        amb_text(10,4,first,ABG,36);amb_text(10,14,second,TONO_SAGE,36);amb_text(10,24,status,TONO_AMBER,36);
+        amb_text(10,4,first,AINK,36);amb_text(10,14,second,ADIM,36);amb_text(10,24,status,ADIM,36);
     }
     cv_rect(8,34,224,1,ALINE);
     if(ambr.view==3) {
         for(i=0;i<8;i++){
             int x=11+i*28;unsigned selected=i==ambr.slot;
-            cv_bg=selected?ABG:TONO_SELECT;
+            cv_bg=selected?AINK:ASEL;
             cv_rect(x,50,22,24,cv_bg);
-            amb_number(x+7,58,i+1,selected?AINK:ABG);
-            if(selected)cv_rect(x,76,22,3,TONO_AMBER);
+            amb_number(x+7,58,i+1,selected?ABG:AINK);
+            if(selected)cv_rect(x,76,22,3,TONO_ORANGE);
         }
     } else if(ambr.reset_pending || ambr.piece_preview!=255){
-        amb_text(12,54,ambr.reset_pending?"REC RESTORE / HOME CANCEL":"REC RECALL / HOME CANCEL",ABG,36);
+        amb_text(12,54,ambr.reset_pending?"REC RESTORE / HOME CANCEL":"REC RECALL / HOME CANCEL",AINK,36);
     }else for(k=0;k<4;k++) {
         char label[16]={0},value[24]={0};amb_knob_value(k,label,value);cv_bg=ABG;
-        cv_rect(2+k*60,38,56,49,ABG);cv_rect(2+k*60,83,56,4,field_color[k]);
+        if(k)cv_rect(k*60,42,1,38,ALINE);
         amb_text(5+k*60,43,label,ADIM,9);amb_text(5+k*60,63,value,AINK,9);
 
     }

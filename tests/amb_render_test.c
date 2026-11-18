@@ -56,7 +56,7 @@ static void ar_frame(const char *name,const char *dir,int save)
 static void ar_splash(const char *dir)
 {
     static uint16_t settled[240*240];
-    const unsigned sun_pixel=53*240+168;
+    const unsigned index_pixel=64*240+120;
     uint32_t palette=settings.palette,prefs=ui_prefs;
     settings.palette=UI_JIANT_INDEX;
     palette_set(settings.palette);
@@ -65,20 +65,20 @@ static void ar_splash(const char *dir)
     ui_prefs&=~PREF_ANIM_OFF;
     draw_splash();
     ar_save(ar_name,dir);ar_frames++;
-    assert(swap16(host_screen[sun_pixel])!=TONO_CLAY);
+    assert(swap16(host_screen[index_pixel])!=TONO_ORANGE);
     assert(swap16(host_screen[0])==TONO_PAPER);
 
-    ar_name="tono_boot_flight";
+    ar_name="tono_boot_sweep";
     splash_write(SPL_WRITE*3/4);
     ar_save(ar_name,dir);ar_frames++;
-    assert(swap16(host_screen[sun_pixel])==TONO_CLAY);
+    assert(swap16(host_screen[index_pixel])!=TONO_ORANGE);
     memcpy(settled,host_screen,sizeof settled);
 
     ar_name="tono_boot_final";
     splash_write(SPL_WRITE);
     ar_save(ar_name,dir);ar_frames++;
     assert(memcmp(settled,host_screen,sizeof settled));
-    assert(swap16(host_screen[sun_pixel])==TONO_CLAY);
+    assert(swap16(host_screen[index_pixel])==TONO_ORANGE);
     memcpy(settled,host_screen,sizeof settled);
     {
         uint64_t sent=ui_sent_px;
