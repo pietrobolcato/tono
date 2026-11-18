@@ -59,6 +59,15 @@ int main(int argc,char **argv)
             snprintf(name,sizeof name,"role_%u_page_%u_bank_%u_fx_%u",role,page,bank,fx);ar_frame(name,dir,role==0 || role==6);
         }
     }
+    for(role=0;role<6;role++){
+        amb_patch(0,role,0);ambr.view=1;ambr.page=1;ambr.bank=1;
+        for(bank=0;bank<3;bank++){ambr.detail=(uint8_t)bank;snprintf(name,sizeof name,"details_role_%u_group_%u",role,bank);ar_frame(name,dir,1);}
+    }
+    ambr.view=1;ambr.page=0;ambr.reset_pending=1;ar_frame("track_restore",dir,1);ambr.reset_pending=0;
+    ambr.view=1;ambr.page=3;for(style=0;style<5;style++){
+        amb.layer[0].base[P_LWAVE]=(int16_t)style;trk[0].p[P_LWAVE]=(int16_t)style;trk[0].lfo_ph=0xc0000000u;
+        snprintf(name,sizeof name,"lfo_shape_%u",style);ar_frame(name,dir,1);
+    }
     ambr.view=2;for(page=0;page<5;page++)for(fx=0;fx<(page==3?4u:1u);fx++){
         ambr.page=(uint8_t)page;ambr.fx=(uint8_t)fx;snprintf(name,sizeof name,"global_%u_fx_%u",page,fx);ar_frame(name,dir,1);
     }

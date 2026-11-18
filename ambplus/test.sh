@@ -11,6 +11,8 @@ for AMB_TEST in amb_controls_test amb_policy_test; do
 done
 cc -O1 -w -Ibuild/gen -Ifirmware/src tests/amb_native_test.c -lm -o build/host/amb_native_test
 build/host/amb_native_test build/amb-demo.wav
+cc -O1 -w -Ibuild/gen -Ifirmware/src tests/amb_feedback_test.c -lm -o build/host/amb_feedback_test
+build/host/amb_feedback_test
 cc -O1 -w -Ibuild/gen -Ifirmware/src tests/amb_render_test.c -lm -o build/host/amb_render_test
 build/host/amb_render_test build/amb-ui
 printf '%s\n' 'AMB+ targeted tests completed. Also run the full JIANT suite against an AMBPLUS=0 build and exact-package emulator tests; see ambplus/README.md.'

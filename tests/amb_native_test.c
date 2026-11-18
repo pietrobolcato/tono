@@ -127,7 +127,7 @@ int AMB_MAIN(int argc,char **argv)
     amb_factory(0);amb.layer[0].level=0;amb_patch(0,2,0);assert(amb.layer[0].level==0);
     amb_factory(0);song.playing=0;amb.version=1;memset(&amb.policy,0,sizeof amb.policy);
     assert(!st_save(amb_object(7),&amb,sizeof amb));assert(amb_recall(7));
-    assert(amb.version==2 && amb.policy.variation==40 && amb.policy.active[0]==0 && amb.policy.pending[0]==255);
+    assert(amb.version==AMB_VERSION && amb.policy.variation==40 && amb.policy.active[0]==0 && amb.policy.pending[0]==255);
     amb_factory(0);ambr.view=2;ambr.page=2;amb_leds();
     {unsigned q=led_pos[panel.btn[B_REC]];assert(q!=255);assert(!(fm1_led_dim[q>>3]&(1u<<(q&7))));}
     ambr.view=1;ambr.page=4;ambr.edit_layer=0;ambr.recording=1;amb_leds();
