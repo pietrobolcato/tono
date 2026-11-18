@@ -54,8 +54,8 @@ static void tono_sun(int32_t radius, uint16_t ink)
     int32_t y, x = radius;
     for (y = 0; y <= radius; y++) {
         while (x * x + y * y > radius * radius) x--;
-        cv_rect(126 - x, 30 - y, 2 * x + 1, 1, ink);
-        cv_rect(126 - x, 30 + y, 2 * x + 1, 1, ink);
+        cv_rect(136 - x, 30 - y, 2 * x + 1, 1, ink);
+        cv_rect(136 - x, 30 + y, 2 * x + 1, 1, ink);
     }
 }
 
@@ -67,23 +67,35 @@ static int32_t tono_ease(uint32_t ms, uint32_t start, uint32_t end)
     return 256 - left * left / 256;
 }
 
-static void tono_bird(int32_t dx, int32_t dy, uint16_t ink, uint16_t blue,
-                      uint16_t white, uint16_t clay)
+static void tono_kingfisher(int32_t dx, int32_t dy, uint16_t ink, uint16_t blue,
+                           uint16_t teal, uint16_t white, uint16_t clay, uint16_t amber)
 {
 #define BIRD(x, y) ((tono_point){(x) + dx, (y) + dy})
-    /* Two wings, forked tail, and a light cheek that stays legible in mono. */
-    tono_triangle(BIRD(27, 23), BIRD(70, 42), BIRD(89, 70), ink);
-    tono_triangle(BIRD(27, 23), BIRD(55, 54), BIRD(89, 70), blue);
-    tono_triangle(BIRD(89, 70), BIRD(121, 47), BIRD(155, 41), ink);
-    tono_triangle(BIRD(89, 70), BIRD(155, 41), BIRD(131, 65), blue);
-    tono_triangle(BIRD(89, 70), BIRD(138, 59), BIRD(104, 80), ink);
-    tono_triangle(BIRD(89, 70), BIRD(104, 80), BIRD(69, 87), ink);
-    tono_triangle(BIRD(91, 72), BIRD(114, 64), BIRD(104, 79), white);
-    tono_triangle(BIRD(109, 65), BIRD(118, 63), BIRD(131, 69), ink);
-    tono_triangle(BIRD(114, 69), BIRD(131, 69), BIRD(108, 75), white);
-    tono_triangle(BIRD(124, 67), BIRD(139, 70), BIRD(126, 72), clay);
-    tono_triangle(BIRD(69, 87), BIRD(89, 70), BIRD(76, 73), blue);
-    tono_triangle(BIRD(76, 73), BIRD(65, 76), BIRD(89, 70), ink);
+    /* Dark contours sit under separate ink plates for back, crown and chest. */
+    tono_triangle(BIRD(122, 77), BIRD(169, 97), BIRD(154, 102), ink);
+    tono_triangle(BIRD(115, 81), BIRD(159, 95), BIRD(148, 99), blue);
+    tono_triangle(BIRD(69, 55), BIRD(121, 58), BIRD(139, 91), clay);
+    tono_triangle(BIRD(69, 55), BIRD(139, 91), BIRD(107, 108), clay);
+    tono_triangle(BIRD(69, 55), BIRD(107, 108), BIRD(82, 95), amber);
+    tono_triangle(BIRD(74, 70), BIRD(106, 94), BIRD(90, 98), amber);
+    tono_triangle(BIRD(98, 56), BIRD(125, 47), BIRD(145, 73), blue);
+    tono_triangle(BIRD(98, 56), BIRD(145, 73), BIRD(146, 95), blue);
+    tono_triangle(BIRD(98, 56), BIRD(146, 95), BIRD(126, 99), ink);
+    tono_triangle(BIRD(101, 59), BIRD(119, 57), BIRD(138, 88), teal);
+    tono_triangle(BIRD(101, 59), BIRD(138, 88), BIRD(121, 79), blue);
+    tono_triangle(BIRD(109, 73), BIRD(133, 83), BIRD(141, 93), teal);
+    tono_triangle(BIRD(24, 57), BIRD(77, 43), BIRD(78, 61), ink);
+    tono_triangle(BIRD(37, 54), BIRD(76, 47), BIRD(76, 53), blue);
+    tono_triangle(BIRD(69, 49), BIRD(85, 31), BIRD(105, 30), teal);
+    tono_triangle(BIRD(69, 49), BIRD(105, 30), BIRD(123, 50), blue);
+    tono_triangle(BIRD(69, 49), BIRD(123, 50), BIRD(106, 65), blue);
+    tono_triangle(BIRD(74, 52), BIRD(105, 54), BIRD(91, 65), white);
+    tono_triangle(BIRD(74, 52), BIRD(91, 65), BIRD(74, 61), white);
+    tono_triangle(BIRD(81, 37), BIRD(100, 33), BIRD(107, 42), teal);
+    cv_rect(81+dx,43+dy,6,6,ink);cv_rect(82+dx,43+dy,2,2,white);
+    cv_line_t(90+dx,99+dy,94+dx,111+dy,ink,2);
+    cv_line_t(103+dx,103+dy,106+dx,112+dy,ink,2);
+    cv_rect(94+dx,111+dy,7,2,ink);cv_rect(106+dx,111+dy,8,2,ink);
 #undef BIRD
 }
 
@@ -98,43 +110,45 @@ static void tono_tree(int32_t x, int32_t y, int32_t height, uint16_t ink)
 static void tono_landscape(uint32_t ms, uint16_t paper, uint16_t ink)
 {
     int mono = ux.mono || settings.palette == UI_BW_INDEX;
-    uint16_t sky = mono ? ux_mix(paper, ink, 12) : RGB(203, 209, 175);
-    uint16_t haze = mono ? ux_mix(paper, ink, 38) : RGB(151, 174, 143);
-    uint16_t pine = mono ? ux_mix(paper, ink, 68) : RGB(53, 93, 87);
-    uint16_t lake = mono ? ux_mix(paper, ink, 23) : RGB(112, 154, 137);
+    uint16_t sky = mono ? ux_mix(paper, ink, 12) : RGB(208, 209, 169);
+    uint16_t haze = mono ? ux_mix(paper, ink, 38) : RGB(157, 172, 137);
+    uint16_t pine = mono ? ux_mix(paper, ink, 68) : RGB(60, 98, 86);
+    uint16_t lake = mono ? ux_mix(paper, ink, 23) : RGB(118, 154, 136);
     uint16_t clay = mono ? ux_mix(paper, ink, 52) : TONO_CLAY;
-    uint16_t blue = mono ? ux_mix(paper, ink, 78) : RGB(47, 77, 87);
+    uint16_t amber = mono ? ux_mix(paper, ink, 38) : RGB(225, 149, 73);
+    uint16_t blue = mono ? ux_mix(paper, ink, 78) : RGB(37, 97, 117);
+    uint16_t teal = mono ? ux_mix(paper, ink, 58) : RGB(71, 150, 142);
     uint16_t white = mono ? paper : RGB(249, 230, 186);
     int32_t sun = tono_ease(ms, 40u, 225u);
-    int32_t rise = (256 - tono_ease(ms, 125u, 370u)) * 40 / 256;
+    int32_t rise = (256 - tono_ease(ms, 100u, 370u)) * 34 / 256;
 
     cv_begin(TONO_ART_W, TONO_ART_H, sky);
-    if (sun) tono_sun(22 * sun / 256, clay);
-    tono_triangle((tono_point){-34, 115 + rise}, (tono_point){41, 52 + rise},
-                  (tono_point){102, 115 + rise}, haze);
-    tono_triangle((tono_point){55, 115 + rise}, (tono_point){95, 66 + rise},
-                  (tono_point){153, 115 + rise}, haze);
-    tono_triangle((tono_point){110, 115 + rise}, (tono_point){168, 56 + rise},
-                  (tono_point){205, 115 + rise}, haze);
-    tono_triangle((tono_point){-20, 123 + rise}, (tono_point){-2, 70 + rise},
-                  (tono_point){84, 123 + rise}, pine);
-    tono_triangle((tono_point){87, 123 + rise}, (tono_point){154, 82 + rise},
-                  (tono_point){196, 123 + rise}, pine);
-    cv_rect(0, 111, TONO_ART_W, 16, lake);
-    cv_rect(22, 114, 35, 1, haze);
-    cv_rect(68, 118, 61, 1, haze);
-    cv_rect(42, 123, 17, 1, haze);
-    cv_rect(105, 123, 45, 1, haze);
-    cv_rect(154, 114, 17, 1, haze);
-    tono_tree(11, 110 + rise, 22, ink);
-    tono_tree(20, 110 + rise, 14, ink);
-    tono_tree(29, 111 + rise, 10, blue);
-    tono_tree(146, 112 + rise, 10, blue);
-    tono_tree(155, 112 + rise, 16, ink);
-    tono_tree(167, 110 + rise, 22, ink);
-    if (ms >= 300u) {
-        int32_t flight = 256 - tono_ease(ms, 300u, SPL_WRITE);
-        tono_bird(-24 * flight / 256, 22 * flight / 256, ink, blue, white, clay);
+    if (sun) tono_sun(25 * sun / 256, clay);
+    tono_triangle((tono_point){-53, 112 + rise}, (tono_point){18, 55 + rise},
+                  (tono_point){112, 112 + rise}, haze);
+    tono_triangle((tono_point){109, 109 + rise}, (tono_point){190, 54 + rise},
+                  (tono_point){201, 110 + rise}, haze);
+    tono_triangle((tono_point){-23, 116 + rise}, (tono_point){-1, 76 + rise},
+                  (tono_point){61, 116 + rise}, pine);
+    cv_rect(0, 106, TONO_ART_W, 21, lake);
+    cv_rect(13, 113, 38, 1, haze);
+    cv_rect(18, 122, 49, 1, haze);
+    cv_rect(73, 123, 18, 1, sky);
+    cv_rect(102, 119, 45, 1, haze);
+    cv_rect(148, 112, 22, 1, haze);
+    tono_tree(8, 106 + rise, 21, ink);
+    tono_tree(17, 105 + rise, 13, pine);
+    if (ms >= 180u) {
+        int32_t branch = (256 - tono_ease(ms, 180u, 440u)) * 18 / 256;
+        tono_triangle((tono_point){37, 120 + branch},(tono_point){167, 104 + branch},
+                      (tono_point){139, 114 + branch},ink);
+        cv_line(55, 121 + branch, 75, 109 + branch, ink);
+        cv_line(64, 116 + branch, 113, 112 + branch, pine);
+    }
+    if (ms >= 260u) {
+        int32_t flight = 256 - tono_ease(ms, 260u, SPL_WRITE);
+        tono_kingfisher(19 * flight / 256, -17 * flight / 256, ink, blue,
+                        teal, white, clay, amber);
     }
     cv_blit(TONO_ART_X, TONO_ART_Y);
 }
