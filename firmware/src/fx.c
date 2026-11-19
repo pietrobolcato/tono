@@ -1960,6 +1960,41 @@ static __attribute__((noinline)) void drum_mix(int32_t *ol, int32_t *or_, uint32
         }
 }
 
+#if AMBPLUS
+/* Capture each voice once, before inserts and sends. Workers own separate
+ * accumulators; core 0 reads the second one only after a successful join. */
+enum { AMB_MONITOR_RAMP = 256 };
+static volatile uint8_t amb_monitor_requested;
+static unsigned amb_monitor_blend, amb_monitor_active, amb_monitor_core1;
+static int32_t amb_monitor_bus[2][CTL*2];
+static __attribute__((noinline)) void amb_monitor_part(unsigned core,const int32_t *b,
+                                                       unsigned n,int level,int step,int pan)
+{
+    int left=4096-(pan>0?pan*64:0),right=4096+(pan<0?pan*64:0);
+    int32_t *out=amb_monitor_bus[core];
+    for(unsigned i=0;i<n;i++,level+=step){
+        int32_t x=((b[i]>>2)*(level>>8))>>10;
+        out[2*i]+=(x*left)>>12;
+        out[2*i+1]+=(x*right)>>12;
+    }
+}
+static void amb_monitor_output(int32_t *out,unsigned n)
+{
+    unsigned target=amb_monitor_requested?AMB_MONITOR_RAMP:0;
+    int mg=fx_usb_fixed?MASTER_FULL:song.master_q12;
+    for(unsigned i=0;i<n;i++){
+        if(amb_monitor_blend<target)amb_monitor_blend++;
+        else if(amb_monitor_blend>target)amb_monitor_blend--;
+        for(unsigned side=0;side<2;side++){
+            unsigned j=2*i+side;
+            int dry=amb_monitor_bus[0][j]+(amb_monitor_core1?amb_monitor_bus[1][j]:0);
+            dry=soft_knee(softclip((((dry>>2)*mg)>>10)),12000);
+            out[j]+=(dry-out[j])*(int)amb_monitor_blend/AMB_MONITOR_RAMP;
+        }
+    }
+}
+#endif
+
 /* one synth part into the dry mix and the sends; a part with no voice sounding costs
  * the LFO tick and a cleared buffer only (after the DIST tail has run out) */
 static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t n)   /* (0.6.78: inlined in both
@@ -2035,6 +2070,10 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
             stem_pre(pre, ol, or_, n);
         if ((duck_g0 < 32767 || duck_g1 < 32767) && ENGINES[t->engine] != &ENG_DRUM)   /* DUCK: the kick's */
             lq = duck_ramp(l0 >> 8, mp_lvl[ti] >> 8, &dl);
+#if AMBPLUS
+        if(amb_monitor_active && !(mix_skip & (1u<<ti)) && !(pf.mute & (1u<<ti)))
+            amb_monitor_part(c1,b,n,l0,(mp_lvl[ti]-l0)>>CTL_LOG2,t->p[P_PAN]);
+#endif
         track_dist(t, b, n);
 #if AMBPLUS
         amb_layer_process(ti,b,n);
@@ -2514,6 +2553,11 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
     uint32_t i, c1m = 0, c1j = 0, t0 = MC_TICKS(), t1;
     int perf;
     int32_t mg = fx_usb_fixed ? MASTER_FULL : (int32_t)song.master_q12;   /* (USB LEVEL FIXED: MASTER after) */
+#if AMBPLUS
+    amb_monitor_active=amb_monitor_requested || amb_monitor_blend;
+    amb_monitor_core1=0;
+    if(amb_monitor_active)memset(amb_monitor_bus,0,sizeof amb_monitor_bus);
+#endif
     for (i = 0; i < n; i++)
         send_c[i] = send_d[i] = send_r[i] = mix_l[i] = mix_r[i] = sl_l[i] = sl_r[i] = 0;
     if (fx_stems)                                       /* (0.7.1) a part not mixed this block: a silent stem */
@@ -2556,8 +2600,12 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
         i = (uint32_t)mc_wait();
         prf_blk[PRF_WAIT] = MC_TICKS() - t0;             /* (core 0 idle: core 1 still at its parts or the buses) */
         if (!i) {
-            if (c1m)
+            if (c1m) {
                 mc_join(n);
+#if AMBPLUS
+                amb_monitor_core1=1;
+#endif
+            }
             mc_jobs++;
         } else {
             mc_lost();                                  /* (its parts' block and the buses' dropped; one core from here) */

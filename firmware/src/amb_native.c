@@ -871,7 +871,7 @@ static void amb_master(int32_t raw,int boot)
 }
 /* Bounded three-band output EQ. One-pole splits at ~180 Hz / ~3 kHz;
  * smoothed gains, headroom and a final soft knee, both stereo channels. */
-static __attribute__((noinline)) void amb_output(int32_t *out,uint32_t n)
+static __attribute__((noinline)) void amb_master_eq_output(int32_t *out,uint32_t n)
 {
     static int32_t low[2],high[2],g[4]={4096,4096,4096,4096};
     static const uint16_t db[25]={1029,1154,1295,1453,1631,1830,2053,2304,2584,2900,3254,3650,4096,4596,5157,5786,6492,7285,8173,9170,10289,11544,12952,14532,16306};
@@ -894,6 +894,11 @@ static __attribute__((noinline)) void amb_output(int32_t *out,uint32_t n)
         y=(int32_t)((clamp(y,-65535,65535)*g[3])/4096);
         out[2*i+c]=soft_knee(y,12000);
     }
+}
+static void amb_output(int32_t *out,uint32_t n)
+{
+    amb_master_eq_output(out,n);
+    if(amb_monitor_active)amb_monitor_output(out,n);
 }
 /* Three broad bands per layer before dry mix and shared sends. Flat EQ is
  * bit-exact bypass. Independent state per physical track, safe on two cores. */
@@ -1387,7 +1392,10 @@ static void amb_input(void)
     home0=(uint8_t)home;play0=(uint8_t)play;
     for(b=0;b<NB;b++) if((pressed>>panel.btn[b])&1u) {
         if(b==B_HOME || b==B_PLAY) continue;
-        if((home && b==B_SEQ) || (b==B_SCL && (ambr.view==0 || ambr.view==4))){
+        if(home && b==B_FX){
+            ambr.home_used=1;amb_monitor_requested^=1;
+            amb_say(amb_monitor_requested?"ALL FX BYPASSED":"EFFECTS ON");
+        }else if((home && b==B_SEQ) || (b==B_SCL && (ambr.view==0 || ambr.view==4))){
             ambr.view=ambr.view==4?0:4;ambr.home_used=(uint8_t)home;
             ambr.proposal=ambr.piece_preview=255;ambr.reset_pending=ambr.recording=ambr.overwrite=0;
             for(k=0;k<4;k++)trk[k].peak=0;
@@ -1501,7 +1509,7 @@ static void amb_leds(void)
     for(b=0;b<NB;b++) {
         int edit_action=(ambr.view==1 && (ambr.page==0 || ambr.page==1 || ambr.page==4)) ||
             (ambr.target?(ambr.view!=1 || ambr.page!=0):(ambr.view!=2 || ambr.page!=3)) || ambr.proposal!=255 || ambr.piece_preview!=255;
-        int action=b==B_PLAY || (b==B_SAVE && (ambr.view!=3 || ambr.slot || ambr.overwrite)) ||
+        int action=(b==B_FX && ((fm1_in.buttons>>panel.btn[B_HOME])&1u)) || b==B_PLAY || (b==B_SAVE && (ambr.view!=3 || ambr.slot || ambr.overwrite)) ||
             (b==B_GLO && (ambr.view!=2 || ambr.page!=0 || ambr.proposal!=255 || ambr.piece_preview!=255)) ||
             (b==B_EDIT && edit_action) || b==B_OCTDN || b==B_OCTUP ||
             (b==B_HOME && (ambr.target || ambr.view || ambr.proposal!=255 || ambr.piece_preview!=255 || amb_pending_ready)) || (b==B_SCL && ambr.view!=3) ||
@@ -2174,7 +2182,7 @@ static void amb_draw(void)
         amb_text(10,44,ambr.view==1 && ambr.page==1?"MASTER adjusts this layer after pickup.":"MASTER picks up the saved level.",ADIM,39);
         if(amb_page_bank())
             amb_text(10,57,"PRESETS variation / REC apply",ADIM,39);
-        amb_text(10,75,"HOME closes help",AQUEUE,24);
+        amb_text(10,75,"HOME close / HOME + FX bypass",AQUEUE,37);
         cv_blit_cells(0,147);
         return;
     }
@@ -2219,7 +2227,7 @@ static void amb_draw(void)
     else if(amb_tail_any())
         amb_text(10,59,ambr.handoff[4] || ambr.handoff[5]?"CROSSFADE":"OLD SOUND RELEASING / NEXT QUEUED",ADIM,39);
     cv_rect(8,72,224,1,ALINE);
-    amb_text(10,78,"Help",ADIM,4);
+    amb_text(10,78,amb_monitor_requested?"FX BYPASSED":"Help",amb_monitor_requested?AQUEUE:ADIM,13);
     amb_text(162,78,"HOME + EDIT",AINK,12);
     cv_blit_cells(0,147);
     (void)b;

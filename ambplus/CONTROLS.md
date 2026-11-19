@@ -65,3 +65,7 @@ GLO → HARMONY uses SELECT to switch between CROSSFADE (default) and RELEASE. T
 EDIT → FX → GRANULAR uses MIX, LENGTH, PITCH and SCATTER. Two overlapping grains read the layer's recent audio. Texture GRAIN and Sample BLUR bring it up most strongly. Bells SHIMMER and Pad/Drone SPACE add a smaller amount above their centre. Master MOTION adds a little grain to bells, textures and samples. During SOUND edits MASTER adjusts the edited layer after pickup. HOME shows an orange MASTER label when its four knobs control the full mix.
 
 New acoustic patches are Solo Violin, Chamber Cello, Tenor Sax and Concert Flute under Pad, Bowed Cello under Drone and Kawai Grand under Bells. All five recordings are also available as Sample sources. Shore Wash, Rain on Tin, Ember Bed and Window Draft join Texture. They use the continuous foundation pattern.
+
+### Compare dry and processed sound
+
+Hold HOME and tap FX while playing. The footer shows **FX BYPASSED**. Repeat the shortcut to hear the processed mix again. The dry monitor takes each voice before layer drive, granular, EQ, auto-pan and shared effects. It retains synthesis, envelopes, pitch modulation, level, pan, solo and output protection. Effects keep running during the comparison. The switch lasts for the emulator session and does not edit saved pieces. In fm1-live hold **7** and tap **1**. **F3** records the monitored output.
