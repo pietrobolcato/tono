@@ -1756,7 +1756,10 @@ static void amb_sound_preview(const amb_layer_t *current,unsigned next)
     amb_text(12,72,"PROPOSED",ADIM,9);
     cv_text(83,68,&AF_M,sample?N_AS_SOURCE[next]:amb_recipe(current->role,next)->name,AINK);
     if(sample){
-        static const char *const character[]={"Soft struck harmonic","Taped vowel sustain","Bowed string and vibrato","Low bowed string section","Hammer attack, long decay","Breathy reed sustain","Airy flute sustain"};
+        static const char *const character[]={"Soft struck harmonic","Taped vowel sustain","Bowed string and vibrato","Low bowed string section","Hammer attack, long decay","Breathy reed sustain","Airy flute sustain",
+            "Rolling beads and surf","Soft metallic brushing","Ridged wooden scrape",
+            "Dry shifting seeds","A ticking wooden rattle","Bowed metal shimmer"};
+        _Static_assert(NELEM(character)==NELEM(N_AS_SOURCE),"Describe every sample source");
         amb_text(12,96,character[current->base[P_E0]],ADIM,34);
         amb_text(12,112,character[next],AINK,34);
     }else{
