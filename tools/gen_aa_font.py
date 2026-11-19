@@ -184,7 +184,25 @@ def huff_unpack(hc, data, n):
     return out
 
 
-def emit(face, tracking, gamma, kern_min):
+def kern_classes(rows):
+    """Left and right glyphs with identical kerning share a lookup class."""
+    columns = list(zip(*rows))
+    distinct = list(dict.fromkeys(columns))
+    right = [distinct.index(column) for column in columns]
+    reduced = list(zip(*distinct))
+    unique = list(dict.fromkeys(reduced))
+    left = [unique.index(row) for row in reduced]
+    ki, kp = [0], []
+    for row in unique:
+        for i, delta in enumerate(row):
+            if delta:
+                kp.extend([i, delta & 255])
+        ki.append(len(kp) // 2)
+    assert all(unique[left[a]][right[b]] == v for a, row in enumerate(rows) for b, v in enumerate(row))
+    return left + right, ki, kp
+
+
+def emit(face, tracking, gamma, kern_min, compact=False):
     name, font, px, (first, last), extras, ftrack, phases = face
     chars = [chr(c) for c in range(first, last + 1)] + [chr(c) for c in extras]
     r = ar.raster_font(font, px, chars, tracking if ftrack is None else ftrack, gamma, True, kern_min, phases)
@@ -235,6 +253,13 @@ def emit(face, tracking, gamma, kern_min):
     nki = pairs[-1][0] + 1 if pairs else 0
     ki = [sum(1 for p in pairs if p[0] < g) for g in range(nki + 1)]
     kp = [v for _, b, d in pairs for v in (b, d & 255)]
+    classes = []
+    if compact and len(kp) > 512:
+        rows = [[0] * 256 for _ in range(nki)]
+        for ga, b, d in pairs:
+            rows[ga][b] = d
+        classes, ki, kp = kern_classes(rows)
+        lines.append(ar.c_array(f"AF_{name}_CLASSES", "uint8_t", classes, 24))
     psh = phases.bit_length() - 1
     lines.append(f"/* {name}: {os.path.basename(font.split('#')[0])} {px}px, h {r['h']}, baseline {r['asc']}, "
                  f"{len(chars)} glyphs x {phases} phases, {len(data)} B data"
@@ -249,14 +274,15 @@ def emit(face, tracking, gamma, kern_min):
         lines.append(ar.c_array(f"AF_{name}_KP", "uint8_t", kp, 24))
     ex = ", ".join(str(CODE.get(c, c)) for c in extras) or "0"
     lines.append(f"static const uint8_t AF_{name}_EX[{max(1, len(extras))}] = {{{ex}}};")
+    extra = f", 0, AF_{name}_CLASSES" if classes else ""
     lines.append(f"static const aafont_t AF_{name} = {{{r['h']}, {r['asc']}, {first}, {last}, {len(extras)}, {nki}, "
                  f"AF_{name}_GH, AF_{name}_GP, AF_{name}_DATA, {'AF_%s_KI' % name if keys else '0'}, "
-                 f"{'AF_%s_KP' % name if keys else '0'}, AF_{name}_EX, {psh}, {'AF_%s_HC' % name if hc else '0'}}};")
+                 f"{'AF_%s_KP' % name if keys else '0'}, AF_{name}_EX, {psh}, {'AF_%s_HC' % name if hc else '0'}{extra}}};")
     if "H" in chars:                                  # the capitals' band (gfx.c CAP_IN: centring text by it)
         cap = table[chars.index("H") * phases]
         lines.append(f"#define AF_{name}_CAP_Y {cap[3]}   /* the ink of H: rows {cap[3]} .. {cap[3] + cap[5] - 1} of the line */")
         lines.append(f"#define AF_{name}_CAP_H {cap[5]}")
-    cost = {"data": len(data) + len(hc), "glyph_table": gsize, "kern": len(kp) + 2 * len(ki), "extras": len(extras),
+    cost = {"data": len(data) + len(hc), "glyph_table": gsize, "kern": len(classes) + len(kp) + 2 * len(ki), "extras": len(extras),
             "glyphs": len(chars), "phases": phases, "pairs": len(keys), "h": r["h"], "asc": r["asc"], "px": px,
             "font": os.path.basename(font.split("#")[0]), "adv_digit": r["glyphs"]["0"][0] / 16}
     cost["total"] = cost["data"] + cost["glyph_table"] + cost["kern"] + cost["extras"]
@@ -272,6 +298,7 @@ def main():
     ap.add_argument("--gamma", type=float, default=1.0, help="coverage curve; <1 thickens light-on-dark text")
     ap.add_argument("--kern-min", type=int, default=1, help="smallest kerning pair kept, in 1/16 px (0 pairs = no kerning)")
     ap.add_argument("--huff", default=",".join(HUFF[0]), help="faces stored Huffman-coded (comma list, '' = none)")
+    ap.add_argument("--kern-classes", action="store_true", help="losslessly group glyphs with identical kerning")
     a = ap.parse_args()
     HUFF[0] = tuple(x for x in a.huff.split(",") if x)
     faces = ([parse_face(s) for s in a.face] if a.face else []) or (preset(a.preset) if a.preset else None)
@@ -282,7 +309,7 @@ def main():
            "#pragma once", "#include <stdint.h>", ""]
     total = 0
     for f in faces:
-        text, c = emit(f, a.tracking, a.gamma, a.kern_min)
+        text, c = emit(f, a.tracking, a.gamma, a.kern_min, a.kern_classes)
         out.append(text)
         total += c["total"]
         print(f"face {f[0]}: {c['font']} {c['px']}px h{c['h']} base{c['asc']}  {c['glyphs']} glyphs x {c['phases']}  "

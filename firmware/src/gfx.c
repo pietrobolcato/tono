@@ -26,6 +26,7 @@ typedef struct {
     uint8_t psh;                        /* log2 of the phases per glyph: entries i << psh .. (i << psh) + phases - 1 */
     const uint8_t *hc;                  /* data's Huffman code (cv_alpha_hc), 0 = 2 px per byte (cv_alpha) */
     uint8_t bits;                       /* (0.8.5) 1: data is 1 bit a pixel, no ramp (AF_X: cv_bits) */
+    const uint8_t *classes; /* optional left glyph and right character maps */
 } aafont_t;
 typedef struct { const char *name; uint16_t bg, surf, text, theme, accent; } ui_pal_t;
 typedef struct { uint16_t off; uint8_t w; const char *label; } kc_t;
@@ -780,6 +781,12 @@ static int32_t kern(const aafont_t *f, uint32_t a, uint32_t b)       /* 1/16 px 
     uint32_t lo, hi;
     if (ga < 0 || (uint32_t)ga >= f->nk)
         return 0;
+    if (f->classes) {
+        if (b > 255u)
+            return 0;
+        ga = f->classes[ga];
+        b = f->classes[f->nk + b];
+    }
     lo = f->ki[ga];
     hi = f->ki[ga + 1];
     while (lo < hi) {                                /* (a's pairs, by b) */
