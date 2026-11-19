@@ -965,7 +965,7 @@ static __attribute__((noinline)) void amb_output(int32_t *out,uint32_t n)
 }
 /* Three broad bands per layer before dry mix and shared sends. Flat EQ is
  * bit-exact bypass. Independent state per physical track, safe on two cores. */
-static void amb_layer_process(unsigned k,int32_t *b,uint32_t n)
+static __attribute__((noinline)) void amb_layer_process(unsigned k,int32_t *b,uint32_t n)
 {
     static int32_t low[NTRK][6],high[NTRK][6],g[NTRK][4];static uint8_t primed[NTRK];
     static const uint16_t db[25]={1029,1154,1295,1453,1631,1830,2053,2304,2584,2900,3254,3650,4096,4596,5157,5786,6492,7285,8173,9170,10289,11544,12952,14532,16306};
