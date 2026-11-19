@@ -1478,6 +1478,23 @@ static void amb_mix_ring(void)
     }
 }
 
+/* Role pictograms keep their shapes when a layer is reassigned. */
+static void amb_role_symbol(int x,int y,unsigned role,uint16_t ink)
+{
+    static const uint16_t rows[][9]={
+        {0x104,0x28a,0x451,0x820,0x104,0x28a,0x451,0x820,0}, /* pad */
+        {0,0xfff,0,0,0xfff,0,0,0xfff,0},                     /* drone */
+        {0x060,0x198,0x204,0x492,0x801,0x060,0x060,0x060,0x1f8}, /* bells */
+        {0x060,0x060,0x060,0x060,0x060,0x0f0,0x1f8,0x0f0,0}, /* bass */
+        {0x060,0x060,0x063,0x663,0x663,0x66f,0x66f,0x66f,0}, /* drums */
+        {0x444,0,0x111,0,0x888,0,0x222,0,0x444},             /* texture */
+        {0x180,0x1c0,0x1e0,0x1f0,0x1f8,0x1f0,0x1e0,0x1c0,0x180} /* sample */
+    };
+    for(int row=0;row<9;row++)
+        for(int col=0;col<12;col++)
+            if(rows[role][row]&(1u<<(11-col)))cv_rect(x+col,y+row,1,1,ink);
+}
+
 static void amb_draw_home(void)
 {
     unsigned target=amb_level_feedback(),value=target?amb.layer[target-1].level:amb.master;
@@ -1500,10 +1517,17 @@ static void amb_draw_home(void)
     for(unsigned i=0;i<24;i++)cv_rect(17+9*i,77,7,2,i*100<24*percent?TONO_ORANGE:DISPLAY_GRID);
     for(unsigned k=0;k<4;k++){
         const amb_layer_t *l=&amb.layer[k];int left=8+(k%2)*114,y=90+(k/2)*28;
-        cv_bg=amb_theme()?amb_accent(k):ambr.target==k+1?TONO_ORANGE:AINK;cv_rect(left,y,14,13,cv_bg);
-        if(amb_theme() && ambr.target==k+1)cv_rect(left,y+15,14,2,cv_bg);
-        amb_number(left+4,y+2,k+1,amb_theme()?(TE_LIGHT?TONO_PAPER:TONO_INK):ABG);cv_bg=ABG;
-        amb_text(left+19,y,AMB_ROLE[l->role],AINK,8);
+        if(amb_theme()){
+            uint16_t accent=amb_accent(k);cv_bg=ABG;
+            amb_role_symbol(left,y+1,l->role,accent);
+            if(ambr.target==k+1)cv_rect(left,y+14,12,2,accent);
+            amb_number(left+19,y,k+1,accent);
+            amb_text(left+28,y,AMB_ROLE[l->role],accent,8);
+        }else{
+            cv_bg=ambr.target==k+1?TONO_ORANGE:AINK;cv_rect(left,y,14,13,cv_bg);
+            amb_number(left+4,y+2,k+1,ABG);cv_bg=ABG;
+            amb_text(left+19,y,AMB_ROLE[l->role],AINK,8);
+        }
         amb_text(left+19,y+13,l->role==6?N_AS_SOURCE[l->base[P_E0]&1]:amb_patch_name(l),ADIM,14);
         if(l->base[P_MUTE] || (ambr.solo>=0 && ambr.solo!=(int)k))amb_text(left+99,y,"M",AQUEUE,1);
     }
@@ -1784,6 +1808,16 @@ static void amb_draw(void)
         amb_text(left,14,label,amb_theme()?accent:ADIM,9);cv_rect(left,28,17,2,accent);
         if(text_w(&AF_M,value)<=54)cv_text(left,34,&AF_M,value,AINK);
         else amb_text(left,37,value,AINK,9);
+        if(amb_theme() && ambr.view==0){
+            int amount;
+            if(ambr.target)amount=amb.layer[ambr.target-1].macro[k]*100/127;
+            else{
+                unsigned id=amb_master_macros[k];
+                amount=k==3?-amb.global[id]*100/64:amb.global[id]*100/GP[id].max;
+            }
+            for(int tick=0;tick<9;tick++)cv_rect(left+5*tick,53,4,2,
+                tick*100<9*amount?accent:ALINE);
+        }
     }
     cv_bg=ABG;
     if(ambr.notice[0] && fm1_ms-ambr.notice_ms<2500u)
