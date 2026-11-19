@@ -75,3 +75,9 @@ On LAYER EQ and GLOBAL EQ, the three segmented bars show live input levels below
 On HOME, turn ALGORITHM left for a closer, darker and more driven mix or right for a clearer, more spacious one. Each song starts at position 0 with 18 detents on either side. Colour and sends move progressively during playback. Harmony changes on a downbeat and the generator keeps running. At wider intervals, generated layers can change instruments one at a time, using GLO release/crossfade. Turn back to revisit a colour. Manual patterns and chosen sample sources retain their instruments. SAVE stores the current arrangement. Recalling it starts a fresh landscape from there.
 
 The Texture role includes ten recorded-grain beds. Select one on EDIT → SOUND with ALGORITHM and REC. STEADY holds it continuously; recorded manual rests release it. Ocean Beads and Undertow use an ocean drum, Cabasa Silk and Wire Brush a cabasa, Wood Rasp and Dry Timber a guiro, Seed Rain a shaker, Clockwork and Distant Cogs a ratchet, and Bowed Sheet a suspended cymbal.
+
+### Live travel and space
+
+HOME displays the signed ALGORITHM position and its colour continuously. The centre tick marks the loaded arrangement. GLO → SETTINGS uses SELECT for theme and knob 1 for travel. BOUNDED keeps the original 37 positions. ENDLESS lets you keep turning on either side. Beyond the former endpoints, harmony and orchestration keep evolving within the dark or bright palette. The setting persists between sessions.
+
+On a layer’s FX → DELAY page, knob 1 sets that layer’s send and knob 4 chooses the shared echo type. GLO → MASTER FX → DELAY also controls its time and feedback. PING PONG alternates channels. SLAPBACK keeps repeats short with low feedback. The delay and reverb diagrams sketch the response to an impulse. PAN shows the smoothed position actually applied to the sounding layer.

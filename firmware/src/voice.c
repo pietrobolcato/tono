@@ -380,7 +380,7 @@ static uint32_t voice_victim(const track_t *self, int soft, track_t **pp)
         uint32_t mode = trk_vmode(t);
         uint32_t low = mode == V_POLY ? lowest_held(t) : NVOICE;
 #if AMBPLUS
-        if(amb_tail_releasing(p))continue; /* finish a user-requested sound release */
+        if(amb_tail_releasing(p) || (self!=t && amb_fading_in((unsigned)(self-trk))))continue; /* finish a user-requested sound release */
 #endif
         if (soft && t == self)
             continue;
@@ -431,10 +431,14 @@ static void voice_kill(voice_t *v)                      /* fade out over ~6 ms (
 /* (0.6.18) the load budget takes only a tail that is nearly gone: the oldest released voice under -50 dB (any part; 0.6.19, was -30).
  * NVOICE = none: the new voice is added and the tails ring out (0.6.16-17 took the oldest released one, loud or not:
  * with a sequence running every note cut the tails; the overload guard at 80 % stays the last line) */
-static uint32_t quiet_tail(track_t **pp)
+static uint32_t quiet_tail(const track_t *self, track_t **pp)
 {
     uint32_t p, i, best = NVOICE;
-    for (p = 0; p < NPART; p++)
+    (void)self;
+    for (p = 0; p < NPART; p++) {
+#if AMBPLUS
+        if(amb_tail_releasing(p) || (self!=&trk[p] && amb_fading_in((unsigned)(self-trk))))continue;
+#endif
         for (i = 0; i < NVOICE; i++) {
             const voice_t *v = &trk[p].v[i];
             if (!v->active || v->gate || v->stage == 4u || v->env_out >= 104)
@@ -444,6 +448,7 @@ static uint32_t quiet_tail(track_t **pp)
                 *pp = &trk[p];
             }
         }
+    }
     return best;
 }
 
@@ -453,7 +458,7 @@ static int voice_room(track_t *t, int soft)
     track_t *vp = 0;
     uint32_t k;
     if (voices_busy() < voice_cap()) {
-        if (load_tight && (k = quiet_tail(&vp)) < NVOICE) {
+        if (load_tight && (k = quiet_tail(t,&vp)) < NVOICE) {
             voice_kill(&vp->v[k]);                      /* (the load budget: a dying tail makes the room) */
             voice_trims++;
         }
@@ -498,7 +503,7 @@ static voice_t *voice_alloc(track_t *t, uint32_t note)
     }
     if (nfree && (voices_busy() >= voice_cap() || load_tight)) {   /* (0.6.16: the load budget too; 0.6.18: a dying tail) */
         track_t *vp = 0;
-        uint32_t full = voices_busy() >= voice_cap(), k = full ? voice_victim(t, 0, &vp) : quiet_tail(&vp);
+        uint32_t full = voices_busy() >= voice_cap(), k = full ? voice_victim(t, 0, &vp) : quiet_tail(t,&vp);
         if (k < np && vp == t)
             return &t->v[k];                            /* our own: restart it in place (no click) */
         if (k < NVOICE) {

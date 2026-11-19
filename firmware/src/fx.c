@@ -1585,7 +1585,7 @@ static __attribute__((noinline)) int fx_rest(int32_t any, int32_t *wet, uint32_t
 #if AMBPLUS
 static __attribute__((noinline)) unsigned tape_select(void)
 {
-    unsigned tape=song.g[G_DTYPE]>=2?(unsigned)song.g[G_DTYPE]:0;
+    unsigned tape=song.g[G_DTYPE]>=2 && song.g[G_DTYPE]<=4?(unsigned)song.g[G_DTYPE]:0;
     if(tape!=tape_fx.kind){
         if(!tape){fx.dsw=2;fx.dsw_n=0;fx.dsw_to=fx.dr_sh;}
         tape_reset(tape);
@@ -1627,6 +1627,10 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
      * loop's gain squared, the right x FEEDBK: the repeats left, right, left .., each FEEDBK softer; TIME at most half
      * the line (0.8.4: of its longest, at a quarter rate, dly_rate); WIDE out of it */
     int32_t png = song.g[G_DPING] == 1 && !gr, fb2 = (int32_t)(((int64_t)fb * fb) >> 15);
+#if AMBPLUS
+    if(song.g[G_DTYPE]==5){png=1;dig=1;gr=0;}
+    if(song.g[G_DTYPE]==6){dl=clamp(dl,FS/25,FS/7);fb=clamp(fb,0,8192);png=gr=0;}
+#endif
     if (dig && fb > 32767) fb = 32767;                  /* (0.6.90) DIGITAL: 100 % at most, a repeat held for ever */
     if (dig && fb2 > 32767) fb2 = 32767;
     int32_t cho = sys_load != LOAD_ECO;                /* (0.6.30) LOAD ECO: no chorus */

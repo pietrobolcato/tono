@@ -93,6 +93,7 @@ static const char *amb_knob_hint(const amb_layer_t *l,unsigned knob)
         if(!l->generated)return (l->role==4?manual_drum:manual)[knob];
         return (l->role==4?drum:pattern)[knob];
     }
+    if(ambr.page==5 && ambr.fx==2 && knob==3)return "Shared delay algorithm";
     if(ambr.page==5 && ambr.fx==5)return amb_grain_hint[knob];
     return ambr.page==5?amb_param_hint(l,amb_fx_id(l,knob)):eq[knob];
 }

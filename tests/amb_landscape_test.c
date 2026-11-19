@@ -18,5 +18,18 @@ int main(void)
     for(unsigned k=0;k<4;k++)assert(!memcmp(&amb.layer[k],&initial[k],sizeof initial[k]));
     assert(amb.chord==chord && amb_valid(&amb));
     amb_fixture_scene(0);assert(!travel.ready && !travel.wanted);
+    song.playing=0;ambr.view=2;ambr.page=5;
+    amb_knob(0,1);assert(amb_endless());
+    ambr.view=0;
+    for(int i=1;i<=80;i++){
+        turn(EN_ALGO,1);assert(travel.wanted==i && amb_valid(&amb));
+    }
+    unsigned chord80=amb.chord,patch80=amb.layer[0].patch;
+    turn(EN_ALGO,-2);turn(EN_ALGO,2);
+    assert(travel.wanted==80 && amb.chord==chord80 && amb.layer[0].patch==patch80);
+    for(int i=79;i>=-80;i--){turn(EN_ALGO,-1);assert(travel.wanted==i && amb_valid(&amb));}
+    ambr.view=2;ambr.page=5;amb_knob(0,-1);
+    assert(!amb_endless() && travel.wanted==-18);
+    puts("Endless travel across both boundaries and reversible chord/patch selections PASS");
     puts("Live landscape: bar-queued harmony, gradual colour, instrument thresholds, manual pattern and return PASS");
 }

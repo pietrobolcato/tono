@@ -4,14 +4,16 @@
  * the current arrangement and recall starts a fresh performance from it. */
 #define AMB_TRAVEL_RANGE 18
 static struct {
-    volatile int8_t wanted;
-    int8_t harmony, colour, stage[4];
+    volatile int32_t wanted;
+    int32_t harmony, stage[4];
+    int8_t colour;
     uint8_t ready, chord[2*AMB_TRAVEL_RANGE+1];
     int16_t origin_macro[4][4], origin_clip, origin_echo_colour;
     amb_layer_t origin[4];
     uint8_t last_patch[4], protect[4];
 } travel;
 
+static int amb_endless(void){return (favorites.factory[15][13]&2)!=0;}
 static const char *amb_landscape_name(int position)
 {
     if(position<=-12)return "DARK / DRIVEN";
@@ -52,7 +54,14 @@ static int amb_landscape_value(int current,int16_t *base,int old_offset,int next
 }
 static void amb_landscape_colour(int stopped)
 {
-    int old=travel.colour,delta=travel.wanted*4-old;
+    int position=travel.wanted;
+    int distance=position<0?-position:position;
+    int tone=clamp(distance,0,18)*4;
+    if(distance>18){
+        int phase=(distance-18)%16;
+        tone=72+(phase<8?phase:16-phase)*2;
+    }
+    int old=travel.colour,delta=(position<0?-tone:tone)-old;
     if(!delta)return;
     int next=old+(stopped?delta:clamp(delta,-2,2));
     for(unsigned k=0;k<4;k++)for(unsigned j=0;j<4;j++){
@@ -75,7 +84,9 @@ static int amb_landscape_instrument(unsigned k,int position)
     };
     amb_layer_t *l=&amb.layer[k];
     int threshold=4+4*(int)k;
-    int stage=position>=threshold?1:position<=-threshold?-1:0;
+    int distance=position<0?-position:position;
+    int stage=distance<threshold?0:1+(distance-threshold)/16;
+    if(position<0)stage=-stage;
     if(!l->generated || l->role>=6 || travel.protect[k])return 0;
     if(travel.stage[k] && (l->role!=travel.origin[k].role || l->patch!=travel.last_patch[k])){
         travel.protect[k]=1;return 0;
@@ -87,8 +98,8 @@ static int amb_landscape_instrument(unsigned k,int position)
     const amb_layer_t *sound=saved;
     if(stage){
         const uint8_t *choices=palette[l->role][stage>0];
-        unsigned choice=amb_hash(amb.policy.seed+19*k)&1;
-        if(choices[choice]==saved->patch)choice^=1;
+        unsigned choice=(amb_hash(amb.policy.seed+19*k)+(distance-threshold)/16)&1;
+        if(distance<threshold+16 && choices[choice]==saved->patch)choice^=1;
         replacement=*l;
         amb_fill_patch(&replacement,amb.key,k,l->role,choices[choice]);
         sound=&replacement;
@@ -107,7 +118,8 @@ static int amb_landscape_bar(void)
     for(unsigned k=0;k<4;k++)if(amb_landscape_instrument(k,position) && song.playing)break;
     if(position==travel.harmony)return 0;
     int scale[12],count=amb_scale(amb_pool(),scale);
-    amb.chord=travel.chord[AMB_TRAVEL_RANGE+position]%count;
+    if(position>=-18 && position<=18)amb.chord=travel.chord[AMB_TRAVEL_RANGE+position]%count;
+    else amb.chord=(amb_hash(amb.policy.seed+(uint32_t)position/4u)+(uint32_t)position)%count;
     amb_revoice();travel.harmony=position;
     return 1;
 }
@@ -115,8 +127,11 @@ static void amb_landscape_turn(int delta)
 {
     ambr.loading=1;
     if(!travel.ready)amb_landscape_start();
-    travel.wanted=clamp(travel.wanted+delta,-AMB_TRAVEL_RANGE,AMB_TRAVEL_RANGE);
+    int next=travel.wanted+delta;
+    /* Wrap the distant numeric readout while staying on the same side. */
+    if(amb_endless())travel.wanted=next>999999?20+(next-1000000)%16:next< -999999?-20-(-next-1000000)%16:next;
+    else travel.wanted=clamp(next,-AMB_TRAVEL_RANGE,AMB_TRAVEL_RANGE);
     if(!song.playing){amb_landscape_colour(1);amb_landscape_bar();}
-    amb_say(amb_landscape_name(travel.wanted));
+    ambr.dirty=1;
     ambr.loading=0;
 }

@@ -43,5 +43,19 @@ int main(void)
         if(i>101)for(unsigned j=0;j<CTL;j++)energy+=abs(out[j]);
     }
     assert(energy>100);
+    /* A fading-in layer at capacity may recycle only its own voices.
+     * The other three chairs retain their mixer gain and released notes. */
+    memset(ambr.handoff,0,sizeof ambr.handoff);
+    memset(ambr.fade_slot,0,sizeof ambr.fade_slot);
+    for(unsigned i=0;i<NTRK;i++)memset(trk[i].v,0,sizeof trk[i].v);
+    ambr.fade_slot[0]=4;ambr.handoff[4]=1;ambr.tail_gain[4]=16384;
+    for(unsigned i=1;i<4;i++){
+        trk[i].v[0].active=1;
+        assert(amb_fade_level(i,65536)==65536);
+    }
+    track_t *victim=0;
+    assert(amb_fade_level(0,65536)==32768);
+    assert(voice_victim(&trk[0],0,&victim)==NVOICE && quiet_tail(&trk[0],&victim)==NVOICE);
+    puts("Single-layer crossfade keeps sibling gains and voices PASS");
     printf("Concurrent old and new synth voices for %u frames, song overlap, layer gain pickup and granular return PASS\n",overlap_frames);
 }
