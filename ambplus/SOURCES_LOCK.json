@@ -1,8 +1,8 @@
 {
   "status": "DEVELOPMENT CANDIDATE; VALIDATION INCOMPLETE; NOT HARDWARE-VALIDATED",
   "flash_status": "NOT AUTHORISED",
-  "source_sha": "f220cd157247853d65bb74531dfacd6a2b1df780",
-  "artifact_sha256": "262f8e3661e46aee7e3c334e792658a20118c1b37517fd3f5c706eadf70191bf",
+  "source_sha": "589dc12f4086f1128d4dc91a7ef4bc5647151b8f",
+  "artifact_sha256": "96dae5a5881051e817ca683e554ce4682862f3fc8a807e2dfeddb75351159ad3",
   "jiant": {
     "url": "https://github.com/juanjiant-bit/JIANT",
     "commit": "beffdd0b32ffebce1d62fd608ffc653fc7feec82",
@@ -53,7 +53,7 @@
   "excluded_sources": [
     "Shrub"
   ],
-  "previous_implementation_sha": "e962efb9b3047eaa417222a428b7e6258d03ee3b",
+  "previous_implementation_sha": "f220cd157247853d65bb74531dfacd6a2b1df780",
   "save_version": 5,
   "save_payload_bytes": 1440,
   "comparison_reference": {
@@ -89,5 +89,10 @@
     "sha256": "d9850c52974d677e5d0876fec7fef127d4d7dab7a928d060d50b7de7e4a0ab3d",
     "patch": "emulator-shift-mute.patch",
     "license": "EMULATOR_LICENSE"
+  },
+  "owner_factory_song": {
+    "name": "Nostalgic New Inn",
+    "source": "Tono 0.26 USER 1",
+    "payload_sha256": "16dd9961c3631a767d48a46e14fcde488aff559a39fba8f62e095aedbf08dd9a"
   }
 }
