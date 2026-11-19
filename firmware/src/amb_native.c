@@ -1396,6 +1396,29 @@ static void amb_display(int top,int height)
     cv_rect(8,top,3,height,TONO_ORANGE);
 }
 
+/* All time and response plots share the same 200-pixel plotting area. */
+static void amb_scope(int reference_y)
+{
+    amb_display(49,75);
+    for(int x=19;x<=219;x+=50)
+        for(int y=57;y<109;y+=5)cv_rect(x,y,1,1,DISPLAY_GRID);
+    cv_line(19,reference_y,219,reference_y,DISPLAY_GRID);
+}
+
+static void amb_eq_plot(const int8_t *bands)
+{
+    amb_scope(82);
+    int last=82;
+    for(unsigned i=0;i<4;i++){
+        int next=i<3?82-bands[i]*2:82;
+        cv_line(19+50*i,last,69+50*i,next,DISPLAY_TRACE);
+        if(i<3)tono_disc(69+50*i,next,2,TONO_ORANGE);
+        last=next;
+    }
+    amb_text(17,112,"LOW",ABG,3);amb_text(193,112,"HIGH",ABG,4);
+    cv_bg=ABG;
+}
+
 static void amb_draw_home(void)
 {
     unsigned target=amb_level_feedback(),value=target?amb.layer[target-1].level:amb.master;
@@ -1502,26 +1525,39 @@ static void amb_draw(void)
                 amb_text(12,102,ENGINES[l->engine]->name,ADIM,12);amb_number(188,113,l->patch+1,AINK);
             }
         } else if(ambr.view==1 && ambr.page==2) {
+            amb_scope(106);
             if(l->role==4){
-                amb_text(12,68,"HIT SHAPE",AINK,22);
                 for(i=0;i<4;i++){
-                    int height=l->base[amb_envelope_id(l,i)]/3;
-                    cv_rect(18+i*54,133-height,28,height,ADIM);
+                    unsigned id=amb_envelope_id(l,i);
+                    const param_desc_t *d=amb_param_desc(l,id);
+                    int height=clamp((l->base[id]-d->min)*46/(d->max-d->min),0,46);
+                    cv_rect(29+i*50,106-height,25,height,DISPLAY_TRACE);
+                    cv_rect(29+i*50,105-height,25,2,TONO_ORANGE);
                 }
+                amb_text(17,112,"HIT PARAMETERS",ABG,18);
             }else if(l->role==6 && l->base[P_E1]==3){
-                amb_text(12,70,"ONE-SHOT PLAY REGION",AINK,28);
-                int x=12+2*l->base[P_E4],end=12+2*l->base[P_E5];
-                cv_line(12,105,214,105,ALINE);cv_rect(x,101,end>x?end-x:1,9,AINK);
+                int start=19+2*clamp(l->base[P_E4],0,100);
+                int end=19+2*clamp(l->base[P_E5],0,100);
+                cv_line(19,82,219,82,DISPLAY_GRID);
+                cv_rect(start,79,end>start?end-start:1,7,DISPLAY_TRACE);
+                cv_line(start,74,start,90,TONO_ORANGE);
+                cv_line(end,74,end,90,TONO_ORANGE);
+                amb_text(17,112,"ONE-SHOT REGION",ABG,18);
             }else{
-            int ax=16+amb.layer[ambr.edit_layer].base[P_ATK]/3,rx=229-l->base[P_REL]/3;
-            int dx=ax+6+l->base[P_DEC]/2,sy=128-l->base[P_SUS]/2;
-            field_curve(12,128,ax,65,131,ASEL);field_curve(ax,65,dx,sy,131,ALINE);field_curve(dx,sy,rx,sy,131,ASEL);field_curve(rx,sy,230,130,131,ALINE);
+                int peak=23+l->base[P_ATK]/3,hold=peak+6+l->base[P_DEC]/2;
+                int release=215-l->base[P_REL]/3,sustain=106-l->base[P_SUS]*48/127;
+                cv_line(19,106,peak,58,DISPLAY_TRACE);
+                cv_line(peak,58,hold,sustain,DISPLAY_TRACE);
+                cv_line(hold,sustain,release,sustain,DISPLAY_TRACE);
+                cv_line(release,sustain,219,106,DISPLAY_TRACE);
+                tono_disc(peak,58,2,TONO_ORANGE);tono_disc(hold,sustain,2,TONO_ORANGE);
+                tono_disc(release,sustain,2,TONO_ORANGE);
+                amb_text(17,112,"NOTE ON",ABG,8);amb_text(174,112,"RELEASE",ABG,8);
             }
+            cv_bg=ABG;
         } else if(ambr.view==1 && ambr.page==3) {
             track_t *t=&trk[ambr.edit_layer];uint32_t ph=amb_lfo_phase(ambr.edit_layer);int last=0;
-            amb_display(49,75);
-            for(int x=19;x<=219;x+=50)for(int y=57;y<109;y+=5)cv_rect(x,y,1,1,DISPLAY_GRID);
-            cv_line(19,82,219,82,DISPLAY_GRID);
+            amb_scope(82);
             for(i=0;i<=200;i++){
                 int y=82-lfo_wave(t,i*21474836u)*22/32768;
                 if(i){cv_line(18+i,last,19+i,y,DISPLAY_TRACE);cv_rect(19+i,y+1,1,1,DISPLAY_TRACE);}
@@ -1546,9 +1582,7 @@ static void amb_draw(void)
                 if(song.playing && ambr.playhead_valid[ambr.edit_layer] && i==ambr.playhead[ambr.edit_layer])cv_rect(12+i*14,127,10,2,AQUEUE);
             }
         } else if(ambr.view==1 && ambr.page==6) {
-            int8_t *eq=amb.layer_eq[ambr.edit_layer];
-            field_curve(15,100,65,100-eq[0]*2,126,ASEL);field_curve(65,100-eq[0]*2,120,100-eq[1]*2,126,ALINE);
-            field_curve(120,100-eq[1]*2,175,100-eq[2]*2,126,ASEL);field_curve(175,100-eq[2]*2,225,100,126,ALINE);cv_line(15,100,225,100,ADIM);
+            amb_eq_plot(amb.layer_eq[ambr.edit_layer]);
             amb_text(12,130,"LAYER EQ / BEFORE FX SENDS / DB",ADIM,35);
         } else if(ambr.view==1 && ambr.page==5) {
             static const char *const modules[5]={"DRIVE","CHORUS / PAN","DELAY SEND","REVERB SEND","SPATIAL"};
@@ -1605,8 +1639,7 @@ static void amb_draw(void)
             }
             amb_text(12,64,"TONAL CENTRE",ADIM,24);cv_text(12,77,&AF_M,N_NOTE[amb.key],AINK);
         } else if(ambr.view==2 && ambr.page==4) {
-            field_curve(15,100,65,100-amb.eq[0]*2,126,ASEL);field_curve(65,100-amb.eq[0]*2,120,100-amb.eq[1]*2,126,ALINE);
-            field_curve(120,100-amb.eq[1]*2,175,100-amb.eq[2]*2,126,ASEL);field_curve(175,100-amb.eq[2]*2,225,100,126,ALINE);cv_line(15,100,225,100,ADIM);
+            amb_eq_plot(amb.eq);
             amb_text(12,130,"3 BANDS / OUTPUT TRIM (DB)",ADIM,34);
         } else if(ambr.view==3) {
             amb_text(12,62,"SLOT",ADIM,6);amb_number(49,62,ambr.slot+1,AINK);
@@ -1655,17 +1688,20 @@ static void amb_draw(void)
         amb_text(12,20,ambr.reset_pending?"REC RESTORE / HOME CANCEL":"REC RECALL / HOME CANCEL",AINK,36);
     }else for(k=0;k<4;k++) {
         char label[16]={0},value[24]={0};amb_knob_value(k,label,value);cv_bg=ABG;
-        if(k)cv_rect(k*60,10,1,38,ALINE);
-        amb_text(5+k*60,12,label,ADIM,9);cv_rect(5+k*60,26,17,2,TONO_ORANGE);
-        if(text_w(&AF_M,value)<=54)cv_text(5+k*60,31,&AF_M,value,AINK);
-        else amb_text(5+k*60,34,value,AINK,9);
-
+        int left=9+k*57;
+        if(k)cv_rect(left-4,12,1,42,ALINE);
+        amb_text(left,14,label,ADIM,9);cv_rect(left,28,17,2,TONO_ORANGE);
+        if(text_w(&AF_M,value)<=54)cv_text(left,34,&AF_M,value,AINK);
+        else amb_text(left,37,value,AINK,9);
     }
     cv_bg=ABG;
     if(ambr.notice[0] && fm1_ms-ambr.notice_ms<2500u)
-        amb_text(10,73,ambr.notice,ADIM,39);
+        amb_text(10,59,ambr.notice,ADIM,39);
     else if(amb_tail_any())
-        amb_text(10,73,"OLD SOUND RELEASING / NEXT QUEUED",ADIM,39);
+        amb_text(10,59,"OLD SOUND RELEASING / NEXT QUEUED",ADIM,39);
+    cv_rect(8,72,224,1,ALINE);
+    amb_text(10,78,"Help",ADIM,4);
+    amb_text(162,78,"HOME + EDIT",AINK,12);
     cv_blit_cells(0,147);
     (void)b;
 }
