@@ -27,19 +27,22 @@ int main(void)
             l->macro[knob]=64;
         }
         ambr.view=1;ambr.page=3;l->lfo_depth=100;
-        for(unsigned i=0;i<ROUTE_COUNT;i++){
-            amb_knob(3,1);
-            const char *name=amb_route_name(l,l->lfo_dest);
-            assert(name && *name);
-            if(!l->lfo_dest)break;
-            routes++;
-            if(l->engine==ENGI_VOICE && !strcmp(name,"BREATH")){
-                trk[0].lfo_val=-32767;amb_prepare();int low=trk[0].p[P_E5];
-                trk[0].lfo_val=32767;amb_prepare();assert(trk[0].p[P_E5]-low>=60);
-                assert(amb_valid(&amb));voice_patches++;
-            }
-        }
-        assert(l->lfo_dest==0);
+        uint8_t seen[ROUTE_COUNT]={0};
+        do{
+            unsigned first=l->lfo_dest;
+            do{
+                unsigned route=l->lfo_dest;
+                assert(!seen[route] && amb_route_name(l,route));seen[route]=1;routes++;
+                if(l->engine==ENGI_VOICE && !strcmp(amb_route_name(l,route),"BREATH")){
+                    trk[0].lfo_val=-32767;amb_prepare();int low=trk[0].p[P_E5];
+                    trk[0].lfo_val=32767;amb_prepare();assert(trk[0].p[P_E5]-low>=60);
+                    assert(amb_valid(&amb));voice_patches++;
+                }
+                amb_knob(3,1);
+            }while(l->lfo_dest!=first);
+            turn(EN_SELECT,1);
+        }while(l->lfo_dest!=0);
+        for(unsigned i=0;i<ROUTE_COUNT;i++)assert(seen[i]==!!amb_route_name(l,i));
         settle();
         assert(!memcmp(saved,l->base,sizeof saved));patches++;
     }

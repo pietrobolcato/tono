@@ -37,3 +37,5 @@ Copy this file into the root of your dedicated AMB+ fork of JIANT. It is not fir
 - The only *interactive* development emulator is `joakimeriksson/fm1-emu` (browser and/or native `fm1-live`) running our **real** `.fwsc` package. `index.html` in handoff is a visual specification, not device firmware.
 - JIANT `tests/run_tests.sh` remains mandatory for regression, golden audio, UI bounds, resource budgets and storage logic. No requirement to compile JIANT `web/emu/build.sh`; it may be optional when host or hardware emulator debugging is insufficient.
 - Test both `FM1_STRICT=1` native emulator and relevant device flash variant before release. An emulator pass is not hardware certification.
+
+For Tono interface changes, follow the **Interaction pattern for new features** in ambplus/CONTROLS.md. It supersedes the original handoff’s immediate SELECT patch changes.

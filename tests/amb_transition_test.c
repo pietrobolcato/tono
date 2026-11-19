@@ -55,7 +55,7 @@ int main(void)
             assert(!memcmp(&delay,&dly_u,sizeof delay));assert(!memcmp(reverb,rev_comb,sizeof reverb));
         }
         ambr.view=1;ambr.page=1;ambr.bank=0;before=fx;delay=dly_u;memcpy(reverb,rev_comb,sizeof reverb);
-        turn(EN_SELECT,1);assert(amb.layer[0].patch==old_patch);press(B_REC);assert(amb.layer[0].patch==(old_patch+1)%amb_patch_count(amb.layer[0].role) && amb.layer[0].level==level);
+        turn(EN_ALGO,1);assert(amb.layer[0].patch==old_patch);press(B_REC);assert(amb.layer[0].patch==(old_patch+1)%amb_patch_count(amb.layer[0].role) && amb.layer[0].level==level);
         assert(!memcmp(&before,&fx,sizeof fx));assert(!memcmp(&delay,&dly_u,sizeof delay));assert(!memcmp(reverb,rev_comb,sizeof reverb));
         for(i=0;i<FS*4u/CTL;i++)mix_block(out,CTL);
         assert(trk[0].engine==amb.layer[0].engine && ambr.held_n[0]);
