@@ -1,8 +1,8 @@
 {
   "status": "DEVELOPMENT CANDIDATE; VALIDATION INCOMPLETE; NOT HARDWARE-VALIDATED",
   "flash_status": "NOT AUTHORISED",
-  "source_sha": "6543aa8ae8800b8413ae1bf6a4df2ae2dc4d5b1b",
-  "artifact_sha256": "fdecc191fe2e865a859125dc705ce97fdba7fe2b4a950712630c2439aa160515",
+  "source_sha": "f220cd157247853d65bb74531dfacd6a2b1df780",
+  "artifact_sha256": "262f8e3661e46aee7e3c334e792658a20118c1b37517fd3f5c706eadf70191bf",
   "jiant": {
     "url": "https://github.com/juanjiant-bit/JIANT",
     "commit": "beffdd0b32ffebce1d62fd608ffc653fc7feec82",
@@ -80,5 +80,14 @@
       "Idiophones/Struck Idiophones/Suspended Cymbal 2/susCymb2_bowed_4.wav": "822397e799fe1cd77805bb85a60084583fa9672c41f5db2171669d20c32b404b"
     },
     "encoded_header_sha256": "ff6b4796f3abb75246f1d25b0be84a8846d658d2e48b6a788a3f6c36ff5459ed"
+  },
+  "tono_native_emulator": {
+    "upstream": "2ed986561c6f26596d37fd306fac0e7558a41356",
+    "source_sha": "f9d398fe0f9735e08b42b24e5e62286821bcc9cc",
+    "target": "macOS arm64",
+    "rust": "1.100.0",
+    "sha256": "d9850c52974d677e5d0876fec7fef127d4d7dab7a928d060d50b7de7e4a0ab3d",
+    "patch": "emulator-shift-mute.patch",
+    "license": "EMULATOR_LICENSE"
   }
 }
