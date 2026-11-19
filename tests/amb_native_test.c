@@ -44,6 +44,36 @@ static void amb_render(unsigned frames)
     for(i=0;i<frames;i+=CTL) {mix_block(out,CTL);amb_output(out,CTL);}
 }
 
+static void check_page_presets(void)
+{
+    amb_fixture_scene(0);
+    unsigned checks=0;
+    for(unsigned role=0;role<7;role++){
+        amb_patch(0,role,0);
+        for(unsigned view=1;view<=2;view++)for(unsigned page=0;page<(view==1?7:6);page++){
+            unsigned count=view==1 && page==5?6:view==2 && page==3?4:1;
+            for(unsigned fx=0;fx<count;fx++)for(unsigned index=1;index<=3;index++){
+                ambr.view=view;ambr.page=page;ambr.fx=fx;ambr.edit_layer=0;ambr.local_preset=0;
+                amb_piece_t old=amb;
+                turn(EN_PRESET,index);
+                assert(ambr.view==view && ambr.piece_preview==255 && !memcmp(&amb,&old,sizeof amb));
+                if(!amb_page_bank()){assert(!ambr.local_preset);continue;}
+                assert(ambr.local_preset==index && amb_rec_action());
+                press(B_HOME);assert(!ambr.local_preset && !memcmp(&amb,&old,sizeof amb));
+                ambr.view=view;ambr.page=page;ambr.fx=fx;
+                turn(EN_PRESET,index);press(B_REC);
+                assert(amb_valid(&amb) && !ambr.local_preset);
+                assert(!memcmp(&old.layer[1],&amb.layer[1],3*sizeof(amb_layer_t)));
+                assert(amb.layer[0].engine==old.layer[0].engine && amb.layer[0].patch==old.layer[0].patch);
+                amb_piece_t saved=amb;
+                turn(EN_PRESET,index);press(B_REC);assert(!memcmp(&saved,&amb,sizeof amb));
+                checks++;
+            }
+        }
+    }
+    printf("%u local presets across roles/pages: silent browse, HOME cancel, valid repeatable commit, scope PASS\n",checks);
+}
+
 #ifndef AMB_MAIN
 #define AMB_MAIN main
 #endif
@@ -153,6 +183,7 @@ int AMB_MAIN(int argc,char **argv)
     for(i=0;i<40;i++){trk_note_on(&trk[i%4],48+(i%24),80);assert(voices_busy()<=4);}
     printf("offsets: piece.policy=%zu piece.layer=%zu layer.bytes=%zu runtime.step=%zu\n",offsetof(amb_piece_t,policy),offsetof(amb_piece_t,layer),sizeof(amb_layer_t),offsetof(__typeof__(ambr),step));
     if(argc>1)f=fopen(argv[1],"wb");
+    check_page_presets();
     if(f) {amb_fixture_scene(0);seq_start();wav_hdr(f,FS*20);for(i=0;i<FS*20u/CTL;i++){mix_block(out,CTL);amb_output(out,CTL);for(k=0;k<CTL;k++)wav_put(f,out[k*2],out[k*2+1]);}fclose(f);seq_stop();}
     puts("AMB+ native: controls/roles/pages/recording/non-destructive generation/8-slot A-B recovery/factory catalog DSP PASS");
     return 0;
