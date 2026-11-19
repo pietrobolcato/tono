@@ -1,8 +1,8 @@
 {
   "status": "DEVELOPMENT CANDIDATE; VALIDATION INCOMPLETE; NOT HARDWARE-VALIDATED",
   "flash_status": "NOT AUTHORISED",
-  "source_sha": "c4051f2f3eb8d873a421871ff5b9624b6f775417",
-  "artifact_sha256": "8f97a7e38460cddb13117e900c527c62f9de77220a0a92c8079e6e975f0b57cc",
+  "source_sha": "c70cc5e6ccb0e8bec982715bfcca687386a94894",
+  "artifact_sha256": "67c45b7ee94cd616373b6810cb64d8333c7bbb33a7ca5841450a21d1f3c5f55b",
   "jiant": {
     "url": "https://github.com/juanjiant-bit/JIANT",
     "commit": "beffdd0b32ffebce1d62fd608ffc653fc7feec82",
@@ -46,14 +46,14 @@
     "fonttools": "4.68.0"
   },
   "samples": {
-    "source": "Original offline-generated PCM; tools/gen_amb_samples.py",
+    "source": "Two original offline-generated companded recordings; tools/gen_amb_samples.py",
     "license": "GPL-3.0-only",
-    "bytes": 32768
+    "bytes": 32000
   },
   "excluded_sources": [
     "Shrub"
   ],
-  "previous_implementation_sha": "e09b9f94ab27af372d3c2da06d3f6368172d2350",
+  "previous_implementation_sha": "c4051f2f3eb8d873a421871ff5b9624b6f775417",
   "save_version": 4,
   "save_payload_bytes": 1420,
   "comparison_reference": {
