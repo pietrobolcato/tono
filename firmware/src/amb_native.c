@@ -1229,13 +1229,20 @@ static void amb_leds(void)
 #define ALINE (TE_DARK?RGB(76,76,80):RGB(174,175,171))
 #define ASEL (TE_DARK?RGB(52,52,55):RGB(209,210,205))
 #define AQUEUE (TE_DARK?TONO_ORANGE:RGB(145,54,9))
-#define SCOPE_BG (TE_LIGHT?RGB(223,221,215):TONO_INK)
+#define SCOPE_BG (TE_LIGHT?RGB(237,238,236):TONO_INK)
 #define SCOPE_INK (TE_LIGHT?TONO_INK:TONO_PAPER)
 static uint16_t amb_accent(unsigned n)
 {
     static const uint16_t bright[]={RGB(255,105,57),RGB(114,188,214),RGB(224,130,175),RGB(239,190,95)};
-    static const uint16_t deep[]={RGB(174,56,13),RGB(19,102,136),RGB(156,49,103),RGB(128,83,9)};
-    return (TE_LIGHT?deep:bright)[n%4];
+    static const uint16_t vivid[]={RGB(255,66,32),RGB(0,148,246),RGB(245,53,146),RGB(255,167,0)};
+    return (TE_LIGHT?vivid:bright)[n%4];
+}
+
+/* Small lettering uses a denser ink in the same hue as its indicator. */
+static uint16_t amb_accent_text(unsigned n)
+{
+    static const uint16_t inks[]={RGB(202,45,8),RGB(0,99,189),RGB(186,27,111),RGB(147,82,0)};
+    return TE_LIGHT?inks[n%4]:amb_accent(n);
 }
 
 static void field_curve(int x0,int y0,int x1,int y1,int floor,uint16_t fill)
@@ -1418,7 +1425,7 @@ static const char *amb_screen_help(void)
 /* Layer numbers are shared by HOME and ENSEMBLE. The orange mark tracks
  * the selected target, including when several tracks have the same role. */
 #define DISPLAY_GRID (TE_LIGHT?RGB(174,172,167):RGB(76,80,77))
-#define DISPLAY_TRACE (TE_LIGHT?RGB(26,104,130):RGB(172,209,221))
+#define DISPLAY_TRACE (TE_LIGHT?RGB(0,148,246):RGB(172,209,221))
 static void amb_display(int top,int height)
 {
     cv_bg=SCOPE_BG;cv_rect(8,top,224,height,SCOPE_BG);
@@ -1460,7 +1467,7 @@ static void amb_led_number(int x,int y,unsigned value)
             cv_rect(x+seg[0],y+seg[1],seg[2],seg[3],(mask>>i)&1?amb_accent(0):DISPLAY_GRID);
         }
     }
-    amb_text(x, y+12,"%",amb_accent(0),1);
+    amb_text(x, y+12,"%",amb_accent_text(0),1);
 }
 
 static void amb_mix_ring(void)
@@ -1521,8 +1528,8 @@ static void amb_draw_home(void)
             uint16_t accent=amb_accent(k);cv_bg=ABG;
             amb_role_symbol(left,y+1,l->role,accent);
             if(ambr.target==k+1)cv_rect(left,y+14,12,2,accent);
-            amb_number(left+19,y,k+1,accent);
-            amb_text(left+28,y,AMB_ROLE[l->role],accent,8);
+            amb_number(left+19,y,k+1,amb_accent_text(k));
+            amb_text(left+28,y,AMB_ROLE[l->role],amb_accent_text(k),8);
         }else{
             cv_bg=ambr.target==k+1?TONO_ORANGE:AINK;cv_rect(left,y,14,13,cv_bg);
             amb_number(left+4,y+2,k+1,ABG);cv_bg=ABG;
@@ -1697,7 +1704,7 @@ static void amb_draw(void)
                 unsigned style=ambr.gen_edit[k]?ambr.gen_candidate[k]:amb.policy.pending[k]!=255?amb.policy.pending[k]:amb.policy.active[k];
                 amb_policy_t preview=amb.policy;preview.active[k]=(uint8_t)style;
                 if(ambr.gen_edit[k] || amb.policy.pending[k]!=255)amb_text(209,y,"Q",TONO_ORANGE,1);
-                amb_text(17,y,k==0?"RHYTHM":k==1?"PHRASE":"INTERPLAY",amb_theme()?amb_accent(k):DISPLAY_TRACE,10);
+                amb_text(17,y,k==0?"RHYTHM":k==1?"PHRASE":"INTERPLAY",amb_theme()?amb_accent_text(k):DISPLAY_TRACE,10);
                 amb_text(88,y,k==0?AMB_RHYTHMS[style]:k==1?AMB_PHRASES[style]:AMB_INTERPLAY[style],SCOPE_INK,24);
                 int prev=y+17;
                 for(i=0;i<26;i++){
@@ -1719,8 +1726,8 @@ static void amb_draw(void)
             static const char *const modules[4]={"REVERB","DELAY / TAPE","MOTION","WARMTH"};
             amb_display(49,75);
             cv_text(17,50,&AF_M,modules[ambr.fx%4],SCOPE_INK);
-            if(ambr.fx%4==0)amb_text(162,58,N_RTYPE[fx.rtype<NELEM(N_RTYPE)?fx.rtype:0],DISPLAY_TRACE,11);
-            if(ambr.fx%4==1)amb_text(162,58,N_DLYTYPE[amb.global[G_DTYPE]],DISPLAY_TRACE,11);
+            if(ambr.fx%4==0)amb_text(162,58,N_RTYPE[fx.rtype<NELEM(N_RTYPE)?fx.rtype:0],TE_LIGHT?amb_accent_text(1):DISPLAY_TRACE,11);
+            if(ambr.fx%4==1)amb_text(162,58,N_DLYTYPE[amb.global[G_DTYPE]],TE_LIGHT?amb_accent_text(1):DISPLAY_TRACE,11);
             const char *const names[]={"SIZE","MIX","DEPTH","CLIP"};
             const unsigned ids[]={G_RSIZE,G_DMIX,G_CDEPTH,G_CLIP};
             unsigned id=ids[ambr.fx%4], v=amb.global[id], max=GP[id].max;
@@ -1734,11 +1741,11 @@ static void amb_draw(void)
             amb_text(10,132,ambr.fx%4==0 && fx.rtype!=amb.global[G_RTYPE]?"ECO: LIGHTER EFFECT ACTIVE":"SHARED MASTER PROCESSING",ADIM,32);
         } else if(ambr.view==2 && ambr.page==1) {
             amb_display(49,75);cv_text(17,51,&AF_M,N_NOTE[amb.key],SCOPE_INK);
-            amb_text(43,58,amb.scale==0?"MINOR":amb.scale==1?"MAJOR":amb.scale==2?"DORIAN":"LYDIAN",DISPLAY_TRACE,8);
+            amb_text(43,58,amb.scale==0?"MINOR":amb.scale==1?"MAJOR":amb.scale==2?"DORIAN":"LYDIAN",TE_LIGHT?amb_accent_text(1):DISPLAY_TRACE,8);
             for(i=0;i<12;i++){
                 int x=17+i*17;unsigned in=(amb_pool()>>i)&1u;
                 cv_bg=i==0?TONO_ORANGE:in?DISPLAY_TRACE:DISPLAY_GRID;cv_rect(x,77,15,24,cv_bg);
-                amb_text(x+1,85,N_NOTE[(amb.key+i)%12],in?SCOPE_BG:SCOPE_INK,2);
+                amb_text(x+1,85,N_NOTE[(amb.key+i)%12],in?(TE_LIGHT?TONO_INK:SCOPE_BG):SCOPE_INK,2);
             }
             cv_bg=SCOPE_BG;amb_text(17,112,"NOTE POOL",SCOPE_INK,10);
             cv_bg=ABG;amb_text(10,132,"TONAL CENTRE",ADIM,16);amb_text(88,132,N_NOTE[amb.key],AQUEUE,3);
@@ -1805,7 +1812,7 @@ static void amb_draw(void)
         int left=9+k*57;
         if(k)cv_rect(left-4,12,1,42,ALINE);
         uint16_t accent=amb_theme()?amb_accent(k):TONO_ORANGE;
-        amb_text(left,14,label,amb_theme()?accent:ADIM,9);cv_rect(left,28,17,2,accent);
+        amb_text(left,14,label,amb_theme()?amb_accent_text(k):ADIM,9);cv_rect(left,28,17,2,accent);
         if(text_w(&AF_M,value)<=54)cv_text(left,34,&AF_M,value,AINK);
         else amb_text(left,37,value,AINK,9);
         if(amb_theme() && ambr.view==0){
