@@ -2,6 +2,7 @@
 
 The playable instrument is the real `.fwsc` package in Joakim Eriksson's FM1 hardware emulator. The handoff HTML is a visual specification. Use one sounding instance at low volume; preserve unsaved emulator work before switching packages.
 
+- SELECT browses the current list, including GLO THEME. ALGORITHM opens chord and layer-role proposals. While a proposal is open, SELECT or ALGORITHM browses it, REC confirms and HOME cancels. PRESETS opens the piece list. The four numbered knobs edit the parameters shown on screen.
 - HOME SELECT: MASTER → L1 → L2 → L3 → L4. Four sound layers; MASTER adds no voice. MASTER pot always controls the last HOME target, on every page. Cross its saved level to pick it up after retargeting. While changing a selected layer's gain, the top HOME label/value/bar temporarily shows that layer; MASTER returns after 1.2 seconds without an accepted gain change.
 - HOME knobs: displayed performance macros, bounded offsets from deep baselines. Pad/Drone knob 3 is SUSTAIN, affecting envelope, hold length and generated activity. New factory Pad/Drone patches have sustained envelopes and 84% base activity. Existing user envelopes are retained.
 - HOME keyboard: shared pitch-class pool. Bright keys are chord tones, softer lights are available pool notes. Tap to add/remove classes for generation; tonic stays and at least three classes remain. A stock scale replaces the custom pool; key transposes it. EDIT's keyboard can otherwise audition literal/off-scale notes, except on PATTERN or while its sound is being replaced.

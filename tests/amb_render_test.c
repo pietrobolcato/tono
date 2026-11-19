@@ -183,7 +183,9 @@ int main(int argc,char **argv)
     }
     ambr.help=0;amb_fixture_scene(0);
     for(unsigned theme=0;theme<THEME_COUNT;theme++){
-        ambr.view=2;ambr.page=5;amb_knob(0,theme?1:0);assert(amb_theme()==theme);
+        ambr.view=2;ambr.page=5;if(theme)turn(EN_SELECT,1);
+        for(unsigned k=0;k<4;k++)turn(EN_K1+k,1);
+        assert(amb_theme()==theme);
         for(unsigned view=0;view<5;view++){
             ambr.view=view;
             unsigned pages=view==1?NELEM(AMB_EDIT):view==2?NELEM(AMB_GLO):1;

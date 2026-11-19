@@ -974,7 +974,7 @@ static void amb_knob(unsigned knob,int delta)
         }
         if(id) {const param_desc_t *d=amb_param_desc(l,id);l->base[id]=(int16_t)param_turn(d,l->base[id],delta);}
     } else if(ambr.view==2) {
-        if(ambr.page==5){if(!knob)amb_theme_turn(delta);return;}
+        if(ambr.page==5)return;
         if(ambr.page==0) amb.evolve[knob]=(uint8_t)clamp(amb.evolve[knob]+delta*3,0,100);
         else if(ambr.page==1) {
             unsigned old_key=amb.key,old_pool=amb_pool();
@@ -1037,6 +1037,18 @@ static void amb_rec(void)
         else {amb.chord=ambr.proposal;amb_revoice();}
     }
     ambr.proposal=255;ambr.dirty=1;
+}
+static void amb_browse_proposal(int delta)
+{
+    if(ambr.view==1 && ambr.page==0) {
+        unsigned cur=ambr.proposal==255?amb.layer[ambr.edit_layer].role:ambr.proposal;
+        ambr.proposal=(uint8_t)amb_wrap((int)cur+delta,7);
+        if(ambr.proposal==amb.layer[ambr.edit_layer].role) ambr.proposal=255;
+    } else if(ambr.view==0 || (ambr.view==2 && ambr.page==0)) {
+        unsigned cur=ambr.proposal==255?amb.chord:ambr.proposal;
+        ambr.proposal=(uint8_t)amb_wrap((int)cur+delta,7);
+        if(ambr.proposal==amb.chord) ambr.proposal=255;
+    }
 }
 static void amb_input(void)
 {
@@ -1114,6 +1126,7 @@ static void amb_input(void)
     if(sel) {
         ambr.reset_pending=0;
         if(ambr.piece_preview!=255) ambr.piece_preview=(uint8_t)amb_wrap(ambr.piece_preview+sel,NELEM(AMB_SCENE)+AMB_SLOTS);
+        else if(ambr.proposal!=255) amb_browse_proposal(sel);
         else if(ambr.view==0) amb_target(amb_wrap(ambr.target+sel,5));
         else if(ambr.view==3) {ambr.slot=(uint8_t)amb_wrap(ambr.slot+sel,8);ambr.overwrite=0;}
         else if(ambr.view==1) {
@@ -1135,17 +1148,9 @@ static void amb_input(void)
         }
         ambr.dirty=1;
     }
-    if(algo) {
+    if(algo && ambr.piece_preview==255){
         ambr.reset_pending=0;
-        if(ambr.view==1 && ambr.page==0) {
-            unsigned cur=ambr.proposal==255?amb.layer[ambr.edit_layer].role:ambr.proposal;
-            ambr.proposal=(uint8_t)amb_wrap((int)cur+algo,7);
-            if(ambr.proposal==amb.layer[ambr.edit_layer].role) ambr.proposal=255;
-        } else if(ambr.view==0 || (ambr.view==2 && ambr.page==0)) {
-            unsigned cur=ambr.proposal==255?amb.chord:ambr.proposal;
-            ambr.proposal=(uint8_t)amb_wrap((int)cur+algo,7);
-            if(ambr.proposal==amb.chord) ambr.proposal=255;
-        }
+        amb_browse_proposal(algo);
         ambr.dirty=1;
     }
     if(pre && ambr.view!=3) {
@@ -1388,12 +1393,12 @@ static void amb_guidance(const amb_layer_t *l,const char **first,const char **se
         else if(ambr.page==1)b="OFF-SCALE KEYS REMAIN PLAYABLE";
         else if(ambr.page==2){a="SCL PAGE / KNOBS 1-3 STYLES";b="KNOB 4 VARIATION";}
         else if(ambr.page==3)a="SCL PAGE / SELECT FX MODULE";
-        else if(ambr.page==5){a="SELECT OR KNOB 1 CHANGES THEME";b="SCL NEXT PAGE / HOME RETURN";}
+        else if(ambr.page==5){a="SELECT CHANGES THEME";b="SCL NEXT PAGE / HOME RETURN";}
     }
     if(ambr.reset_pending){a="REC RESTORE TRACK";b="HOME CANCEL";}
     else if(ambr.piece_preview!=255){a="SELECT PRESET / REC RECALL";b="HOME CANCEL";}
     else if(ambr.proposal!=255 && (ambr.view==0 || (ambr.page==0 && ambr.view<3))){
-        a=ambr.view==1?"ALGO LAYER TYPE / REC COMMIT":"ALGO CHORD / REC COMMIT";b="HOME CANCEL";
+        a="SELECT OR ALGO / REC COMMIT";b="HOME CANCEL";
     }
     *first=a;*second=b;
 }
@@ -1579,7 +1584,7 @@ static void amb_draw(void)
     if(ambr.help){
         amb_text(10,32,amb_screen_help(),AINK,39);
         if(ambr.view==2 && ambr.page==5){
-            amb_text(12,61,"SELECT / KNOB 1",ADIM,20);
+            amb_text(12,61,"SELECT",ADIM,20);
             amb_text(12,81,"Switch the global display theme.",AINK,36);
         }else if(ambr.view==3 || ambr.reset_pending || ambr.piece_preview!=255){
             amb_text(12,51,ambr.view==3?"SAVE PIECE":ambr.reset_pending?"RESTORE LAYER":"RECALL PIECE",AINK,30);
@@ -1795,7 +1800,7 @@ static void amb_draw(void)
         return;
     }
     if(ambr.view==2 && ambr.page==5){
-        amb_text(10,18,"SELECT / KNOB 1",ADIM,16);
+        amb_text(10,18,"SELECT",ADIM,16);
         cv_text(10,32,&AF_M,theme_names[amb_theme()],AINK);
     }else if(ambr.view==3) {
         for(i=0;i<8;i++){
