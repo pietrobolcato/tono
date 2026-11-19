@@ -3,7 +3,9 @@
  * Uses voice-local existing phase/filter state, no sample RAM or flash writes. */
 #include "amb_samples.h"
 #include "amb_acoustic_pcm.h"
-static const char *const N_AS_SOURCE[]={"SOFT CHIME","TAPE VOWEL","SOLO VIOLIN","BOWED CELLO","KAWAI GRAND","TENOR SAX","CONCERT FLUTE"};
+#include "amb_texture_pcm.h"
+enum { AMB_TEXTURE_SOURCE = 7 };
+static const char *const N_AS_SOURCE[]={"SOFT CHIME","TAPE VOWEL","SOLO VIOLIN","BOWED CELLO","KAWAI GRAND","TENOR SAX","CONCERT FLUTE","OCEAN DRUM","CABASA RUB","GUIRO SCRAPE","SEED SHAKER","RATCHET","BOWED CYMBAL"};
 typedef struct {const uint8_t *pcm;unsigned length,root,rate_q16,loop_percent;} amb_recording_t;
 static const amb_recording_t amb_recordings[]={
     {AMB_SAMPLES[0],AMB_SAMPLE_N,60,9511,24},{AMB_SAMPLES[1],AMB_SAMPLE_N,60,9511,24},
@@ -11,12 +13,33 @@ static const amb_recording_t amb_recordings[]={
     {amb_pcm_cello,NELEM(amb_pcm_cello),60,17833,12},
     {amb_pcm_piano,NELEM(amb_pcm_piano),72,17833,29},
     {amb_pcm_tenor,NELEM(amb_pcm_tenor),72,14861,29},
-    {amb_pcm_flute,NELEM(amb_pcm_flute),72,14861,15}
+    {amb_pcm_flute,NELEM(amb_pcm_flute),72,14861,15},
+    /* Six phrase maps, each addressing grains of its own percussion take. */
+    {amb_texture_frames[0],24576,60,8025,9},{amb_texture_frames[1],24576,60,8025,11},
+    {amb_texture_frames[2],24576,60,8025,7},{amb_texture_frames[3],24576,60,8025,13},
+    {amb_texture_frames[4],24576,60,8025,8},{amb_texture_frames[5],24576,60,8025,12}
 };
 /* Direct lookup supports arbitrary pitch and sample trims without a decode buffer. */
 static inline int32_t amb_pcm_at(const uint8_t *pcm,unsigned at)
 {
     return amb_pcm_decode[pcm[at]];
+}
+static inline int amb_texture_point(unsigned bank,unsigned code,unsigned pos)
+{
+    if(code&64)pos=127-pos;
+    unsigned byte=amb_texture_grains[bank][((code>>4)&3)*64+(pos>>1)];
+    int x=amb_texture_levels[(pos&1)?(byte>>4):(byte&15)]*(int)(code&15)*11;
+    return code&128?-x:x;
+}
+static __attribute__((noinline)) int amb_texture_read(unsigned bank,unsigned at)
+{
+    unsigned block=at>>7,pos=at&127,code=amb_texture_frames[bank][block];
+    int x=amb_texture_point(bank,code,pos);
+    if(pos<6 && block){
+        int last=amb_texture_point(bank,amb_texture_frames[bank][block-1],127);
+        x=last+(x-last)*(int)(pos+1)/7;
+    }
+    return x;
 }
 static const char *const N_AS_STYLE[4]={"PAD","DRONE","TEXTURE","ONE-SHOT"};
 static const char *const N_AS_LOOP[2]={"OFF","ON"};
@@ -27,7 +50,8 @@ static void amb_sample_on(track_t *t,voice_t *v)
 }
 static void amb_sample_render(track_t *t,voice_t *v,int32_t *out,uint32_t n,const vmod_t *m)
 {
-    const amb_recording_t *recording=&amb_recordings[clamp(t->p[P_E0],0,NELEM(amb_recordings)-1)];
+    unsigned source=clamp(t->p[P_E0],0,NELEM(amb_recordings)-1);
+    const amb_recording_t *recording=&amb_recordings[source];
     const uint8_t *src=recording->pcm;
     unsigned start=(unsigned)clamp(t->p[P_E4],0,99)*recording->length/100u;
     unsigned end=(unsigned)clamp(t->p[P_E5],1,100)*recording->length/100u;
@@ -42,6 +66,7 @@ static void amb_sample_render(track_t *t,voice_t *v,int32_t *out,uint32_t n,cons
     if(fade>(end-loop)/3)fade=(end-loop)/3;
     inc=((pitch_inc((unsigned)pitch)>>12)*recording->rate_q16)/(pitch_inc(recording->root*16)>>12);
     if(style==2)inc=inc*(990u+(unsigned)((t->lfo_ph>>24)&31))/1000u;
+    unsigned cached=~0u;int32_t first=0,second=0,overlap=0;
     for(i=0;i<n;i++) {
         unsigned at=ph>>16,frac=(ph>>1)&32767u;int32_t x,b;
         if(at<start || at>=end) {
@@ -49,10 +74,22 @@ static void amb_sample_render(track_t *t,voice_t *v,int32_t *out,uint32_t n,cons
             unsigned resume=loop+fade;
             ph=(resume<<16)+(ph-(end<<16))%((end-resume)<<16);at=ph>>16;
         }
-        x=amb_pcm_at(src,at);b=amb_pcm_at(src,at+1<end?at+1:start);x+=((b-x)*(int32_t)frac)>>15;
+        if(cached!=at){
+            unsigned following=at+1<end?at+1:start;
+            if(source>=AMB_TEXTURE_SOURCE){
+                unsigned bank=source-AMB_TEXTURE_SOURCE;
+                first=amb_texture_read(bank,at);second=amb_texture_read(bank,following);
+                if(at>=end-fade)overlap=amb_texture_read(bank,loop+at-(end-fade));
+            }else{
+                first=amb_pcm_at(src,at);second=amb_pcm_at(src,following);
+                if(at>=end-fade)overlap=amb_pcm_at(src,loop+at-(end-fade));
+            }
+            cached=at;
+        }
+        x=first;b=second;x+=((b-x)*(int32_t)frac)>>15;
         if(at>=end-fade && style!=3 && t->p[P_E3]) {
-            unsigned d=at-(end-fade),other=loop+d;
-            x=(x*(int32_t)(fade-d)+amb_pcm_at(src,other)*(int32_t)d)/(int32_t)fade;
+            unsigned d=at-(end-fade);
+            x=(x*(int32_t)(fade-d)+overlap*(int32_t)d)/(int32_t)fade;
         }
         if(at-start<8u)x=x*(int32_t)(at-start)/8;
         if((style==3 || !t->p[P_E3]) && end-at<fade)x=x*(int32_t)(end-at)/(int32_t)fade;

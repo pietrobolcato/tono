@@ -168,6 +168,15 @@ static void amb_fill_patch(amb_layer_t *l,unsigned key,unsigned k,unsigned role,
         const uint8_t *v=texture[patch-8];
         l->base[P_E1]=v[0];l->base[P_E2]=v[1];l->base[P_E3]=v[2];l->base[P_E4]=0;l->base[P_E5]=v[3];l->base[P_E6]=v[4];
     }
+    if(role==5 && patch>=12){
+        static const int8_t texture[][3]={
+            {0,-2,39},{1,0,46},{2,-5,25},{3,3,52},{4,-4,26},
+            {5,-3,55},{0,-14,65},{1,8,58},{2,-13,36},{4,-16,60}
+        };
+        const int8_t *bed=texture[patch-12];
+        l->base[P_E0]=AMB_TEXTURE_SOURCE+bed[0];l->base[P_E1]=2;l->base[P_E2]=bed[1];
+        l->base[P_E6]=bed[2];l->base[P_E7]=r->color;
+    }
     if(role==6){l->base[P_E4]=0;l->base[P_E5]=100;l->base[P_E6]=40;l->base[P_E7]=85;l->base[P_LN7]=100;l->base[P_LN6]=20;}
     for(i=0;i<4;i++)l->macro[i]=64;
 }
@@ -516,7 +525,7 @@ static __attribute__((noinline)) void amb_prepare(void)
         t->p[P_REL]=(int16_t)clamp(l->base[P_REL]+bloom/2,0,127);
         t->p[P_REV]=(int16_t)clamp(l->base[P_REV]+space,0,120);
         if(l->engine==ENGI_VOICE)t->p[P_E0]=(int16_t)clamp(l->base[P_E0]+warm,0,127);
-        if(l->role==5 && !amb_legacy_texture(l))t->p[P_E6]=(int16_t)clamp(l->base[P_E6]+bloom,0,127);
+        if(l->role==5 && !amb_legacy_texture(l))t->p[P_E6]=(int16_t)clamp(l->base[P_E6]+bloom,0,l->engine==ENGI_AMB_SAMPLE?100:127);
         t->p[P_DLY]=(int16_t)clamp(l->base[P_DLY]+space/2,0,104);
         t->p[P_CHOR]=(int16_t)clamp(l->base[P_CHOR]+motion/2,0,100);
         if(l->engine==12)t->p[P_E2]=(int16_t)clamp(l->base[P_E2]-warm/2,-64,63);
@@ -1149,7 +1158,7 @@ static unsigned amb_pattern_param(const amb_layer_t *l,unsigned knob)
     /* STEADY noise is held continuously. Its three performance controls
      * shape that held voice. Non-pitched noise cannot follow a chord. */
     if(l->generated && l->role==5 && !amb_legacy_texture(l)){
-        if(l->mode==0 && knob==1)return P_E1;
+        if(l->mode==0 && knob==1)return l->engine==ENGI_AMB_SAMPLE?P_E2:P_E1;
         if(l->mode==0 && knob==2)return P_E6;
         if(knob==3)return P_FCUT;
     }
