@@ -2142,9 +2142,14 @@ static void amb_draw(void)
     }
     if(!ambr.help && ambr.local_preset && amb_page_bank()){
         GFX_HOOK_COVER(8,50,232,145);cv_bg=ASEL;cv_rect(8,50,224,95,cv_bg);
-        amb_text(16,62,"PROPOSED VARIATION",ADIM,26);
+        const char *subject=ambr.page==1 && ambr.view==1?(l->role==6?N_AS_SOURCE[l->base[P_E0]]:amb_patch_name(l)):"PROPOSED VARIATION";
+        amb_text(16,62,subject,ADIM,32);
         cv_text(16,79,&AF_M,amb_page_bank()->name[ambr.local_preset-1],AINK);
-        amb_text(16,113,"REC APPLY / HOME CANCEL",AQUEUE,30);
+        if(ambr.view==1 && ambr.page==1){
+            static const char *const feel[]={"Up close, with a clearer attack","Rounder, with a softer entrance","A slow swell in a larger space"};
+            amb_text(16,103,feel[ambr.local_preset-1],ADIM,36);
+        }
+        amb_text(16,127,"REC APPLY / HOME CANCEL",AQUEUE,30);
     }else if(!ambr.help && ambr.reset_pending){
         GFX_HOOK_COVER(8,50,232,145);cv_bg=ASEL;cv_rect(8,50,224,95,cv_bg);
         amb_text(16,61,"RESTORE THIS TRACK?",AQUEUE,30);

@@ -53,10 +53,19 @@ static void amb_apply_page_preset(void)
     if(bank==&amb_sound_bank){
         const amb_recipe_t *r=amb_recipe(l->role,l->patch);
         unsigned color=l->engine==0?P_E4:P_FCUT;
-        l->base[P_ATK]=clamp(r->attack+v[0],0,127);
-        l->base[color]=clamp(r->color+(color==P_FCUT?25:0)+v[1],0,127);
-        l->base[P_REV]=clamp(r->reverb+v[2],0,127);
-        l->base[P_DLY]=clamp(r->delay+v[3],0,127);
+        int attack=r->attack, tone=r->color+(color==P_FCUT?25:0), room=r->reverb, echo=r->delay;
+        if(l->role==6){
+            /* Keep the articulation of each recording when changing its space. */
+            static const uint8_t sources[][4]={{3,108,50,20},{42,90,55,16},{20,115,46,9},
+                {24,111,42,6},{0,120,42,7},{8,116,38,11},{15,123,50,14}};
+            _Static_assert(NELEM(sources)==NELEM(N_AS_SOURCE),"one variation baseline per source");
+            const uint8_t *source=sources[l->base[P_E0]];
+            attack=source[0];tone=source[1];room=source[2];echo=source[3];
+        }
+        l->base[P_ATK]=clamp(attack+v[0],0,127);
+        l->base[color]=clamp(tone+v[1],0,127);
+        l->base[P_REV]=clamp(room+v[2],0,127);
+        l->base[P_DLY]=clamp(echo+v[3],0,127);
     }else if(bank==&amb_lfo_bank){
         l->base[P_LWAVE]=v[0];l->base[P_LRATE]=v[1];l->lfo_depth=v[2];
     }else if(bank==&amb_eq_bank){

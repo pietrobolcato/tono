@@ -192,6 +192,14 @@ int main(int argc,char **argv)
             for(ambr.page=0;ambr.page<pages;ambr.page++){
                 snprintf(name,sizeof name,"theme_%u_view_%u_page_%u",theme,view,ambr.page);
                 ar_frame(name,dir,1);
+                for(unsigned module=0;module<(view==1 && ambr.page==5?6u:view==2 && ambr.page==3?4u:1u);module++){
+                    ambr.fx=module;
+                    if(!amb_page_bank())continue;
+                    for(unsigned choice=1;choice<=3;choice++){
+                        ambr.local_preset=choice;ar_frame("page_variation",dir,0);
+                    }
+                    ambr.local_preset=0;
+                }
             }
         }
     }
