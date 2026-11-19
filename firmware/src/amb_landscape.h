@@ -70,7 +70,7 @@ static int amb_landscape_instrument(unsigned k,int position)
     /* At most one new player per downbeat. Manual sequences and explicitly
      * chosen sample sources keep their instruments throughout the gesture. */
     static const uint8_t palette[6][2][2]={
-        {{5,20},{18,22}}, {{3,13},{9,12}}, {{8,4},{13,14}},
+        {{5,20},{18,22}}, {{3,13},{9,12}}, {{8,12},{13,14}},
         {{7,6},{1,10}}, {{5,6},{2,8}}, {{1,10},{8,11}}
     };
     amb_layer_t *l=&amb.layer[k];
