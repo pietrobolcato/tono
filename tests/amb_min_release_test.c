@@ -3,15 +3,15 @@
 #include "amb_native_test.c"
 int main(void)
 {
-    unsigned i,k,t,cap[4]={250,500,3000,6000};int32_t out[CTL*2];
-    memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();
+    unsigned i,k,t,cap[]={250,500,3000,6000,30000};int32_t out[CTL*2];
+    memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();favorites.factory[15][13]=1;
     /* Q24 envelope x Q15 gain must retain full precision, without 32-bit
      * multiplication overflow that would collapse the audible release. */
     ambr.tail_env[0][0]=1<<24;ambr.tail_gain[0]=32768;assert(amb_tail_envelope(0,0)==1<<24);
     ambr.tail_gain[0]=16384;assert(amb_tail_envelope(0,0)==1<<23);
 
-    for(t=0;t<4;t++){
-        song.playing=0;amb_fixture_scene(0);amb.release_ms=cap[t];
+    for(t=0;t<NELEM(cap);t++){
+        song.playing=0;amb_fixture_scene(0);ambr.view=2;ambr.page=1;amb_knob(3,((int)cap[t]-amb.release_ms)/250);assert(amb.release_ms==cap[t] && amb_valid(&amb));
         amb_patch(0,3,0);amb_prepare();trk[0].engine=trk[0].eng_req;panic_req=0;
         trk_note_on(&trk[0],60,100);for(i=0;i<FS/5u/CTL;i++)mix_block(out,CTL);
         assert(amb_track_active(0));amb_target(1);ambr.view=1;ambr.page=0;
@@ -19,6 +19,10 @@ int main(void)
         {unsigned elapsed=0;int64_t late_energy=0,dry_energy=0;unsigned total=(cap[t]*FS+999)/1000;
             while(ambr.handoff[0] && elapsed<total+CTL*4){
                 mix_block(out,CTL);elapsed+=CTL;
+                if(cap[t]==30000 && elapsed==CTL*100){
+                    unsigned remaining=ambr.tail_left[0];amb_begin_change(0);
+                    assert(ambr.tail_left[0]==remaining);
+                }
                 if(elapsed<total*9/10)assert(ambr.handoff[0] && amb_track_active(0));
                 if(elapsed>total*7/10 && elapsed<total*9/10)for(k=0;k<CTL*2;k++)late_energy+=(int64_t)out[k]*out[k];
                 if(!dry_energy && elapsed>total*8/10 && elapsed<total*9/10){

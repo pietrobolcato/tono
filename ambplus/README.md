@@ -44,3 +44,5 @@ Tono 0.10 and the earlier Garden release are documented in [the release validati
 The performance-feedback candidate is under `../../release/ambplus-0.2-feedback/`. See CONTROLS.md for HOME note-pool editing, SUSTAIN, generated overdub, detailed sound groups, track restore and emulator combinations. The previous v0.1 release and evidence remain preserved.
 
 Latest v0.6 checkpoint: `../../release/ambplus-0.6-transitions-textures/`. See PLAYING_CHECKPOINT_VALIDATION_REPORT.md and CONTROLS.md for uniform active-synth transition duration, style/whole-piece transitions, transient selected-layer gain, steady unpitched factory textures and manual rest entry. Save layout remains v4/1420 B; old PHASE texture snapshots remain readable. Older v0.5 may reject records using new Noise Texture recipes 2/4. No new 20-minute soak for this incremental checkpoint; use short checks/human playing, with longer soaks at milestones.
+
+Tono 0.18 adds acoustic recordings, live granular FX, patch comparisons, expanded LFO destinations and selectable overlapping releases. [Controls and sound banks](CONTROLS.md).

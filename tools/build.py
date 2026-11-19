@@ -194,6 +194,9 @@ def build_loader():
 # master, the FX layer, the SLICER, and core 0's own copies of a part's mix and the buses (core 1 runs the flash ones)
 HOT_FNS = ("mix_block", "mix_part_m0", "fx_run0", "perf_begin", "perf_pre", "perf_block", "perf_master", "slicer_bus")
 
+if os.environ.get("AMBPLUS") == "1":
+    HOT_FNS += ("events_block", "fm6_render", "rev_spring", "rev_spring_side", "amb_output")
+
 
 def hot_sections(ir):
     """HOT_FNS' definitions in the optimised IR given section ".hot_text.<name>"; (the IR, how many found)"""

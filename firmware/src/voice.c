@@ -344,6 +344,7 @@ static uint32_t voice_cap(void)
         unsigned extra=0;
         for(unsigned k=0;k<4;k++)if(trk[k].engine==ENGI_SINEFM)
             for(unsigned v=0;v<NVOICE;v++)extra+=trk[k].v[v].active!=0;
+        if(amb_tail_releasing(4) || amb_tail_releasing(5))extra++;
         if(extra>4)extra=4;
         if(c>4+extra)c=4+extra;
     }

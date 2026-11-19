@@ -258,11 +258,13 @@ static void garden_step(unsigned k, unsigned step)
     amb_layer_t *l = &amb.layer[k];
     garden_layer_t *g = &garden_layer[k];
     int scale[12], count = amb_scale(amb_pool(), scale);
-    unsigned density = clamp((int)l->density + (l->role == 4 ? ((int)l->macro[1] - 64) / 2 : 0), 0, 100);
-    unsigned variation = clamp((int)amb.policy.variation + (int)l->mutation, 0, 100);
-    unsigned stride = 1u << l->speed, slot = (step / stride) % 16;
+    unsigned density = clamp((int)amb_routed(k,ROUTE_DENSITY,l->density,0,100) + (l->role == 4 ? ((int)l->macro[1] - 64) / 2 : 0), 0, 100);
+    unsigned variation = clamp((int)amb.policy.variation + (int)amb_routed(k,ROUTE_MUTATE,l->mutation,0,100), 0, 100);
+    unsigned stride = 1u << amb_routed(k,ROUTE_SPEED,l->speed,0,3), slot = (step / stride) % 16;
+    unsigned mode=amb_routed(k,ROUTE_MODE,l->mode,0,l->role==0?AMB_CHANT:4);
+    unsigned follow=amb_routed(k,ROUTE_FOLLOW,l->follow,0,100);
     unsigned degree_base =
-        l->follow == 100 || amb_hash(amb.policy.seed + step / 16 + k) % 100 < l->follow ? amb.chord : 0;
+        follow == 100 || amb_hash(amb.policy.seed + step / 16 + k) % 100 < follow ? amb.chord : 0;
     int arc = garden_arc.value * (int)amb.evolve[1] / 25600;
     int allow = (!amb.policy.active[1] || amb_phrase_event(&amb.policy, step, k));
     switch (amb.policy.active[2]) {
@@ -305,7 +307,7 @@ static void garden_step(unsigned k, unsigned step)
         if (l->engine == ENGI_SOFTPULSE)
             trk[k].p[P_ROOT] = (amb.key + scale[amb.chord % count]) % 12;
         garden_pulse(g, k, step, density, variation, allow);
-        if (allow && step % 64 == 63 && garden_random(g, 100) < l->fill)
+        if (allow && step % 64 == 63 && garden_random(g, 100) < amb_routed(k,ROUTE_FILL,l->fill,0,100))
             trk_note_on(&trk[k], 42, 56);
         return;
     }
@@ -320,8 +322,8 @@ static void garden_step(unsigned k, unsigned step)
                 duration = duration / 100 * (85 + garden_random(g, 31));
                 duration = duration / 2 * stride;
                 g->breath_due[i] = g->now + wait + duration;
-                if (allow && (l->mode != 4 || i == 0)) {
-                    unsigned voice = l->mode == 1 ? 3 - i : l->mode == 0 ? (i + step / 16) % 4 : i;
+                if (allow && (mode != 4 || i == 0)) {
+                    unsigned voice = mode == 1 ? 3 - i : mode == 0 ? (i + step / 16) % 4 : i;
                     note = ambr.voicing[voice];
                     vel = 65 + garden_random(g, 25);
                     garden_schedule(k, note, vel, wait, duration / 100 * (42 + density / 4), 0);
@@ -346,11 +348,11 @@ static void garden_step(unsigned k, unsigned step)
         for (unsigned i = 0; i < 4; i++) {
             garden_loop_t *loop = &g->loop[i];
             unsigned pos = loop->position;
-            if (allow && !loop->rest && loop->offset[pos] >= 0 && (l->mode != 4 || !(i & 1u))) {
+            if (allow && !loop->rest && loop->offset[pos] >= 0 && (mode != 4 || !(i & 1u))) {
                 int degree = degree_base + loop->offset[pos];
-                if (l->mode == 0)
+                if (mode == 0)
                     degree = degree_base + 2 * (int)(pos % 4);
-                if (l->mode == 1)
+                if (mode == 1)
                     degree = degree_base + 2 * (int)(3 - pos % 4);
                 note = garden_register[i] - (garden_register[i] - amb.key) % 12 + scale[degree % count] +
                        12 * (degree / count);

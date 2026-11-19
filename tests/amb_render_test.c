@@ -129,7 +129,7 @@ int main(int argc,char **argv)
     fm1_ms+=1200;ar_frame("master_after_level_feedback",dir,1);
     for(role=0;role<7;role++){
         amb_patch(0,role,0);ambr.target=1;ambr.edit_layer=0;ambr.view=1;
-        for(page=0;page<7;page++)for(bank=0;bank<(page==1?(role==6?3u:2u):1u);bank++)for(fx=0;fx<(page==5?5u:1u);fx++){
+        for(page=0;page<7;page++)for(bank=0;bank<(page==1?(role==6?3u:2u):1u);bank++)for(fx=0;fx<(page==5?6u:1u);fx++){
             ambr.page=(uint8_t)page;ambr.bank=(uint8_t)bank;ambr.fx=(uint8_t)fx;
             snprintf(name,sizeof name,"role_%u_page_%u_bank_%u_fx_%u",role,page,bank,fx);ar_frame(name,dir,role==0 || role==6);
         }
@@ -175,7 +175,7 @@ int main(int argc,char **argv)
         amb_patch(0,role,role==0?10:0);
         for(page=0;page<7;page++)for(bank=0;bank<(page==1?(role==6?3u:2u):1u);bank++){
             ambr.page=page;ambr.bank=bank;
-            for(fx=0;fx<(page==5?5u:1u);fx++){ambr.fx=fx;ar_frame("layer_help",dir,0);}
+            for(fx=0;fx<(page==5?6u:1u);fx++){ambr.fx=fx;ar_frame("layer_help",dir,0);}
         }
     }
     ambr.view=2;for(page=0;page<5;page++){
@@ -198,7 +198,7 @@ int main(int argc,char **argv)
     ambr.view=1;ambr.page=1;ambr.bank=0;ambr.edit_layer=0;
     for(role=0;role<7;role++){
         amb_patch(0,role,0);
-        unsigned count=role==6?2:amb_patch_count(role);
+        unsigned count=role==6?NELEM(N_AS_SOURCE):amb_patch_count(role);
         for(unsigned patch=1;patch<count;patch++){
             ambr.proposal=patch;
             ar_frame("sound_proposal",dir,0);

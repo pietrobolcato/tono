@@ -36,7 +36,7 @@ if 'amb' in symbols:
  'layers':[{'role':blob[176+i*306],'patch':blob[177+i*306],'engine':blob[178+i*306],'generated':blob[179+i*306],
  'manual_and_patch_sha256':hashlib.sha256(blob[176+i*306:176+(i+1)*306]).hexdigest()} for i in range(4)]}
 if 'amb' in symbols and report['piece']['version']>=4:
- report['piece']['payload_bytes']=1420
+ report['piece']['payload_bytes']=symbols['amb'][1]
  report['piece']['layer_eq']=[list(struct.unpack_from('<bbbb',r,a+1400+i*4)) for i in range(4)]
  report['piece']['release_ms']=struct.unpack_from('<H',r,a+1416)[0]
 if args.audio:

@@ -18,7 +18,9 @@ static const amb_recipe_t amb_pad_patches[] = {
   AR("Umber Pulse",0,24,90,116,82,62,15,37),
   AR("Garden Rhodes",ENGI_SINEFM,0,116,111,88,62,30,80),
   AR("Sunroom Keys",ENGI_SINEFM,3,22,101,88,49,15,85),
-  AR("Linen Pad",ENGI_SINEFM,4,91,116,85,69,19,75)
+  AR("Linen Pad",ENGI_SINEFM,4,91,116,85,69,19,75),
+  AR("Solo Violin",15,1,20,76,89,46,9,97),AR("Chamber Cello",15,2,24,79,88,42,6,95),
+  AR("Tenor Sax",15,4,8,60,83,38,11,96),AR("Concert Flute",15,5,15,63,90,50,14,99)
 };
 static const amb_recipe_t amb_drone_patches[] = {
   AR("Deep Current",0,22,110,120,90,75,35,28),AR("Hollow Earth",2,8,103,116,86,80,42,43),
@@ -27,7 +29,8 @@ static const amb_recipe_t amb_drone_patches[] = {
   AR("Dark Air",11,4,110,124,84,87,43,30),AR("Warm Voltage",0,19,100,117,91,72,33,43),
   AR("Low Ooh",5,4,90,118,90,70,12,91),AR("Chapel Aah",5,0,88,120,84,83,9,89),
   AR("Cantus",5,5,64,114,87,88,10,92),AR("Slow Chip",3,12,94,110,76,62,20,78),
-  AR("Skylight",ENGI_SINEFM,5,102,116,80,75,11,88)
+  AR("Skylight",ENGI_SINEFM,5,102,116,80,75,11,88),
+  AR("Bowed Cello",15,2,35,90,91,42,10,96)
 };
 static const amb_recipe_t amb_bells_patches[] = {
   AR("Felt Glass",12,11,0,100,86,88,45,65),AR("Distant Chime",12,8,4,110,80,94,53,79),
@@ -38,7 +41,8 @@ static const amb_recipe_t amb_bells_patches[] = {
   AR("Porcelain",3,15,15,85,75,70,34,88),
   AR("Garden Bell",ENGI_SINEFM,1,22,102,86,80,94,90),
   AR("Willow Tine",ENGI_SINEFM,6,3,91,86,58,24,76),
-  AR("Dew Bell",ENGI_SINEFM,7,13,103,81,82,44,94)
+  AR("Dew Bell",ENGI_SINEFM,7,13,103,81,82,44,94),
+  AR("Kawai Grand",15,3,0,78,98,42,7,99)
 };
 static const amb_recipe_t amb_bass_patches[] = {
   AR("Round Sub",0,7,8,65,101,20,14,32),AR("Soft Pulse",0,2,14,72,96,28,23,39),
@@ -60,7 +64,9 @@ static const amb_recipe_t amb_texture_patches[] = {
   AR("Ocean Air",11,4,110,117,83,89,38,42),AR("Tape Mist",11,7,98,114,82,81,46,55),
   AR("High Air",11,0,87,108,81,93,53,68),AR("Paper Grain",11,6,28,83,78,69,43,64),
   AR("Distant Hiss",11,5,100,116,80,92,39,53),AR("Rainfield",11,1,60,101,77,85,56,73),
-  AR("Organic Noise",11,0,105,115,80,88,47,60),AR("Midnight Static",11,5,96,120,76,94,37,41)
+  AR("Organic Noise",11,0,105,115,80,88,47,60),AR("Midnight Static",11,5,96,120,76,94,37,41),
+  AR("Shore Wash",11,4,89,110,77,68,13,47),AR("Rain on Tin",11,1,36,96,76,57,18,92),
+  AR("Ember Bed",11,6,57,92,79,35,9,58),AR("Window Draft",11,0,90,112,80,61,13,75)
 };
 #undef AR
 static const struct { const amb_recipe_t *patches; unsigned count; } amb_bank[] = {

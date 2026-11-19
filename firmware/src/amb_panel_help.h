@@ -50,10 +50,10 @@ static const char *amb_param_hint(const amb_layer_t *l,unsigned id)
 static const char *amb_knob_hint(const amb_layer_t *l,unsigned knob)
 {
     static const char *const eq[]={"Low band gain","Middle band gain","High band gain","Output trim"};
-    static const char *const master[]={"Size of the room","Echo return level","Shared chorus depth","Master filter tilt"};
+    static const char *const master[]={"Room size, sends, width","Repeats, sends and return","Chorus, pan and room mod","Body, drive and echo tone"};
     static const char *const macro[][4]={
-        {"Soften upper harmonics","Chorus and filter motion","Hold notes, raise sustain","Room and echo sends"},
-        {"Soften upper harmonics","Chorus and filter motion","Hold notes, raise sustain","Room and echo sends"},
+        {"Drive, attack and tone","Chorus and filter motion","Hold notes, raise sustain","Room and echo sends"},
+        {"Drive, attack and tone","Chorus and filter motion","Hold notes, raise sustain","Room and echo sends"},
         {"Round off the attack tone","Chorus and filter motion","Lengthen the ring","Room and echo sends"},
         {"Darken the bass tone","Chorus and filter motion","Portamento and release","Room and echo sends"},
         {"Soften hit brightness","More generated hits","Noise in the hit","Room and echo sends"},
@@ -72,7 +72,7 @@ static const char *amb_knob_hint(const amb_layer_t *l,unsigned knob)
         {"Sweep the master filter","Output saturation","Delay brightness","Delay modulation"}
     };
     static const char *const env[]={"Time to full level","Time down to sustain","Level while held","Time after note-off"};
-    static const char *const lfo[]={"Modulation waveform","Cycles per second","Amount of modulation","What the LFO moves"};
+    static const char *const lfo[]={"Modulation waveform","Cycles per second","Amount of modulation","Patch, FX or pattern"};
     static const char *const drum[]={"Generated hit density","Delay offbeat hits","Phrase-end fill strength","Vary drum lane choices"};
     static const char *const pattern[]={"Note selection pattern","Layer step interval","Generated event density","Chance to follow chord"};
     static const char *const manual[]={"Select an edit slot","Layer step interval","Pitch of this slot","Strength of this slot"};
@@ -93,5 +93,6 @@ static const char *amb_knob_hint(const amb_layer_t *l,unsigned knob)
         if(!l->generated)return (l->role==4?manual_drum:manual)[knob];
         return (l->role==4?drum:pattern)[knob];
     }
+    if(ambr.page==5 && ambr.fx==5)return amb_grain_hint[knob];
     return ambr.page==5?amb_param_hint(l,amb_fx_id(l,knob)):eq[knob];
 }

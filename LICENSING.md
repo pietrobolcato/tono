@@ -110,3 +110,5 @@ by those owners.
 ## Radio
 
 Felucca never enables the Bluetooth / Wi-Fi radio of the hardware.
+
+Tono's five acoustic recordings are excerpts from Versilian Studios' CC0 libraries. Violin, cello and flute come from [VSCO 2 Community Edition](https://github.com/sgossner/VSCO-2-CE/tree/440300901dfe9275fd84e0b7763af1f8443ae62e). Tenor sax and Kawai grand come from [VCSL](https://github.com/sgossner/VCSL/tree/c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e). The source filenames, exact revisions and mono conversion are in tools/gen_amb_acoustic.py. The resulting PCM data retains CC0. See LICENSES/CC0-Versilian.txt.

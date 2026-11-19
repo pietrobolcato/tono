@@ -13,6 +13,7 @@
 #if AMBPLUS
 static void amb_init(void);
 static void amb_prepare(void);
+static void amb_control_tick(void);
 static void amb_clock(uint32_t n);
 static void amb_input(void);
 static void amb_draw(void);
@@ -21,6 +22,7 @@ static void amb_master(int32_t raw, int boot);
 static void amb_output(int32_t *out, uint32_t n);
 static int amb_tail_releasing(unsigned k);
 static int amb_tail_any(void);
+static int amb_fade_level(unsigned k,int level);
 static int32_t amb_tail_envelope(unsigned k,unsigned voice);
 static int amb_tail_finished(unsigned k);
 static void amb_layer_process(unsigned k,int32_t *b,uint32_t n);

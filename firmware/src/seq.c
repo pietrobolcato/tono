@@ -2291,12 +2291,15 @@ static int32_t click_beat_now(void)
 }
 
 /* everything that happens between two rendered blocks */
+#if AMBPLUS
+__attribute__((noinline)) /* placed in hot RAM by the Tono build */
+#endif
 static void events_block(uint32_t n)
 {
     uint32_t i, pr, fo, seq_n = n;
     uint32_t clock_mode = (uint32_t)song.g[G_CLOCK];
 #if AMBPLUS
-    amb_prepare();
+    amb_control_tick();
 #endif
     if (midi_clock.mode != clock_mode) {
         seq_stop();

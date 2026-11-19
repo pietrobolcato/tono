@@ -1967,7 +1967,11 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
 {
     uint32_t i, c1 = MC_CPU() & 1u;                     /* (0.6.71) on the second core: its own buffers */
     int32_t *b = c1 ? c1_buf : part_buf;
-    if ((uint32_t)(t - trk) >= trk_live) {              /* (0.6.18) TRACKS 4: asleep, nothing rendered. (0.6.19) Its
+    if ((uint32_t)(t - trk) >= trk_live
+#if AMBPLUS
+        && !amb_tail_releasing((unsigned)(t-trk))
+#endif
+    ) {              /* (0.6.18) TRACKS 4: asleep, nothing rendered. (0.6.19) Its
                                                          * voices first fade out over a block (voice_kill: they were
                                                          * cut at once, a click), its mute let go (perform.c) */
         uint32_t k, on = 0;
@@ -1996,6 +2000,9 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
     {
         uint32_t ti = (uint32_t)(t - trk) % NTRK;
         int32_t lvl = LEVEL_Q12[t->p[P_LEVEL] & 127] << 8, pan = t->p[P_PAN] << 8, l0, p0, lq, dl, gl, gr, dgl, dgr;
+#if AMBPLUS
+        lvl=amb_fade_level(ti,lvl);
+#endif
         if (t->p[P_APDEP] > 0)                          /* (0.6.9) AUTO PAN */
             pan = clamp(pan + autopan(t, ti, n), -(64 << 8), 63 << 8);
         if (!mp_seen[ti]) {

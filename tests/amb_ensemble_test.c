@@ -45,7 +45,7 @@ static void audit_controls(void)
                 for(unsigned gen=0;gen<2;gen++)for(unsigned mode=0;mode<(role==0?AMB_CHANT+1:5);mode++){
                     amb.layer[0].generated=gen;amb.layer[0].mode=mode;check_knobs();
                 }
-            }else if(page==5){for(ambr.fx=0;ambr.fx<5;ambr.fx++)check_knobs();}
+            }else if(page==5){for(ambr.fx=0;ambr.fx<6;ambr.fx++)check_knobs();}
             else check_knobs();
         }
     }
