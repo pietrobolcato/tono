@@ -22,6 +22,8 @@ static void ar_cover(int a,int b,int c,int d)
 {unsigned i;for(i=0;i<ar_n;i++)if(ar_boxes[i].x0>=a && ar_boxes[i].y0>=b && ar_boxes[i].x1<=c && ar_boxes[i].y1<=d)ar_boxes[i].s[0]=0;}
 static void ar_text(int a,int b,int c,int d,const char *s,unsigned f)
 {
+    if(!strcmp(s,"SELECT TARGET / EDIT / SCL ENSEMBLE") ||
+       !strcmp(s,"MASTER picks up the saved level."))assert(ambr.help);
     if(f&2u){printf("CLIPPED %s %s\n",ar_name,s);ar_bad++;}
     if(!strcmp(s,"Tono"))ar_tono_label++;
     assert(ar_n<100);ar_boxes[ar_n]=(abox){a,b,c,d,{0}};strncpy(ar_boxes[ar_n++].s,s,39);
@@ -167,6 +169,7 @@ int main(int argc,char **argv)
     for(style=0;style<NELEM(AMB_SCENE)+AMB_SLOTS;style++){ambr.piece_preview=(uint8_t)style;snprintf(name,sizeof name,"preset_%u",style);ar_frame(name,dir,style==0 || style==13);}
     ambr.piece_preview=255;ambr.view=3;for(style=0;style<8;style++){ambr.slot=(uint8_t)style;ambr.overwrite=style%2;snprintf(name,sizeof name,"save_%u",style);ar_frame(name,dir,1);}
     amb_fixture_scene(7);ambr.view=4;ar_frame("ensemble",dir,1);
+    ambr.view=0;ambr.help=1;ar_frame("home_help",dir,1);
     ambr.view=1;ambr.page=1;ambr.help=1;ar_frame("vowel_help",dir,1);
     for(role=0;role<7;role++){
         amb_patch(0,role,role==0?10:0);

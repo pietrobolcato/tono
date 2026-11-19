@@ -1332,13 +1332,12 @@ static void amb_fx_diagram(unsigned k,unsigned module)
 }
 #include "amb_panel_help.h"
 
-/* Interaction guidance has one home: three aligned lines above knob values.
- * Navigation and actions remain visible while a notice or pickup is shown. */
+/* Contextual shortcuts belong to the modal guide. */
 static void amb_guidance(const amb_layer_t *l,const char **first,const char **second)
 {
     const char *a="SCL PAGE / KNOBS EDIT",*b="HOME RETURN";
     if(ambr.view==4){a="K1-K4 LAYER GAIN / SCL HOME";b="BARS SHOW LIVE LAYER OUTPUT";}
-    else if(ambr.view==0){a="SELECT TARGET / EDIT / SCL ENSEMBLE";b="KEYS POOL / ALGO CHORD / HOME+EDIT ?";}
+    else if(ambr.view==0){a="SELECT TARGET / EDIT / SCL ENSEMBLE";b="KEYS NOTE POOL / ALGO CHORD";}
     else if(ambr.view==3){a="SELECT SLOT / REC SAVE";b=ambr.overwrite?"REC AGAIN OVERWRITE / HOME CANCEL":"HOME CANCEL";}
     else if(ambr.view==1){
         if(ambr.page==0){a="SCL PAGE / ALGO LAYER TYPE";b="EDIT RESTORE LOADED TRACK";}
@@ -1360,8 +1359,31 @@ static void amb_guidance(const amb_layer_t *l,const char **first,const char **se
     else if(ambr.proposal!=255 && (ambr.view==0 || (ambr.page==0 && ambr.view<3))){
         a=ambr.view==1?"ALGO LAYER TYPE / REC COMMIT":"ALGO CHORD / REC COMMIT";b="HOME CANCEL";
     }
-    if(ambr.help){a="HOME RETURN TO PAGE";b="HOME + EDIT TOGGLE HELP";}
     *first=a;*second=b;
+}
+
+static const char *amb_screen_help(void)
+{
+    static const char *const edit[]={
+        "Choose the role this layer plays.", "Choose a patch and shape its sound.",
+        "Shape how each note starts and ends.", "Set how a parameter moves over time.",
+        "Edit this layer's rhythm and notes.", "Shape the layer and its effect sends.",
+        "Balance the frequencies of this layer."
+    };
+    static const char *const global[]={
+        "Set how the piece changes as it plays.", "Set the key and scale of the piece.",
+        "Choose how the layers generate music.", "Shape the effects shared by all layers.",
+        "Balance the tone of the whole mix."
+    };
+    if(ambr.reset_pending)return "Restore the layer from the loaded piece.";
+    if(ambr.piece_preview!=255)return "Load a factory piece or a saved slot.";
+    switch(ambr.view){
+    case 1:return edit[ambr.page];
+    case 2:return global[ambr.page];
+    case 3:return "Store the current piece in a song slot.";
+    case 4:return "Watch the level and state of each layer.";
+    default:return "Mix the layers and guide the harmony.";
+    }
 }
 
 /* Layer numbers are shared by HOME and ENSEMBLE. The orange mark tracks
@@ -1436,12 +1458,13 @@ static void amb_draw(void)
     amb_text(175,8,song.playing?">":"-",song.playing?TONO_ORANGE:ADIM,1);amb_number(188,8,amb.global[G_BPM],AINK);amb_text(211,8,"BPM",ADIM,3);
     cv_rect(8,25,224,1,ALINE);cv_bg=ABG;
     if(ambr.help){
+        amb_text(10,32,amb_screen_help(),AINK,39);
         if(ambr.view==3 || ambr.reset_pending || ambr.piece_preview!=255){
             amb_text(12,51,ambr.view==3?"SAVE PIECE":ambr.reset_pending?"RESTORE LAYER":"RECALL PIECE",AINK,30);
             amb_text(12,81,ambr.reset_pending?"REC confirms the restore":"SELECT chooses a destination",ADIM,36);
             amb_text(12,108,ambr.view==3?"Stop PLAY, then REC to save":ambr.reset_pending?"HOME cancels after closing help":"REC loads the selected piece",ADIM,36);
         }else for(k=0;k<4;k++){
-            char label[16]={0},value[24]={0};int y=41+25*k;
+            char label[16]={0},value[24]={0};int y=55+23*k;
             cv_bg=k%2?ABG:ASEL;cv_rect(6,y-5,228,20,cv_bg);
             amb_knob_value(k,label,value);amb_number(10,y,k+1,ADIM);
             amb_text(22,y,label,AINK,9);amb_text(84,y,amb_knob_hint(l,k),ADIM,25);
@@ -1608,37 +1631,41 @@ static void amb_draw(void)
     cv_blit_cells(0,0);
     cv_begin(240,93,ABG);
     cv_rect(8,0,224,1,ALINE);
-    {const char *first,*second,*status="";char notice[38];unsigned j;
+    if(ambr.help){
+        const char *first,*second;
         amb_guidance(l,&first,&second);
-        if(amb_tail_any()){status="OLD SOUND RELEASING / NEXT QUEUED";}
-        else if(ambr.notice[0] && fm1_ms-ambr.notice_ms<2500u){
-            str_cpy(notice,ambr.notice,sizeof notice);
-            for(j=0;notice[j];j++)if(notice[j]>='a' && notice[j]<='z')notice[j]-='a'-'A';
-            status=notice;
-        }else if(!ambr.pickup.picked)status="MASTER: PICKUP SAVED LEVEL";
-        else if(ambr.view==0)status="HOME + EDIT FOR KNOB HELP";
-        else if(ambr.view==1 && ambr.page==1 && l->role==6)status="BUNDLED PCM / MIC UNAVAILABLE";
-        amb_text(10,4,first,AINK,36);amb_text(10,14,second,ADIM,36);amb_text(10,24,status,ADIM,36);
+        amb_text(10,8,first,AINK,39);
+        amb_text(10,23,second,AINK,39);
+        amb_text(10,44,"MASTER picks up the saved level.",ADIM,39);
+        if(ambr.view==1 && l->role==6 && ambr.page==1)
+            amb_text(10,57,"Bundled samples only. Mic unavailable.",ADIM,39);
+        amb_text(10,75,"HOME closes help",AQUEUE,24);
+        cv_blit_cells(0,147);
+        return;
     }
-    cv_rect(8,34,224,1,ALINE);
     if(ambr.view==3) {
         for(i=0;i<8;i++){
             int x=11+i*28;unsigned selected=i==ambr.slot;
             cv_bg=selected?AINK:ASEL;
-            cv_rect(x,50,22,24,cv_bg);
-            amb_number(x+7,58,i+1,selected?ABG:AINK);
-            if(selected)cv_rect(x,76,22,3,TONO_ORANGE);
+            cv_rect(x,15,22,24,cv_bg);
+            amb_number(x+7,23,i+1,selected?ABG:AINK);
+            if(selected)cv_rect(x,41,22,3,TONO_ORANGE);
         }
     } else if(ambr.reset_pending || ambr.piece_preview!=255){
-        amb_text(12,54,ambr.reset_pending?"REC RESTORE / HOME CANCEL":"REC RECALL / HOME CANCEL",AINK,36);
+        amb_text(12,20,ambr.reset_pending?"REC RESTORE / HOME CANCEL":"REC RECALL / HOME CANCEL",AINK,36);
     }else for(k=0;k<4;k++) {
         char label[16]={0},value[24]={0};amb_knob_value(k,label,value);cv_bg=ABG;
-        if(k)cv_rect(k*60,42,1,38,ALINE);
-        amb_text(5+k*60,44,label,ADIM,9);cv_rect(5+k*60,58,17,2,TONO_ORANGE);
-        if(text_w(&AF_M,value)<=54)cv_text(5+k*60,63,&AF_M,value,AINK);
-        else amb_text(5+k*60,66,value,AINK,9);
+        if(k)cv_rect(k*60,10,1,38,ALINE);
+        amb_text(5+k*60,12,label,ADIM,9);cv_rect(5+k*60,26,17,2,TONO_ORANGE);
+        if(text_w(&AF_M,value)<=54)cv_text(5+k*60,31,&AF_M,value,AINK);
+        else amb_text(5+k*60,34,value,AINK,9);
 
     }
+    cv_bg=ABG;
+    if(ambr.notice[0] && fm1_ms-ambr.notice_ms<2500u)
+        amb_text(10,73,ambr.notice,ADIM,39);
+    else if(amb_tail_any())
+        amb_text(10,73,"OLD SOUND RELEASING / NEXT QUEUED",ADIM,39);
     cv_blit_cells(0,147);
     (void)b;
 }
