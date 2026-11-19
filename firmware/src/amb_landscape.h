@@ -10,7 +10,8 @@ static struct {
     uint8_t ready, chord[2*AMB_TRAVEL_RANGE+1];
     int16_t origin_macro[4][4], origin_clip, origin_echo_colour;
     amb_layer_t origin[4];
-    uint8_t last_patch[4], protect[4];
+    uint32_t turned_ms;
+    uint8_t indicator;
 } travel;
 
 static int amb_endless(void){return (favorites.factory[15][13]&2)!=0;}
@@ -74,23 +75,30 @@ static void amb_landscape_colour(int stopped)
     amb.global[G_DCOLOR]=amb_landscape_value(amb.global[G_DCOLOR],&travel.origin_echo_colour,old/2,next/2,GP[G_DCOLOR].min,GP[G_DCOLOR].max);
     travel.colour=next;
 }
-static int amb_landscape_instrument(unsigned k,int position)
+static int amb_travel_stage(unsigned k,int position)
 {
-    /* At most one new player per downbeat. Manual sequences and explicitly
-     * chosen sample sources keep their instruments throughout the gesture. */
-    static const uint8_t palette[6][2][2]={
-        {{5,20},{18,22}}, {{3,13},{9,12}}, {{8,12},{13,14}},
-        {{7,6},{1,10}}, {{5,6},{2,8}}, {{10,21},{12,15}}
-    };
-    amb_layer_t *l=&amb.layer[k];
     int threshold=4+4*(int)k;
     int distance=position<0?-position:position;
     int stage=distance<threshold?0:1+(distance-threshold)/16;
-    if(position<0)stage=-stage;
-    if(!l->generated || l->role>=6 || travel.protect[k])return 0;
-    if(travel.stage[k] && (l->role!=travel.origin[k].role || l->patch!=travel.last_patch[k])){
-        travel.protect[k]=1;return 0;
-    }
+    return position<0?-stage:stage;
+}
+static void amb_travel_rebase(unsigned k)
+{
+    if(!travel.ready)return;
+    travel.origin[k]=amb.layer[k];
+    travel.stage[k]=amb_travel_stage(k,travel.wanted);
+}
+
+static int amb_landscape_instrument(unsigned k,int position)
+{
+    /* Orchestration changes only the sound. The sequence stays with its layer. */
+    static const uint8_t palette[7][2][2]={
+        {{5,20},{18,22}}, {{3,13},{9,12}}, {{8,12},{13,14}},
+        {{7,6},{1,10}}, {{5,6},{2,8}}, {{10,21},{12,15}}, {{3,1},{4,6}}
+    };
+    amb_layer_t *l=&amb.layer[k];
+    int stage=amb_travel_stage(k,position);
+    int magnitude=stage<0?-stage:stage;
     if(stage==travel.stage[k] || ambr.handoff[k] || ambr.fade_slot[k])return 0;
     if(!travel.stage[k])travel.origin[k]=*l;
     const amb_layer_t *saved=&travel.origin[k];
@@ -98,10 +106,12 @@ static int amb_landscape_instrument(unsigned k,int position)
     const amb_layer_t *sound=saved;
     if(stage){
         const uint8_t *choices=palette[l->role][stage>0];
-        unsigned choice=(amb_hash(amb.policy.seed+19*k)+(distance-threshold)/16)&1;
-        if(distance<threshold+16 && choices[choice]==saved->patch)choice^=1;
+        unsigned choice=(amb_hash(amb.policy.seed+19*k)+magnitude-1)&1;
+        unsigned original=l->role==6?saved->base[P_E0]:saved->patch;
+        if(magnitude==1 && choices[choice]==original)choice^=1;
         replacement=*l;
-        amb_fill_patch(&replacement,amb.key,k,l->role,choices[choice]);
+        if(l->role==6)replacement.base[P_E0]=choices[choice];
+        else amb_fill_patch(&replacement,amb.key,k,l->role,choices[choice]);
         sound=&replacement;
     }
     amb_sound_change(k);
@@ -109,7 +119,7 @@ static int amb_landscape_instrument(unsigned k,int position)
     memcpy(l->base,sound->base,sizeof l->base);l->patch=sound->patch;l->engine=sound->engine;
     l->base[P_MUTE]=mute;l->base[P_PAN]=pan;l->base[P_TRANS]=transpose;
     if(!ambr.handoff[k])amb_apply_patch(k);
-    travel.stage[k]=stage;travel.last_patch[k]=l->patch;
+    travel.stage[k]=stage;
     return 1;
 }
 static int amb_landscape_bar(void)

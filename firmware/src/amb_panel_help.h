@@ -62,7 +62,7 @@ static const char *amb_knob_hint(const amb_layer_t *l,unsigned knob)
     };
     static const char *const global[][4]={
         {"Chance of a chord change","Slow filter variation","Vary generated density","Vary the reverb send"},
-        {"Transpose the note pool","Replace the scale pool","Transport speed","Sound replacement time"},
+        {"Transpose the note pool","Replace the scale pool","Transport speed","Bars between chord attempts"},
         {"Rhythmic event grid","Phrase contour","How layers take turns","Chance of extra events"}
     };
     static const char *const fx[][4]={
@@ -83,6 +83,7 @@ static const char *amb_knob_hint(const amb_layer_t *l,unsigned knob)
         if(!knob && l->engine==ENGI_VOICE)return "Shift the starting vowel";
         return macro[l->role][knob];
     }
+    if(ambr.view==2 && ambr.page==6)return knob?"Sound replacement time":"Bounded or endless travel";
     if(ambr.view==2)return ambr.page<3?global[ambr.page][knob]:ambr.page==3?fx[ambr.fx%4][knob]:eq[knob];
     if(ambr.page==1)return amb_param_hint(l,amb_sound_id(l,ambr.bank,knob));
     if(ambr.page==2)return l->role==4 || (l->role==6 && l->base[P_E1]==3)?amb_param_hint(l,amb_envelope_id(l,knob)):env[knob];

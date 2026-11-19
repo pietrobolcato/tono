@@ -11,7 +11,7 @@ int main(void)
     ambr.tail_gain[0]=16384;assert(amb_tail_envelope(0,0)==1<<23);
 
     for(t=0;t<NELEM(cap);t++){
-        song.playing=0;amb_fixture_scene(0);ambr.view=2;ambr.page=1;amb_knob(3,((int)cap[t]-amb.release_ms)/250);assert(amb.release_ms==cap[t] && amb_valid(&amb));
+        song.playing=0;amb_fixture_scene(0);ambr.view=2;ambr.page=6;amb_knob(1,((int)cap[t]-amb.release_ms)/250);assert(amb.release_ms==cap[t] && amb_valid(&amb));
         amb_patch(0,3,0);amb_prepare();trk[0].engine=trk[0].eng_req;panic_req=0;
         trk_note_on(&trk[0],60,100);for(i=0;i<FS/5u/CTL;i++)mix_block(out,CTL);
         assert(amb_track_active(0));amb_target(1);ambr.view=1;ambr.page=0;
