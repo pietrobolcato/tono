@@ -1,6 +1,6 @@
 # Tono native firmware
 
-Tono is the instrument formerly named AMB+. Its 240×240 display uses an off-white panel, charcoal type and an orange activity index. The rotary startup animation settles over 800 ms and holds for 900 ms. Reduced motion opens on the settled dial. [Instrument Panel release](../../release/tono-0.12/README.md).
+Tono is the instrument formerly named AMB+. Its 240×240 display uses an off-white panel, charcoal type and an orange activity index. The rotary startup animation settles over 800 ms and holds for 900 ms. Reduced motion opens on the settled dial. HOME pairs the digital level and chord. LFO shows its waveform and phase on a dark screen. Orange rules identify knob assignments. [Orange Display release](../../release/tono-0.13/README.md).
 
 The `ambplus/` scripts, build flag, save record format and package identity retain their established names for compatibility.
 
