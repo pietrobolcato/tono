@@ -1967,6 +1967,12 @@ enum { AMB_MONITOR_RAMP = 256 };
 static volatile uint8_t amb_monitor_requested;
 static unsigned amb_monitor_blend, amb_monitor_active, amb_monitor_core1;
 static int32_t amb_monitor_bus[2][CTL*2];
+static __attribute__((noinline)) void amb_monitor_begin(void)
+{
+    amb_monitor_active=amb_monitor_requested || amb_monitor_blend;
+    amb_monitor_core1=0;
+    if(amb_monitor_active)memset(amb_monitor_bus,0,sizeof amb_monitor_bus);
+}
 static __attribute__((noinline)) void amb_monitor_part(unsigned core,const int32_t *b,
                                                        unsigned n,int level,int step,int pan)
 {
@@ -1978,7 +1984,7 @@ static __attribute__((noinline)) void amb_monitor_part(unsigned core,const int32
         out[2*i+1]+=(x*right)>>12;
     }
 }
-static void amb_monitor_output(int32_t *out,unsigned n)
+static __attribute__((noinline)) void amb_monitor_output(int32_t *out,unsigned n)
 {
     unsigned target=amb_monitor_requested?AMB_MONITOR_RAMP:0;
     int mg=fx_usb_fixed?MASTER_FULL:song.master_q12;
@@ -2554,9 +2560,7 @@ static __attribute__((noinline)) void mix_block(int32_t *out, uint32_t n)   /* (
     int perf;
     int32_t mg = fx_usb_fixed ? MASTER_FULL : (int32_t)song.master_q12;   /* (USB LEVEL FIXED: MASTER after) */
 #if AMBPLUS
-    amb_monitor_active=amb_monitor_requested || amb_monitor_blend;
-    amb_monitor_core1=0;
-    if(amb_monitor_active)memset(amb_monitor_bus,0,sizeof amb_monitor_bus);
+    amb_monitor_begin();
 #endif
     for (i = 0; i < n; i++)
         send_c[i] = send_d[i] = send_r[i] = mix_l[i] = mix_r[i] = sl_l[i] = sl_r[i] = 0;
