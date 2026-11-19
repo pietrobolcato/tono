@@ -117,9 +117,35 @@ int AMB_MAIN(int argc,char **argv)
     assert(amb_recall(0));assert(amb.master==333);
     amb.master=444;ambr.overwrite=1;amb_flash_fail=2;amb_save();amb_flash_fail=-1;
     assert(amb_recall(0));assert(amb.master==333);
-    for(i=1;i<8;i++) {ambr.slot=(uint8_t)i;ambr.overwrite=0;amb_save();assert(amb_occupied(i));}
+    /* Browse only recallable records. A valid header with a corrupt payload or
+     * an unrelated JIANT record still needs overwrite confirmation. */
+    uint32_t invalid_piece=0;
+    assert(!st_save(amb_object(2),&invalid_piece,sizeof invalid_piece));
+    assert(!st_save(amb_object(3),&amb,sizeof amb));
+    amb_nor[st_sector(amb_object(3),0)+ST_PAYLOAD_OFF]^=1;
+    amb_scan_slots();
+    assert(amb_slot_state[0]==AMB_SAVED && amb_slot_state[1]==AMB_EMPTY);
+    assert(amb_slot_state[2]==AMB_UNREADABLE && amb_slot_state[3]==AMB_UNREADABLE);
+    ambr.view=0;ambr.piece_preview=255;ambr.preset_position=NELEM(AMB_SCENE)-1;
+    turn(EN_PRESET,1);assert(ambr.piece_preview==NELEM(AMB_SCENE));
+    turn(EN_PRESET,1);assert(ambr.piece_preview==0);
+    turn(EN_SELECT,-1);assert(ambr.piece_preview==NELEM(AMB_SCENE));press(B_HOME);
+    /* Confirm while performing, navigate away, edit, and stop. The frozen
+     * snapshot goes to the original slot. No erase/program during playback. */
+    unsigned writes_before=amb_writes;
+    ambr.view=3;ambr.slot=1;ambr.overwrite=0;song.playing=1;amb.master=555;
+    amb_save();assert(amb_save_slot==2 && song.playing && amb_writes==writes_before);
+    amb.master=777;ambr.slot=4;amb_save();
+    assert(amb_save_slot==2 && amb_writes==writes_before);press(B_HOME);
+    song.playing=0;amb_input();
+    assert(!amb_save_slot && amb_writes==writes_before+1 && amb_slot_state[1]==AMB_SAVED);
+    assert(amb_recall(1) && amb.master==555);
+    printf("Song library: validated occupancy, skip unreadable slots, live snapshot and stop-time commit PASS\n");
+    for(i=1;i<8;i++) {ambr.slot=(uint8_t)i;ambr.overwrite=0;amb_save();if(ambr.overwrite)amb_save();assert(amb_occupied(i));}
     for(i=0;i<8;i++) assert(amb_recall(i));
     amb.magic=0;assert(!amb_valid(&amb));amb=before;
+    amb_fixture_scene(AMB_SCENE_GARDEN);ambr.view=0;turn(EN_PRESET,1);press(B_REC);
+    assert(st_crc32(&amb,sizeof amb)==0x99937c93u);
     for(scene=0;scene<NELEM(AMB_SCENE);scene++) {
         energy=0;amb_fixture_scene(scene);amb.master=650;assert(amb_valid(&amb));seq_start();
         for(i=0;i<FS*12u/CTL;i++) {mix_block(out,CTL);amb_output(out,CTL);for(k=0;k<CTL*2;k++) {assert(out[k]>=-30000 && out[k]<=30000);energy+=(int64_t)out[k]*out[k];}}

@@ -186,6 +186,12 @@ int main(int argc,char **argv)
         ambr.view=2;ambr.page=5;if(theme)turn(EN_SELECT,1);
         for(unsigned k=0;k<4;k++)turn(EN_K1+k,1);
         assert(amb_theme()==theme);
+        ambr.view=0;ambr.zen=1;
+        for(unsigned sample=0;sample<10;sample++){
+            ambr.zen_train=sample>=4;ambr.step=2+(sample<4?sample*32:(sample-4)*64);
+            snprintf(name,sizeof name,"zen_%u_%u",theme,sample);ar_frame(name,dir,1);
+        }
+        ambr.zen=ambr.zen_train=0;
         for(unsigned view=0;view<5;view++){
             ambr.view=view;
             unsigned pages=view==1?NELEM(AMB_EDIT):view==2?NELEM(AMB_GLO):1;

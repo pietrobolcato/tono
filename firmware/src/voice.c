@@ -585,6 +585,16 @@ static int32_t trk_trans(const track_t *t)
     const engine_t *e = ENGINES[t->engine % NENGINES];
     return e->oneshot || e->keys ? 0 : t->p[P_TRANS];
 }
+#if AMBPLUS
+/* Published by the same path that starts the oscillator, after mutes, swing,
+ * voice admission and pending-engine switches. UI reads the last event per layer. */
+static volatile struct {uint32_t ms;uint8_t note,velocity;} zen_event[4];
+static void zen_note_event(track_t *t, uint32_t note, uint32_t velocity)
+{
+    unsigned k=(unsigned)(t-trk);
+    if(k<4){zen_event[k].note=(uint8_t)note;zen_event[k].velocity=(uint8_t)velocity;zen_event[k].ms=fm1_ms;}
+}
+#endif
 static void voice_start(track_t *t, voice_t *v, uint32_t note, uint32_t vel, int glide)
 {
     const engine_t *e = ENGINES[t->engine];
@@ -598,6 +608,9 @@ static void voice_start(track_t *t, voice_t *v, uint32_t note, uint32_t vel, int
     v->active = 1;
     v->stage = 1;
     v->age = ++vage;
+#if AMBPLUS
+    zen_note_event(t,note,vel);
+#endif
     if (e == &ENG_FORMANT)
         glide_from(v);
     v->fin_d = 0;
@@ -656,6 +669,9 @@ static void mono_play(track_t *t, uint32_t note, uint32_t vel, int retrig, int g
                 v->ph[0] += seed;
             }
         } else {                                            /* legato: new pitch, same envelope */
+#if AMBPLUS
+            if(!i)zen_note_event(t,note,vel);
+#endif
             v->note = (uint8_t)note;
             glide_from_trk(t, v);
             v->pitch16 = ((int32_t)note + trk_trans(t)) * 16 + t->pfx_rpit;

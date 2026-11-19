@@ -73,6 +73,7 @@ static struct {
     amb_walk_t harmony_walk;
     int32_t evolve_smooth[4];
     uint8_t recent[4][16], recent_vel[4][16], recent_valid[4], reset_pending, detail, foundation_pending[4];
+    uint8_t zen,zen_train;
     uint8_t help, local_preset, preset_position;
     uint8_t loading, last_play, target, edit_layer, view, page, bank, fx, lane, cursor, recording;
     uint8_t proposal, chord_q, piece_preview, slot, overwrite, dirty, panic, play_used, home_used;
@@ -92,8 +93,10 @@ static const char *const AMB_ROLE[7] = {"PAD","DRONE","BELLS","BASS","DRUMS","TE
 static const char *const AMB_EDIT[7] = {"MODE","SOUND","ENVELOPE","LFO","PATTERN","FX","LAYER EQ"};
 static const char *const AMB_GLO[] = {"EVOLVE","HARMONY","GENERATE","MASTER FX","EQ","THEME","PERFORMANCE"};
 static const char *const AMB_MOOD[7] = {"homeward","warmer","brighter","suspended","deeper","open","darker"};
-enum { AMB_SCENE_GARDEN = 11 };
-static const char *const AMB_SCENE[] = {"Morning Air","Rain Study","Dark Water","Low Sun","Glass Room","Night Garden","Window Seats","Stone Cloister","Tidal Loom","Kite Strings","Departure Hall","Garden"};
+#include "amb_nostalgic.h"
+_Static_assert(sizeof(amb_piece_t)==1440 && AMB_VERSION==5, "upgrade embedded song before changing format");
+enum { AMB_SCENE_GARDEN = 11, AMB_SCENE_INN = 12 };
+static const char *const AMB_SCENE[] = {"Morning Air","Rain Study","Dark Water","Low Sun","Glass Room","Night Garden","Window Seats","Stone Cloister","Tidal Loom","Kite Strings","Departure Hall","Garden","Nostalgic New Inn"};
 static const char *const AMB_MACRO[7][4] = {
     {"WARMTH","MOTION","SUSTAIN","SPACE"},{"WARMTH","DRIFT","SUSTAIN","SPACE"},
     {"SOFT","MOTION","SHIMMER","SPACE"},{"ROUND","PULSE","GLIDE","SPACE"},
@@ -314,8 +317,18 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
         {0,1,54,5,{2,5,0},97,22,{{2,8,0,85},{0,9,2,56},{2,8,0,62},{0,14,3,65}}},
         {2,2,72,4,{8,0,0},102,57,{{0,16,1,89},{2,11,2,94},{3,9,1,67},{4,8,1,84}}}
     };
-    _Static_assert(NELEM(AMB_SCENE)==6+NELEM(arrangements),"factory catalog");
+    _Static_assert(NELEM(AMB_SCENE)==7+NELEM(arrangements),"factory catalog");
     scene%=NELEM(AMB_SCENE);
+    if(scene==AMB_SCENE_INN){
+        uint8_t *out=(uint8_t *)p;
+        memset(p,0,sizeof *p);
+        for(unsigned at=0;at<sizeof amb_nostalgic;){
+            unsigned run=amb_nostalgic[at++];
+            if(run<128){memcpy(out,amb_nostalgic+at,run);at+=run;}
+            out+=run&127;
+        }
+        return;
+    }
     const arrangement_t *arr=scene<6?0:&arrangements[scene-6];
     unsigned i,j;
     memset(p,0,sizeof *p);p->magic=AMB_MAGIC;p->version=AMB_VERSION;
@@ -387,7 +400,7 @@ static void amb_start_factory(unsigned scene)
 {
     unsigned i,j;amb_install(&amb_pending);amb_pending_ready=0;
     trk_live=4;song.sel=0;ambr.target=ambr.edit_layer=0;ambr.phase=ambr.step=0;ambr.last_play=0;
-    ambr.solo=-1;ambr.local_preset=0;ambr.piece_preview=255;ambr.preset_position=(uint8_t)scene;
+    ambr.local_preset=0;ambr.piece_preview=255;ambr.preset_position=(uint8_t)scene;
     for(i=0;i<4;i++)for(j=0;j<4;j++)ambr.macro_smooth[i][j]=64*256;
     amb_say(AMB_SCENE[scene%NELEM(AMB_SCENE)]);
 }
@@ -395,9 +408,11 @@ static void amb_factory(unsigned scene)
 {
     amb_make_scene(&amb_pending,scene);amb_start_factory(scene);
 }
+static void amb_scan_slots(void);
 static void amb_init(void)
 {
-    memset(&ambr,0,sizeof ambr);amb_factory(AMB_SCENE_GARDEN);
+    tono_init_tables();
+    memset(&ambr,0,sizeof ambr);amb_factory(AMB_SCENE_GARDEN);amb_scan_slots();
     ambr.dirty=1; kb_mask=0;perf_mask=0;song.grid=2;
 }
 static void amb_release(unsigned k)
@@ -1059,23 +1074,66 @@ static int amb_valid(const amb_piece_t *p)
     }
     return 1;
 }
+enum { AMB_EMPTY, AMB_SAVED, AMB_UNREADABLE };
+static uint8_t amb_slot_state[AMB_SLOTS],amb_save_slot;
+static amb_piece_t amb_snapshot;
+static int amb_loadable(const amb_piece_t *p,int n)
+{
+    return ((n==1400 && p->version<=3) || (n==1420 && p->version==4) ||
+        (n==(int)sizeof *p && p->version==AMB_VERSION)) && amb_valid(p);
+}
+static void amb_scan_slots(void)
+{
+    /* Boot scan uses the recall buffer before either transport or input is active. */
+    for(unsigned i=0;i<AMB_SLOTS;i++){
+        int n=st_load(amb_object(i),&amb_pending,sizeof amb_pending);
+        amb_slot_state[i]=amb_loadable(&amb_pending,n)?AMB_SAVED:
+            amb_occupied(i)?AMB_UNREADABLE:AMB_EMPTY;
+    }
+}
+static unsigned amb_next_piece(unsigned p,int clicks)
+{
+    int dir=clicks<0?-1:1;
+    while(clicks){
+        do {p=amb_wrap((int)p+dir,NELEM(AMB_SCENE)+AMB_SLOTS);}
+        while(p>=NELEM(AMB_SCENE) && amb_slot_state[p-NELEM(AMB_SCENE)]!=AMB_SAVED);
+        clicks-=dir;
+    }
+    return p;
+}
+static void amb_commit_snapshot(void)
+{
+    unsigned slot=amb_save_slot-1;
+    if(st_save(amb_object(slot),&amb_snapshot,sizeof amb_snapshot))
+        amb_say("SAVE FAILED - OLD COPY KEPT");
+    else {amb_slot_state[slot]=AMB_SAVED;amb_say("SONG SAVED");}
+    amb_save_slot=0;
+}
 static void amb_save(void)
 {
-    if(song.playing) {amb_say("STOP PLAYBACK TO SAVE");return;}
 #if FELUCCA_FLASH
-    if(!flash_ok) {amb_say("UNSUPPORTED FLASH - SAVE REFUSED");return;}
+    if(!flash_ok){amb_say("UNSUPPORTED FLASH - SAVE REFUSED");return;}
 #endif
-    if(amb_occupied(ambr.slot) && !ambr.overwrite) {ambr.overwrite=1;amb_say("OCCUPIED - REC AGAIN");return;}
-    if(!amb_valid(&amb)) {amb_say("INVALID STATE - SAVE REFUSED");return;}
-    if(st_save(amb_object(ambr.slot),&amb,sizeof amb)) {amb_say("SAVE FAILED - OLD COPY KEPT");return;}
-    ambr.overwrite=0;amb_say("SAVED - DATE UNAVAILABLE");
+    if(amb_save_slot){amb_say("SAVE QUEUED UNTIL STOP");return;}
+    if(amb_occupied(ambr.slot) && !ambr.overwrite){ambr.overwrite=1;amb_say("OCCUPIED - REC AGAIN");return;}
+#if FELUCCA_FLASH
+    uint32_t flags=irq_save();
+#endif
+    amb_snapshot=amb;
+#if FELUCCA_FLASH
+    irq_restore(flags);
+#endif
+    if(!amb_valid(&amb_snapshot)){amb_say("INVALID STATE - SAVE REFUSED");return;}
+    ambr.overwrite=0;amb_save_slot=ambr.slot+1;
+    if(song.playing)amb_say("CAPTURED - WRITES ON STOP");
+    else amb_commit_snapshot();
 }
 static int amb_stage_slot(unsigned slot)
 {
-    int n;amb_pending_ready=0;
+    amb_pending_ready=0;
     memset(&amb_pending,0,sizeof amb_pending);
-    n=st_load(amb_object(slot),&amb_pending,sizeof amb_pending);
-    if(!((n==1400 && amb_pending.version<=3) || (n==1420 && amb_pending.version==4) || (n==(int)sizeof amb_pending && amb_pending.version==AMB_VERSION)) || !amb_valid(&amb_pending)){amb_say("EMPTY / INCOMPATIBLE / DAMAGED");return 0;}
+    int n=st_load(amb_object(slot),&amb_pending,sizeof amb_pending);
+    if(!amb_loadable(&amb_pending,n)){amb_say("SLOT UNAVAILABLE");return 0;}
     if(amb_pending.version==1)amb_policy_init(&amb_pending.policy,0x414d4200u);
     if(amb_pending.version<3){amb_pending.layer[0].reserved=amb_pending.layer[1].reserved=0;}
     if(amb_pending.version<4){memset(amb_pending.layer_eq,0,sizeof amb_pending.layer_eq);amb_pending.release_ms=3000;}
@@ -1400,7 +1458,7 @@ static void amb_rec(void)
             amb_pending_ready=0;amb_make_scene(&amb_pending,p);
             /* A confirmed factory recall is a new take. A slot recall keeps
              * its stored seed. The default at power-on remains reproducible. */
-            amb_pending.policy.seed=amb_hash(amb_pending.policy.seed+fm1_ms+0x9e3779b9u*(++ambr.factory_take));
+            if(p!=AMB_SCENE_INN)amb_pending.policy.seed=amb_hash(amb_pending.policy.seed+fm1_ms+0x9e3779b9u*(++ambr.factory_take));
             if(song.playing){RING_PUBLISH();amb_pending_ready=1;amb_say("RECALL QUEUED TO NEXT BAR");}
             else amb_start_factory(p);
         }else amb_recall(p-NELEM(AMB_SCENE));
@@ -1444,6 +1502,7 @@ static void amb_browse_proposal(int delta)
 }
 static void amb_input(void)
 {
+    if(amb_save_slot && !song.playing)amb_commit_snapshot();
     uint32_t pressed=fm1_input_edges(0),notes=fm1_input_note_edges();
     unsigned b,k; int s,sel=panel_enc(EN_SELECT),algo=panel_enc(EN_ALGO),pre=panel_enc(EN_PRESET);
     unsigned home=(fm1_in.buttons>>panel.btn[B_HOME])&1u,play=(fm1_in.buttons>>panel.btn[B_PLAY])&1u;
@@ -1470,19 +1529,26 @@ static void amb_input(void)
         kb_mask=perf_mask=0;song.rec=0;song.grid=2;return;
     }
     if((pressed & ~(1u<<panel.btn[B_REC] | 1u<<panel.btn[B_PLAY])) || sel || algo)ambr.local_preset=0;
+    if(ambr.view)ambr.zen=0;
     if(home && sel) {
         ambr.home_used=1;
         if(ambr.view==1) {ambr.edit_layer=(uint8_t)amb_wrap(ambr.edit_layer+sel,4);song.sel=ambr.edit_layer;ambr.proposal=255;ambr.dirty=1;}
         sel=0;
     }
     if(!home && home0 && !ambr.home_used) {
+        ambr.zen=0;
         ambr.view=0;ambr.recording=0;ambr.reset_pending=0;ambr.overwrite=0;amb_pending_ready=0;
         if(ambr.target){ambr.edit_layer=ambr.target-1;song.sel=ambr.edit_layer;}ambr.proposal=ambr.piece_preview=255;ambr.dirty=1;
     }
     home0=(uint8_t)home;play0=(uint8_t)play;
     for(b=0;b<NB;b++) if((pressed>>panel.btn[b])&1u) {
         if(b==B_HOME || b==B_PLAY) continue;
-        if(home && b==B_FX){
+        if(home && b==B_ARP){
+            ambr.home_used=1;ambr.zen=!ambr.zen;ambr.view=0;ambr.proposal=ambr.piece_preview=255;
+            ambr.recording=ambr.reset_pending=ambr.overwrite=0;ambr.dirty=1;
+        }else if(ambr.zen && b==B_SCL && !home){
+            ambr.zen_train^=1;ambr.dirty=1;
+        }else if(home && b==B_FX){
             ambr.home_used=1;amb_monitor_requested^=1;
             amb_say(amb_monitor_requested?"ALL FX BYPASSED":"EFFECTS ON");
         }else if((home && b==B_SEQ) || (b==B_SCL && (ambr.view==0 || ambr.view==4))){
@@ -1525,7 +1591,7 @@ static void amb_input(void)
     }
     if(sel) {
         ambr.reset_pending=0;
-        if(ambr.piece_preview!=255) ambr.piece_preview=(uint8_t)amb_wrap(ambr.piece_preview+sel,NELEM(AMB_SCENE)+AMB_SLOTS);
+        if(ambr.piece_preview!=255) ambr.piece_preview=(uint8_t)amb_next_piece(ambr.piece_preview,sel);
         else if(ambr.proposal!=255){ /* ALGORITHM owns this proposal until REC or navigation. */ }
         else if(ambr.view==0) amb_target(amb_wrap(ambr.target+sel,5));
         else if(ambr.view==3) {ambr.slot=(uint8_t)amb_wrap(ambr.slot+sel,8);ambr.overwrite=0;}
@@ -1561,7 +1627,7 @@ static void amb_input(void)
         ambr.dirty=1;
     }else if(pre && ambr.view==0) {
         ambr.reset_pending=0;
-        ambr.piece_preview=(uint8_t)amb_wrap((ambr.piece_preview==255?ambr.preset_position:ambr.piece_preview)+pre,NELEM(AMB_SCENE)+AMB_SLOTS);
+        ambr.piece_preview=(uint8_t)amb_next_piece(ambr.piece_preview==255?ambr.preset_position:ambr.piece_preview,pre);
         ambr.proposal=255;ambr.recording=0;ambr.view=0;ambr.dirty=1;
     }
     for(k=0;k<4;k++) if((s=panel_enc(EN_K1+k))) amb_knob(k,s);
@@ -1609,6 +1675,8 @@ static void amb_leds(void)
             (b==B_EDIT && edit_action) || b==B_OCTDN || b==B_OCTUP ||
             (b==B_HOME && (ambr.target || ambr.view || ambr.proposal!=255 || ambr.piece_preview!=255 || amb_pending_ready)) || (b==B_SCL && ambr.view!=3) ||
             (b==B_REC && amb_rec_action()) || (ambr.target && (b==B_ENV || b==B_LFO || b==B_SEQ || b==B_FX || (b==B_ARP && (!(ambr.view==1 && ambr.page==4) || (!amb.layer[ambr.edit_layer].generated && amb.layer[ambr.edit_layer].notes[ambr.cursor])))));
+        if((fm1_in.buttons>>panel.btn[B_HOME])&1u && b==B_ARP)action=1;
+        if(ambr.zen && b==B_HOME)action=1;
         if(ambr.help)action=b==B_HOME || b==B_PLAY;
         if(action) led_put(lit,panel.btn[b],1);
     }
@@ -1873,8 +1941,9 @@ static void amb_fx_diagram(unsigned k,unsigned module)
 static void amb_guidance(const amb_layer_t *l,const char **first,const char **second)
 {
     const char *a="SCL PAGE / KNOBS EDIT",*b="HOME RETURN";
-    if(ambr.view==4){a="K1-K4 LAYER GAIN / SCL HOME";b="BARS SHOW LIVE LAYER OUTPUT";}
-    else if(ambr.view==0){a="SELECT TARGET / EDIT / SCL ENSEMBLE";b="ALGO SONG: DARKER / BRIGHTER";}
+    if(ambr.zen){a="SCL CONTOUR / TRAIN RIDE";b="HOME RETURN / ALGO TRAVEL";}
+    else if(ambr.view==4){a="K1-K4 LAYER GAIN / SCL HOME";b="BARS SHOW LIVE LAYER OUTPUT";}
+    else if(ambr.view==0){a="SELECT TARGET / EDIT / SCL ENSEMBLE";b="ALGO TRAVEL / HOME + ARP ZEN";}
     else if(ambr.view==3){a="SELECT SLOT / REC SAVE";b=ambr.overwrite?"REC AGAIN OVERWRITE / HOME CANCEL":"HOME CANCEL";}
     else if(ambr.view==1){
         if(ambr.page==0){a="SCL PAGE / ALGO LAYER TYPE";b="EDIT RESTORE LOADED TRACK";}
@@ -2078,17 +2147,18 @@ static void amb_draw_ensemble(void)
     }
 }
 
+#include "amb_zen.h"
 static void amb_draw(void)
 {
     unsigned i,k;char b[32];amb_layer_t *l=&amb.layer[ambr.edit_layer];
-    if(!ambr.dirty && fm1_ms-ambr.last_draw<((ambr.view==4 || (ambr.view==1 && ambr.page==4))?50u:((ambr.view==1 && (ambr.page==3 || ambr.page==6 || (ambr.page==5 && ambr.fx==4))) || (ambr.view==2 && ambr.page==4))?80u:250u))return;
+    if(!ambr.dirty && fm1_ms-ambr.last_draw<(ambr.zen?80u:(ambr.view==4 || (ambr.view==1 && ambr.page==4))?50u:((ambr.view==1 && (ambr.page==3 || ambr.page==6 || (ambr.page==5 && ambr.fx==4))) || (ambr.view==2 && ambr.page==4))?80u:250u))return;
     ambr.last_draw=fm1_ms;ambr.dirty=0;
     if(fm1_ms-travel.turned_ms>=1200u)travel.indicator=0;
     cv_begin(240,147,ABG);
 
 
     tono_logo(8,6,3,ABG,AINK);
-    amb_text(60,8,ambr.help?"HELP":ambr.view==4?"ENSEMBLE":ambr.view==0?"HOME":ambr.view==1?"EDIT":ambr.view==2?"GLOBAL":"SAVE",ADIM,8);
+    amb_text(60,8,ambr.help?"HELP":ambr.view==4?"ENSEMBLE":ambr.view==0?(ambr.zen?(ambr.zen_train?"TRAIN RIDE":"CONTOUR"):"HOME"):ambr.view==1?"EDIT":ambr.view==2?"GLOBAL":"SAVE",ADIM,10);
     if(!ambr.help && (ambr.view==0 || ambr.view==1 || ambr.view==4)){
         unsigned target=ambr.view==1?ambr.edit_layer+1:ambr.target;
         int queued=amb_octave_delta(0)+(target?amb_octave_delta(target):0);
@@ -2113,7 +2183,7 @@ static void amb_draw(void)
         }else if(ambr.view==3 || ambr.reset_pending || ambr.piece_preview!=255){
             amb_text(12,51,ambr.view==3?"SAVE PIECE":ambr.reset_pending?"RESTORE LAYER":"RECALL PIECE",AINK,30);
             amb_text(12,81,ambr.reset_pending?"REC confirms the restore":"SELECT chooses a destination",ADIM,36);
-            amb_text(12,108,ambr.view==3?"Stop PLAY, then REC to save":ambr.reset_pending?"HOME cancels after closing help":"REC loads the selected piece",ADIM,36);
+            amb_text(12,108,ambr.view==3?"REC captures / STOP writes":ambr.reset_pending?"HOME cancels after closing help":"REC loads the selected piece",ADIM,36);
         }else for(k=0;k<(ambr.view==2 && ambr.page==6?2:4);k++){
             char label[16]={0},value[24]={0};int y=55+23*k;
             cv_bg=k%2?ABG:ASEL;cv_rect(6,y-5,228,20,cv_bg);
@@ -2123,7 +2193,7 @@ static void amb_draw(void)
     }else if(ambr.view==4){
         amb_draw_ensemble();
     }else if(ambr.view==0) {
-        amb_draw_home();
+        if(ambr.zen)amb_draw_zen();else amb_draw_home();
     } else {
         amb_display(29,20);
         if(ambr.view==1){
@@ -2296,9 +2366,9 @@ static void amb_draw(void)
             }
         } else if(ambr.view==3) {
             amb_text(12,62,"SLOT",ADIM,6);amb_number(49,62,ambr.slot+1,AINK);
-            cv_text(12,79,&AF_M,amb_occupied(ambr.slot)?"OCCUPIED":"EMPTY",AQUEUE);
-            for(i=0;i<8;i++){int x=13+i*27;cv_rect(x,105,22,6,i==ambr.slot?AQUEUE:ALINE);}
-            amb_text(12,125,ambr.overwrite?"OVERWRITE ARMED":"DESTINATION READY",ambr.overwrite?AQUEUE:ADIM,32);
+            cv_text(12,79,&AF_M,amb_slot_state[ambr.slot]==AMB_SAVED?"SAVED":amb_slot_state[ambr.slot]==AMB_EMPTY?"EMPTY":"UNREADABLE",AQUEUE);
+            for(i=0;i<8;i++){int x=13+i*27;cv_rect(x,105,22,6,i==ambr.slot?AQUEUE:amb_slot_state[i]==AMB_SAVED?AINK:ALINE);}
+            amb_text(12,125,amb_save_slot?"CAPTURED - WRITES ON STOP":ambr.overwrite?"OVERWRITE ARMED":"DESTINATION READY",ambr.overwrite?AQUEUE:ADIM,32);
         }
     }
     if(!ambr.help && ambr.local_preset && amb_page_bank()){
