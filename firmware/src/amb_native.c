@@ -92,6 +92,7 @@ static const char *const AMB_ROLE[7] = {"PAD","DRONE","BELLS","BASS","DRUMS","TE
 static const char *const AMB_EDIT[7] = {"MODE","SOUND","ENVELOPE","LFO","PATTERN","FX","LAYER EQ"};
 static const char *const AMB_GLO[6] = {"EVOLVE","HARMONY","GENERATE","MASTER FX","EQ","THEME"};
 static const char *const AMB_MOOD[7] = {"homeward","warmer","brighter","suspended","deeper","open","darker"};
+enum { AMB_SCENE_GARDEN = 11 };
 static const char *const AMB_SCENE[] = {"Morning Air","Rain Study","Dark Water","Low Sun","Glass Room","Night Garden","Window Seats","Stone Cloister","Tidal Loom","Kite Strings","Departure Hall","Garden"};
 static const char *const AMB_MACRO[7][4] = {
     {"WARMTH","MOTION","SUSTAIN","SPACE"},{"WARMTH","DRIFT","SUSTAIN","SPACE"},
@@ -324,7 +325,7 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
         l->level=arr?arr->chair[i][3]:(uint8_t)l->base[P_LEVEL];
     }
     /* Pitch and timing come from the live conductor for every factory layer. */
-    if(scene==11){
+    if(scene==AMB_SCENE_GARDEN){
         p->eq[2]=-5;p->global[G_WIDTH]=102;p->global[G_RMOD]=126;
         p->master=1010;p->global[G_RTYPE]=5;p->global[G_DTYPE]=4;p->global[G_DFDBK]=59;
         p->layer[1].density=40;p->layer[3].density=35;p->policy.variation=35;
@@ -384,7 +385,7 @@ static void amb_factory(unsigned scene)
 }
 static void amb_init(void)
 {
-    memset(&ambr,0,sizeof ambr);amb_factory(0);
+    memset(&ambr,0,sizeof ambr);amb_factory(AMB_SCENE_GARDEN);
     ambr.dirty=1; kb_mask=0;perf_mask=0;song.grid=2;
 }
 static void amb_release(unsigned k)

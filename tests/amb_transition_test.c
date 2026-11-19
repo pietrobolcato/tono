@@ -5,7 +5,7 @@ int main(void)
 {
     unsigned i,k,seen=1,last=99,current=0;int32_t out[CTL*2];int64_t wet=0;
     amb_layer_t manual;uint64_t hashes[8];
-    memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();amb.auto_index=0;
+    memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();amb_fixture_scene(0);amb.auto_index=0;
     /* The actual runtime AUTO path must not reproduce the old 0 <-> 3 loop. */
     amb.auto_index=1;amb.evolve[0]=100;
     for(i=0;i<8*16;i++){

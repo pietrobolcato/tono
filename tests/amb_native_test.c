@@ -81,7 +81,7 @@ int AMB_MAIN(int argc,char **argv)
 {
     unsigned i,k,scene;amb_piece_t before;int64_t energy;int32_t out[CTL*2];FILE *f=0;
     (void)argc;(void)argv;
-    memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();
+    memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();amb_fixture_scene(0);
     printf("AMB+ piece %zu bytes; original A/B payload capacity %u\n",sizeof amb,ST_PAYLOAD_MAX);
     if(!amb_valid(&amb)) {
         for(k=0;k<4;k++) for(i=0;i<P_COUNT;i++) {const param_desc_t *d=param_desc_of(amb.layer[k].engine,i);if(amb.layer[k].base[i]<d->min || amb.layer[k].base[i]>d->max) printf("bad k%u %s %d expected %d..%d\n",k,d->label,amb.layer[k].base[i],d->min,d->max);}

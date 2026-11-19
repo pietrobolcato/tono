@@ -112,7 +112,7 @@ static void ar_splash(const char *dir)
 int main(int argc,char **argv)
 {
     unsigned role,page,bank,target,fx,style;char name[80];const char *dir=argc>1?argv[1]:".";
-    memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();
+    memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();amb_fixture_scene(0);
     ar_splash(dir);
     /* A scale edit changes the corresponding printed key and leaves the
      * other eleven tiles intact. Sample the fill above each note label. */

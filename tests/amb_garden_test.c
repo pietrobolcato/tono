@@ -82,12 +82,16 @@ int main(void)
     memset(amb_nor, 255, sizeof amb_nor);
     ui_power_on();
     amb_init();
-    amb_fixture_scene(11);
+    assert(ambr.preset_position == 11);
     assert(!strcmp(AMB_SCENE[11], "Garden") && amb_valid(&amb));
     assert(amb.key == 2 && amb.scale == 2 && amb.global[G_BPM] == 72 && amb.policy.active[0] == 8);
     assert(amb.global[G_RTYPE] == 5 && amb.global[G_DTYPE] == 4);
     assert(!strcmp(amb_patch_name(&amb.layer[0]), "Garden Rhodes"));
     assert(!strcmp(amb_patch_name(&amb.layer[1]), "Garden Bell"));
+    turn(EN_PRESET,-11);
+    assert(ambr.piece_preview == 0);
+    press(B_REC);
+    assert(ambr.preset_position == 0 && !strcmp(amb_patch_name(&amb.layer[0]), "Cloud Bloom"));
     /* A different arrangement can borrow the conductor without importing sounds or FX. */
     amb_fixture_scene(6);
     amb.layer[0].generated = 0;

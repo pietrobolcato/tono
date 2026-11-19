@@ -4,7 +4,7 @@
 int main(void)
 {
     unsigned i,k,changes=0,old;int32_t out[CTL*2];int64_t energy=0;
-    memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();
+    memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();amb_fixture_scene(0);
     amb.auto_index=1;amb.evolve[0]=100;ambr.solo=0;old=amb.chord;
     seq_start();
     for(i=0;i<FS*35u/CTL;i++){
