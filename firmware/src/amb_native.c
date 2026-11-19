@@ -1491,9 +1491,10 @@ static void amb_input(void)
             for(k=0;k<4;k++)trk[k].peak=0;
         }else if(home && (b==B_OCTDN || b==B_OCTUP)) {
             ambr.home_used=1;
-            if(ambr.target) {
-                k=ambr.target-1;
-                if(b==B_OCTDN){amb.layer[k].base[P_MUTE]=!amb.layer[k].base[P_MUTE];if(amb.layer[k].base[P_MUTE])amb_release(k);else ambr.foundation_pending[k]=(uint8_t)(amb.layer[k].role<2 || amb.layer[k].role==5);}
+            unsigned target=b==B_OCTDN && ambr.view==1?ambr.edit_layer+1:ambr.target;
+            if(target) {
+                k=target-1;
+                if(b==B_OCTDN){amb.layer[k].base[P_MUTE]=!amb.layer[k].base[P_MUTE];amb_say(amb.layer[k].base[P_MUTE]?"LAYER MUTED":"LAYER ON");if(amb.layer[k].base[P_MUTE])amb_release(k);else ambr.foundation_pending[k]=(uint8_t)(amb.layer[k].role<2 || amb.layer[k].role==5);}
                 else {unsigned j;ambr.solo=ambr.solo==(int)k?-1:(int8_t)k;amb.layer[0].solo_plus1=(uint8_t)(ambr.solo+1);
                     for(j=0;j<4;j++)if(ambr.solo>=0 && j!=(unsigned)ambr.solo)amb_release(j);
                     else ambr.foundation_pending[j]=(uint8_t)(amb.layer[j].role<2 || amb.layer[j].role==5);
