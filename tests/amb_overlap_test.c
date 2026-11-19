@@ -6,7 +6,7 @@ int main(void)
 {
     int32_t out[CTL*2];
     ui_power_on();amb_init();favorites.factory[15][13]=1;amb_fixture_scene(0);
-    ambr.view=2;ambr.page=6;turn(EN_SELECT,1);assert(amb_crossfade());
+    ambr.view=2;ambr.page=6;turn(EN_K3,1);assert(amb_crossfade());
     amb.release_ms=500;amb_prepare();panic_req=0;
     trk[0].engine=trk[0].eng_req;trk_note_on(&trk[0],60,96);
     for(unsigned i=0;i<FS/4/CTL;i++)mix_block(out,CTL);

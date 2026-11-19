@@ -180,13 +180,11 @@ static void zen_wordmark(void)
     enum {W=42,H=13,X=6,Y=5};
     _Static_assert(CV_MAX>=240*120+W*H,"wordmark scratch fits the canvas");
     uint16_t *under=cv_px+240*120;
-    unsigned light=0;
+    uint16_t ink=swap16(TE_DARK?0xffff:0);
     for(int y=0;y<H;y++)for(int x=0;x<W;x++){
-        uint16_t *pixel=&cv_px[(Y+y)*240+X+x],c=swap16(*pixel);
+        uint16_t *pixel=&cv_px[(Y+y)*240+X+x];
         under[y*W+x]=*pixel;*pixel=0;
-        light+=((c>>11)*2+((c>>5)&63)*3+(c&31));
     }
-    uint16_t ink=swap16(light>W*H*125?TONO_INK:TONO_PAPER);
     tono_logo(X+1,Y+1,3,0,0xffff);
     for(int y=0;y<H;y++)for(int x=0;x<W;x++){
         uint16_t *pixel=&cv_px[(Y+y)*240+X+x];

@@ -5,7 +5,12 @@ int main(void)
 {
     memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();
     assert(!amb_walk_value(0) && !amb_journey_style());
-    press(B_GLO);for(int i=0;i<7;i++)press(B_SCL);
+    press(B_GLO);for(int i=0;i<6;i++)press(B_SCL);
+    turn(EN_K4,1);assert(amb_walk_value(0)==WALK_BARS);
+    press(B_SCL);turn(EN_K1,1);assert(amb_walk_value(0)==WALK_SECONDS);
+    ambr.page=6;turn(EN_K4,-1);assert(!amb_walk_value(0) && amb_walk_unit()==WALK_SECONDS);
+    turn(EN_K4,1);assert(amb_walk_value(0)==WALK_SECONDS);
+    press(B_SCL);
     assert(ambr.view==2 && ambr.page==7 && !amb_page_bank());
     turn(EN_SELECT,1);assert(amb_journey_style()==1);
     turn(EN_K1,2);turn(EN_K2,-3);turn(EN_K3,-3);

@@ -56,7 +56,7 @@ static void ar_frame(const char *name,const char *dir,int save)
         assert(swap16(host_screen[12*240+22])==ABG); /* first o counter */
     }else{
         uint16_t ink=swap16(host_screen[6*240+8]);
-        assert(ink==TONO_INK || ink==TONO_PAPER);
+        assert(ink==(TE_DARK?0xffff:0));
         assert(!ar_n); /* wordmark geometry only; no HUD text in either strip */
     }
     if(save)ar_save(name,dir);
