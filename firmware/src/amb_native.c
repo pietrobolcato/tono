@@ -790,10 +790,11 @@ static void amb_octave_boundary(void)
 {
     int change[5];
     for(unsigned i=0;i<5;i++){
-        change[i]=amb_octave_delta(i);
-        ambr.octave_seen[i]=ambr.octave_taps[i];
+        uint8_t taps=ambr.octave_taps[i];
+        change[i]=(int8_t)(taps-ambr.octave_seen[i]);
+        ambr.octave_seen[i]=taps;
     }
-    for(unsigned k=0;k<4;k++)amb_bar_octave[k]=clamp(change[0]+change[k+1],-3,3);
+    for(unsigned k=0;k<4;k++)amb_bar_octave[k]=clamp(amb_bar_octave[k]+change[0]+change[k+1],-3,3);
 }
 static void amb_queue_octave(int direction)
 {
@@ -850,11 +851,7 @@ static __attribute__((noinline)) void amb_clock(uint32_t n)
     for(k=0;k<4;k++)garden_advance(k,n);
     if(!song.playing) {
         for(k=0;k<4;k++)ambr.due[k]=0;
-        if(ambr.last_play){
-            for(k=0;k<4;k++)amb_release(k);
-            for(k=0;k<5;k++)ambr.octave_seen[k]=ambr.octave_taps[k];
-            memset(amb_bar_octave,0,sizeof amb_bar_octave);
-        }
+        if(ambr.last_play)for(k=0;k<4;k++)amb_release(k);
         ambr.last_play=0;return;
     }
     if(!ambr.last_play){
