@@ -8,11 +8,16 @@ typedef struct {const int16_t *pcm;unsigned length,root,rate_q16,loop_percent;} 
 static const amb_recording_t amb_recordings[]={
     {AMB_SAMPLES[0],AMB_SAMPLE_N,60,16384,0},{AMB_SAMPLES[1],AMB_SAMPLE_N,60,16384,0},
     {amb_pcm_violin,NELEM(amb_pcm_violin),60,23777,50},
-    {amb_pcm_cello,NELEM(amb_pcm_cello),60,23777,53},
+    {0,NELEM(amb_pcm_cello),60,17833,12},
     {amb_pcm_piano,NELEM(amb_pcm_piano),72,23777,80},
     {amb_pcm_tenor,NELEM(amb_pcm_tenor),72,23777,48},
     {amb_pcm_flute,NELEM(amb_pcm_flute),72,23777,48}
 };
+/* Cello uses companded storage to fit a longer bow in the firmware slot. */
+static inline int32_t amb_pcm_at(const int16_t *pcm,unsigned at)
+{
+    return pcm ? pcm[at] : amb_cello_decode[amb_pcm_cello[at]];
+}
 static const char *const N_AS_STYLE[4]={"PAD","DRONE","TEXTURE","ONE-SHOT"};
 static const char *const N_AS_LOOP[2]={"OFF","ON"};
 static void amb_sample_on(track_t *t,voice_t *v)
@@ -44,10 +49,10 @@ static void amb_sample_render(track_t *t,voice_t *v,int32_t *out,uint32_t n,cons
             unsigned resume=loop+(recording->loop_percent?fade:0);
             ph=(resume<<16)+(ph-(end<<16))%((end-resume-(recording->loop_percent?0:fade))<<16);at=ph>>16;
         }
-        x=src[at];b=src[at+1<end?at+1:start];x+=((b-x)*(int32_t)frac)>>15;
+        x=amb_pcm_at(src,at);b=amb_pcm_at(src,at+1<end?at+1:start);x+=((b-x)*(int32_t)frac)>>15;
         if(at>=end-fade && style!=3 && t->p[P_E3]) {
             unsigned d=at-(end-fade),other=loop+d;
-            x=(x*(int32_t)(fade-d)+src[other]*(int32_t)d)/(int32_t)fade;
+            x=(x*(int32_t)(fade-d)+amb_pcm_at(src,other)*(int32_t)d)/(int32_t)fade;
         }
         if(at-start<8u)x=x*(int32_t)(at-start)/8;
         if((style==3 || !t->p[P_E3]) && end-at<fade)x=x*(int32_t)(end-at)/(int32_t)fade;
