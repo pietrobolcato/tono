@@ -1222,7 +1222,7 @@ static void amb_text(int x,int y,const char *s,uint16_t color,unsigned maxchars)
 {
     char b[40];unsigned i=0;
     while(s[i] && i<maxchars && i<sizeof b-1) {b[i]=s[i];i++;}
-    b[i]=0;cv_text(x,y,&AF_X,b,color);
+    b[i]=0;cv_text(x,y+1-AF_TONO_LABEL_CAP_Y,&AF_TONO_LABEL,b,color);
 }
 static void amb_number(int x,int y,int n,uint16_t color)
 {
@@ -1374,13 +1374,6 @@ static void amb_display(int top,int height)
     cv_rect(8,top,3,height,TONO_ORANGE);
 }
 
-static void amb_digit(int x,int y,unsigned digit)
-{
-    static const uint8_t mask[]={63,6,91,79,102,109,125,7,127,111};
-    static const uint8_t seg[][4]={{2,0,9,2},{11,2,2,7},{11,11,2,7},{2,18,9,2},{0,11,2,7},{0,2,2,7},{2,9,9,2}};
-    for(unsigned i=0;i<7;i++)cv_rect(x+seg[i][0],y+seg[i][1],seg[i][2],seg[i][3],mask[digit]&(1u<<i)?ABG:DISPLAY_GRID);
-}
-
 static void amb_draw_home(void)
 {
     unsigned target=amb_level_feedback(),value=target?amb.layer[target-1].level:amb.master;
@@ -1389,10 +1382,10 @@ static void amb_draw_home(void)
     if(target){label[0]='L';label[1]=(char)('0'+target);label[2]=' ';str_cpy(label+3,AMB_ROLE[amb.layer[target-1].role],sizeof label-3);}
     amb_display(29,56);
     amb_text(17,35,label,ABG,14);amb_text(98,35,"CHORD",ABG,7);
-    int x=17;
-    if(percent==100){amb_digit(x,50,1);x+=16;}
-    if(percent>=10){amb_digit(x,50,percent/10%10);x+=16;}
-    amb_digit(x,50,percent%10);amb_text(x+16,61,"%",ABG,1);
+    char level[8];
+    fmt_int(level,percent);
+    cv_text(17,45,&AF_TONO_LEVEL,level,ABG);
+    amb_text(20+text_w(&AF_TONO_LEVEL,level),61,"%",ABG,1);
     amb_chord_label(amb.chord,chord);cv_text(98,48,&AF_M,chord,ABG);
     if(ambr.chord_q!=255)amb_text(162,52,"QUEUED",TONO_ORANGE,7);
     for(unsigned i=0;i<24;i++)cv_rect(17+9*i,77,7,2,i*100<24*percent?TONO_ORANGE:DISPLAY_GRID);
@@ -1418,7 +1411,7 @@ static void amb_draw_ensemble(void)
         unsigned held=0,active=0;
         track->peak=0;
         for(unsigned i=0;i<NVOICE;i++)if(track->v[i].active){active++;held+=track->v[i].gate!=0;}
-        cv_rect(8,y,224,20,k%2?ASEL:ABG);
+        cv_bg=k%2?ASEL:ABG;cv_rect(8,y,224,20,cv_bg);
         cv_rect(8,y+19,224,1,ALINE);
         if(held && !muted)tono_disc(18,y+9,3,TONO_ORANGE);
         amb_number(35,y+5,k+1,ADIM);amb_text(46,y+5,AMB_ROLE[role],AINK,8);
@@ -1449,7 +1442,7 @@ static void amb_draw(void)
             amb_text(12,108,ambr.view==3?"Stop PLAY, then REC to save":ambr.reset_pending?"HOME cancels after closing help":"REC loads the selected piece",ADIM,36);
         }else for(k=0;k<4;k++){
             char label[16]={0},value[24]={0};int y=41+25*k;
-            cv_rect(6,y-5,228,20,k%2?ABG:ASEL);
+            cv_bg=k%2?ABG:ASEL;cv_rect(6,y-5,228,20,cv_bg);
             amb_knob_value(k,label,value);amb_number(10,y,k+1,ADIM);
             amb_text(22,y,label,AINK,9);amb_text(84,y,amb_knob_hint(l,k),ADIM,25);
         }
@@ -1600,16 +1593,16 @@ static void amb_draw(void)
         }
     }
     if(!ambr.help && ambr.reset_pending){
-        GFX_HOOK_COVER(8,50,232,145);cv_rect(8,50,224,95,ASEL);
+        GFX_HOOK_COVER(8,50,232,145);cv_bg=ASEL;cv_rect(8,50,224,95,cv_bg);
         amb_text(16,61,"RESTORE THIS TRACK?",AQUEUE,30);
         amb_text(16,81,"LAST LOADED PIECE VERSION",ADIM,31);
         amb_text(16,101,"SOUND / MACROS / PATTERN",ADIM,31);
     }else if(!ambr.help && ambr.piece_preview!=255) {
-        GFX_HOOK_COVER(8,29,232,145);cv_rect(8,29,224,116,ASEL);amb_text(16,67,"PRESET PROPOSAL",ADIM,30);
+        GFX_HOOK_COVER(8,29,232,145);cv_bg=ASEL;cv_rect(8,29,224,116,cv_bg);amb_text(16,67,"PRESET PROPOSAL",ADIM,30);
         cv_text(16,85,&AF_M,ambr.piece_preview<NELEM(AMB_SCENE)?AMB_SCENE[ambr.piece_preview]:"USER SLOT",AINK);
         if(ambr.piece_preview>=NELEM(AMB_SCENE)) amb_number(113,90,ambr.piece_preview-NELEM(AMB_SCENE)+1,AINK);
     } else if(!ambr.help && ambr.view==0 && ambr.proposal!=255) {
-        GFX_HOOK_COVER(8,86,232,146);cv_rect(8,86,224,60,ASEL);amb_text(18,91,"NEXT HARMONY",ADIM,24);
+        GFX_HOOK_COVER(8,86,232,146);cv_bg=ASEL;cv_rect(8,86,224,60,cv_bg);amb_text(18,91,"NEXT HARMONY",ADIM,24);
         amb_chord_label(ambr.proposal,b);amb_text(18,112,b,AINK,16);amb_text(115,112,AMB_MOOD[ambr.proposal],ADIM,16);
     }
     cv_blit_cells(0,0);

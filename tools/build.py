@@ -112,6 +112,11 @@ def generate():
             [tools / "gen_fm6_patches.py", GEN / "felucca_fm6.h"],
             [tools / "gen_drum_maps.py", FW / "src" / "gen_tables.c", FW / "src" / "song_dice.c", GEN / "gen_drum_maps.h",
              GEN / "dice_bars.h", GEN / "gen_bass.h"]]   # (0.9.7)
+    if os.environ.get("AMBPLUS") == "1":
+        inter = SRC / "assets/fonts/InterTight[wght].ttf"
+        cmds.append([tools / "gen_aa_font.py", GEN / "tono_fonts.h",
+                     "--face", f"TONO_LABEL={inter}@500:10:32-126",
+                     "--face", f"TONO_LEVEL={inter}@600:26:48-57"])
     procs = [subprocess.Popen([sys.executable, *map(str, c)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                               text=True) for c in cmds]
     failed = []

@@ -62,7 +62,7 @@ static void tono_wordmark(uint16_t paper, uint16_t ink)
     cv_rect(142, 26, 6, 14, ink);
     tono_round(155, 16, 25, 24, 7, ink);
     tono_round(161, 22, 13, 12, 4, paper);
-    cv_text_in(0, 51, 240, &AF_S, "FM1 AMBIENT SYNTHESIZER", ink, paper);
+    cv_text_in(0, 51, 240, &AF_TONO_LABEL, "FM1 AMBIENT SYNTHESIZER", ink, paper);
     cv_blit(0, 163);
 }
 
