@@ -62,7 +62,7 @@ static const char *amb_knob_hint(const amb_layer_t *l,unsigned knob)
     };
     static const char *const global[][4]={
         {"Chance of a chord change","Slow filter variation","Vary generated density","Vary the reverb send"},
-        {"Transpose the note pool","Replace the scale pool","Transport speed","Bars between chord attempts"},
+        {"Transpose the note pool","Replace the scale pool","Transport speed","Auto chord interval"},
         {"Rhythmic event grid","Phrase contour","How layers take turns","Chance of extra events"}
     };
     static const char *const fx[][4]={
