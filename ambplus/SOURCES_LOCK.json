@@ -1,8 +1,8 @@
 {
   "status": "DEVELOPMENT CANDIDATE; VALIDATION INCOMPLETE; NOT HARDWARE-VALIDATED",
   "flash_status": "NOT AUTHORISED",
-  "source_sha": "2afc670c00554e96f373e94902bf600735d36d69",
-  "artifact_sha256": "6b5047b85fa1f61ec359b9cd482857eadbda4770d09f1af3b4198fe746fa6333",
+  "source_sha": "6543aa8ae8800b8413ae1bf6a4df2ae2dc4d5b1b",
+  "artifact_sha256": "fdecc191fe2e865a859125dc705ce97fdba7fe2b4a950712630c2439aa160515",
   "jiant": {
     "url": "https://github.com/juanjiant-bit/JIANT",
     "commit": "beffdd0b32ffebce1d62fd608ffc653fc7feec82",
