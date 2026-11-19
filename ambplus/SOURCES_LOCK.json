@@ -1,8 +1,8 @@
 {
   "status": "DEVELOPMENT CANDIDATE; VALIDATION INCOMPLETE; NOT HARDWARE-VALIDATED",
   "flash_status": "NOT AUTHORISED",
-  "source_sha": "b3e3def0c561291832136a82ae3b965915cc7dca",
-  "artifact_sha256": "1c86e68789df3d329ca6e9e5e99eb05ac3119cc67f66bb94bf2aecc5c5268aed",
+  "source_sha": "e962efb9b3047eaa417222a428b7e6258d03ee3b",
+  "artifact_sha256": "22f540e369170ff208e917ad32f0393979e0d8efa5de887df5552165171f18d8",
   "jiant": {
     "url": "https://github.com/juanjiant-bit/JIANT",
     "commit": "beffdd0b32ffebce1d62fd608ffc653fc7feec82",
@@ -53,9 +53,9 @@
   "excluded_sources": [
     "Shrub"
   ],
-  "previous_implementation_sha": "c70cc5e6ccb0e8bec982715bfcca687386a94894",
-  "save_version": 4,
-  "save_payload_bytes": 1420,
+  "previous_implementation_sha": "b3e3def0c561291832136a82ae3b965915cc7dca",
+  "save_version": 5,
+  "save_payload_bytes": 1440,
   "comparison_reference": {
     "fm1_base_commit": "3ae2a65ddd02e15bf9ce925b5a7136d5d207ee25",
     "recording_sha256": "75ac03ecb9761987f2ce2b56cb787afaa21503486166a9eee43247f198e0373f"
