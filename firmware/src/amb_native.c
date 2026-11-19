@@ -1810,7 +1810,7 @@ static void amb_space_plot(int reverb,int y,int amount,uint16_t ink)
     int type=amb.global[G_DTYPE], time=delay_samples();
     int spacing=clamp(time/(FS/48)+4,5,60);
     int reflection=0;
-    int feedback=amb.global[G_DFDBK];
+    int feedback=clamp(dly_fb(amb.global[G_DFDBK])*100/32768,0,100);
     if(type==6){spacing=clamp(spacing,6,11);feedback=clamp(feedback,0,32);}
     int h=amount*26/127;
     cv_line(17,y,219,y,ALINE);
@@ -1854,7 +1854,8 @@ static void amb_fx_diagram(unsigned k,unsigned module)
     }else{
         amb_text(12,85,"STEREO POSITION",ADIM,26);cv_line(22,113,214,113,ADIM);
         int pan=mp_seen[k]?mp_pan[k]/256:t->p[P_PAN];
-        x=22+clamp(pan+64,0,127)*192/127;cv_rect(x-2,107,5,13,AINK);
+        cv_rect(118,109,1,9,ADIM);
+        x=22+clamp(pan+64,0,127)*192/127;cv_rect(x-2,107,5,13,TONO_ORANGE);
         amb_text(12,129,"L",ADIM,1);amb_text(208,129,"R",ADIM,1);
     }
 }
@@ -2327,7 +2328,7 @@ static void amb_draw(void)
     }
     if(ambr.view==2 && ambr.page==5){
         amb_text(10,18,"SELECT",ADIM,16);
-        cv_text(10,32,&AF_M,theme_names[amb_theme()],AINK);
+        cv_text(10,32,&AF_M,"Display theme",AINK);
         amb_text(150,18,"K1 TRAVEL",ADIM,12);cv_text(150,32,&AF_M,amb_endless()?"Endless":"Bounded",AINK);
     }else if(ambr.view==3) {
         for(i=0;i<8;i++){
