@@ -113,6 +113,8 @@ def generate():
             [tools / "gen_drum_maps.py", FW / "src" / "gen_tables.c", FW / "src" / "song_dice.c", GEN / "gen_drum_maps.h",
              GEN / "dice_bars.h", GEN / "gen_bass.h"]]   # (0.9.7)
     if os.environ.get("AMBPLUS") == "1":
+        # The shared decoder also reproduces the small face losslessly.
+        cmds[0].extend(["--huff", "S,M,L"])
         inter = SRC / "assets/fonts/InterTight[wght].ttf"
         cmds.append([tools / "gen_aa_font.py", GEN / "tono_fonts.h", "--huff", "TONO_LABEL,TONO_LEVEL", "--kern-min", "3",
                      "--face", f"TONO_LABEL={inter}@500:10:32-126",
