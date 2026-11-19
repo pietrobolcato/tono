@@ -120,9 +120,9 @@ int main(int argc,char **argv)
     unsigned original_pool=amb_pool(),rel=1;
     ar_frame("field_harmony",dir,0);
     uint16_t fills[12];
-    for(unsigned j=0;j<12;j++)fills[j]=host_screen[106*240+15+j*18];
+    for(unsigned j=0;j<12;j++)fills[j]=host_screen[79*240+19+j*17];
     amb_pool_set(original_pool^(1u<<rel));ar_frame("field_harmony_edit",dir,0);
-    for(unsigned j=0;j<12;j++)assert((fills[j]!=host_screen[106*240+15+j*18])==(j==rel));
+    for(unsigned j=0;j<12;j++)assert((fills[j]!=host_screen[79*240+19+j*17])==(j==rel));
     amb_fixture_scene(0);ambr.view=0;
     for(target=0;target<5;target++){amb_target(target);snprintf(name,sizeof name,"home_%u",target);ar_frame(name,dir,1);}
     amb_target(4);fm1_ms=10000;amb_master(0,0);amb_master(800,0);ar_frame("layer_level_feedback",dir,1);
@@ -180,6 +180,18 @@ int main(int argc,char **argv)
     }
     ambr.view=2;for(page=0;page<5;page++){
         ambr.page=page;for(fx=0;fx<(page==3?4u:1u);fx++){ambr.fx=fx;ar_frame("global_help",dir,0);}
+    }
+    ambr.help=0;amb_fixture_scene(0);
+    for(unsigned theme=0;theme<THEME_COUNT;theme++){
+        ambr.view=2;ambr.page=5;amb_knob(0,theme?1:0);assert(amb_theme()==theme);
+        for(unsigned view=0;view<5;view++){
+            ambr.view=view;
+            unsigned pages=view==1?NELEM(AMB_EDIT):view==2?NELEM(AMB_GLO):1;
+            for(ambr.page=0;ambr.page<pages;ambr.page++){
+                snprintf(name,sizeof name,"theme_%u_view_%u_page_%u",theme,view,ambr.page);
+                ar_frame(name,dir,1);
+            }
+        }
     }
     printf("Tono native bitmap audit: %u frames, %u clipping/bounds/overlap findings\n",ar_frames,ar_bad);return ar_bad?1:0;
 }
