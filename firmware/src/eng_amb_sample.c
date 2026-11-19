@@ -8,7 +8,7 @@ typedef struct {const int16_t *pcm;unsigned length,root,rate_q16,loop_percent;} 
 static const amb_recording_t amb_recordings[]={
     {AMB_SAMPLES[0],AMB_SAMPLE_N,60,16384,0},{AMB_SAMPLES[1],AMB_SAMPLE_N,60,16384,0},
     {amb_pcm_violin,NELEM(amb_pcm_violin),60,23777,50},
-    {amb_pcm_cello,NELEM(amb_pcm_cello),60,23777,48},
+    {amb_pcm_cello,NELEM(amb_pcm_cello),60,23777,53},
     {amb_pcm_piano,NELEM(amb_pcm_piano),72,23777,80},
     {amb_pcm_tenor,NELEM(amb_pcm_tenor),72,23777,48},
     {amb_pcm_flute,NELEM(amb_pcm_flute),72,23777,48}

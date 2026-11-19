@@ -32,6 +32,10 @@ static void amb_layer_process(unsigned k,int32_t *b,uint32_t n);
 #define NVOICE 8                 /* voices per part, and the budget shared by all parts */
 #define NPART 6                  /* synth parts: tracks 1..6 (JIANT 0.6: was 4) */
 #define NTRK NPART               /* tracks (the formats and the protocol count these): every track is a part */
+#if AMBPLUS
+/* Audio-thread performance offset; stored notes and drum lane IDs stay literal. */
+static int8_t amb_bar_octave[NTRK];
+#endif
 #define NSTEP 64
 #define HALF_FRAMES 128          /* I2S half buffer: 2.9 ms at 44.1 kHz (a key waits 0..1 half, then plays 1 half later) */
 #ifndef FELUCCA_FM4

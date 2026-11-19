@@ -57,6 +57,10 @@ static struct {
     uint32_t phase, step, off[4], due[4], due_step[4], play_t, last_draw, notice_ms;
     uint8_t due_mask[4];
     amb_grid_cue_t grid_cue[4];
+    /* Single-writer counters. One Master tap reaches all layers at the same
+     * boundary even if the audio interrupt lands during an input frame. */
+    volatile uint8_t octave_taps[5];
+    uint8_t octave_seen[5];
     uint32_t factory_take;
     uint32_t applied_revision[4];
     int master_offset[4];
@@ -224,6 +228,7 @@ static __attribute__((noinline)) int amb_move_release(unsigned k)
     if(dst==NTRK)return 0;
     track_t *from=&trk[k],*to=&trk[dst];
     /* Everything through the oscillator and LFO state, excluding events. */
+    amb_bar_octave[dst]=amb_bar_octave[k];
     memcpy(to,from,(unsigned)((uint8_t*)from->held-(uint8_t*)from));
     to->eng_req=to->engine;
     to->mo_cur=from->mo_cur;to->mo_prev=from->mo_prev;
@@ -777,10 +782,30 @@ static void amb_layer_step(unsigned k,unsigned step,unsigned mask)
     if(l->role==0 && amb_keep_pad(k,notes,n,gate))return;
     amb_release(k);for(i=0;i<n;i++)amb_note(k,notes[i],i?55:65,gate);
 }
+static int amb_octave_delta(unsigned target)
+{
+    return (int8_t)(ambr.octave_taps[target]-ambr.octave_seen[target]);
+}
+static void amb_octave_boundary(void)
+{
+    int change[5];
+    for(unsigned i=0;i<5;i++){
+        change[i]=amb_octave_delta(i);
+        ambr.octave_seen[i]=ambr.octave_taps[i];
+    }
+    for(unsigned k=0;k<4;k++)amb_bar_octave[k]=clamp(change[0]+change[k+1],-3,3);
+}
+static void amb_queue_octave(int direction)
+{
+    unsigned target=ambr.view==1?ambr.edit_layer+1:ambr.target;
+    if(amb_octave_delta(target)*direction<3)ambr.octave_taps[target]+=direction;
+    ambr.dirty=1;
+}
 static void amb_step(void)
 {
     amb_participation_t part[4]; uint8_t mask; unsigned k,bar=ambr.step/16;
     if(ambr.step%16==0) {
+        amb_octave_boundary();
         if(amb_pending_ready){amb_install(&amb_pending);amb_pending_ready=0;amb_say("PRESET RECALLED ON BAR");}
         else if(ambr.chord_q!=255) { amb.chord=ambr.chord_q;ambr.chord_q=255;amb_revoice(); }
         else if(amb.policy.active[0]!=8 && bar && AMB_AUTO[amb.auto_index] && bar%AMB_AUTO[amb.auto_index]==0 && amb_hash(amb.policy.seed+bar)%100u<amb.evolve[0]) {
@@ -825,7 +850,11 @@ static __attribute__((noinline)) void amb_clock(uint32_t n)
     for(k=0;k<4;k++)garden_advance(k,n);
     if(!song.playing) {
         for(k=0;k<4;k++)ambr.due[k]=0;
-        if(ambr.last_play) for(k=0;k<4;k++) amb_release(k);
+        if(ambr.last_play){
+            for(k=0;k<4;k++)amb_release(k);
+            for(k=0;k<5;k++)ambr.octave_seen[k]=ambr.octave_taps[k];
+            memset(amb_bar_octave,0,sizeof amb_bar_octave);
+        }
         ambr.last_play=0;return;
     }
     if(!ambr.last_play){
@@ -1422,7 +1451,10 @@ static void amb_input(void)
         else if(b==B_ARP && ambr.view==1 && ambr.page==4 && amb.layer[ambr.edit_layer].role!=4 && !amb.layer[ambr.edit_layer].generated){
             amb.layer[ambr.edit_layer].notes[ambr.cursor]=0;amb_say("SELECTED STEP CLEARED");
         }
-        else if(b==B_OCTDN || b==B_OCTUP) song.octave=(int8_t)clamp(song.octave+(b==B_OCTUP?1:-1),-3,3);
+        else if(b==B_OCTDN || b==B_OCTUP){
+            if(song.playing || ambr.view==0 || ambr.view==4)amb_queue_octave(b==B_OCTUP?1:-1);
+            else song.octave=(int8_t)clamp(song.octave+(b==B_OCTUP?1:-1),-3,3);
+        }
         else if(b==B_ENV || b==B_LFO || b==B_SEQ || b==B_FX || b==B_ARP) {
             if(ambr.target && b==B_SEQ && ambr.view==1 && ambr.page==4)amb_set_generated(ambr.edit_layer,!amb.layer[ambr.edit_layer].generated);
             else if(ambr.target) {ambr.reset_pending=0;ambr.recording=0;ambr.view=1;ambr.page=b==B_ENV?2:b==B_LFO?3:b==B_FX?5:4;ambr.proposal=ambr.piece_preview=255;}
@@ -1953,6 +1985,17 @@ static void amb_draw(void)
 
     tono_logo(8,6,3,ABG,AINK);
     amb_text(60,8,ambr.help?"HELP":ambr.view==4?"ENSEMBLE":ambr.view==0?"HOME":ambr.view==1?"EDIT":ambr.view==2?"GLOBAL":"SAVE",ADIM,8);
+    if(!ambr.help && (ambr.view==0 || ambr.view==1 || ambr.view==4)){
+        unsigned target=ambr.view==1?ambr.edit_layer+1:ambr.target;
+        int queued=amb_octave_delta(0)+(target?amb_octave_delta(target):0);
+        int active=amb_bar_octave[target?target-1:0];
+        if(!target)for(unsigned k=1;k<4;k++)if(amb_bar_octave[k]!=active){active=0;break;}
+        int offset=clamp(queued?queued:active,-3,3);
+        if(offset){
+            char tag[]="Q+1";tag[0]=queued?'Q':'O';tag[1]=offset<0?'-':'+';
+            tag[2]='0'+(offset<0?-offset:offset);amb_text(116,8,tag,AQUEUE,3);
+        }
+    }
     if(ambr.view!=4)amb_number(146,8,ambr.view==0?ambr.target+1:ambr.view==3?ambr.slot+1:ambr.page+1,AINK);
     if(ambr.view!=4)amb_text(155,8,ambr.view==0?"/5":ambr.view==1?"/7":ambr.view==2?"/6":"/8",AINK,3);
     amb_text(175,8,song.playing?">":"-",song.playing?TONO_ORANGE:ADIM,1);amb_number(188,8,amb.global[G_BPM],AINK);amb_text(211,8,"BPM",ADIM,3);

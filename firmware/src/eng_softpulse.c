@@ -30,10 +30,13 @@ static void sp_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const vm
     int decay = clamp((int)(n * 5127u / ms), 1, 32700);
     uint32_t ph[] = {v->ph[0], v->ph[1], v->ph[2], (uint32_t)v->s[0]}, noise = (uint32_t)v->s[3];
     int low = v->s[1], band = v->s[2], f = clamp(13500 + p[P_E2] * 228, 8000, 38000);
-    uint32_t inc = pitch_inc(clamp((36 + v->s[7] + (p[P_E1] - 64) / 4 + (lane == DV_TOM ? 7 : 0)) * 16, 0, 2047));
+    int octave = amb_bar_octave[t-trk];
+    uint32_t inc = pitch_inc(clamp((36 + 12*octave + v->s[7] + (p[P_E1] - 64) / 4 + (lane == DV_TOM ? 7 : 0)) * 16, 0, 2047));
     uint32_t metal_inc[4];
-    for (unsigned j = 0; j < 4; j++)
-        metal_inc[j] = (metal[j] >> 8) * (224 + p[P_E1] / 2);
+    for (unsigned j = 0; j < 4; j++){
+        uint32_t base = (metal[j] >> 8) * (224 + p[P_E1] / 2);
+        metal_inc[j] = octave < 0 ? base >> -octave : base << octave;
+    }
     for (unsigned i = 0; i < n; i++) {
         int x;
         if (hat) {

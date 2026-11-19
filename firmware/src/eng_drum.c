@@ -478,6 +478,9 @@ static void drum_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
          * MORPH (both did nothing on DRUM) */
         int32_t lfo = mulq15(t->lfo_val, t->lfo_fade);
         lfo_pit = (lfo * p[P_LD_PIT] * 3) >> 15;
+#if AMBPLUS
+        lfo_pit += amb_bar_octave[t-trk] * 192;
+#endif
         lfo_shp = (lfo * p[P_LD_SHP]) >> 15;
     }
     if (L->bc != L->bd) {                                /* (0.6.82) BEND: towards its pitch over the step */
