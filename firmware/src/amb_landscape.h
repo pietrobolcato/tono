@@ -12,6 +12,10 @@ static struct {
     amb_layer_t origin[4];
     uint32_t turned_ms;
     uint8_t indicator;
+    uint8_t distance, pending_layers, anchor, previous_sound[4];
+    int8_t direction;
+    uint32_t chapter;
+    amb_walk_t walk;
 } travel;
 
 static int amb_endless(void){return (favorites.factory[15][13]&2)!=0;}
@@ -89,6 +93,66 @@ static void amb_travel_rebase(unsigned k)
     travel.stage[k]=amb_travel_stage(k,travel.wanted);
 }
 
+static void amb_landscape_apply(unsigned k,const amb_layer_t *sound)
+{
+    amb_layer_t *l=&amb.layer[k];
+    amb_sound_change(k);
+    int mute=l->base[P_MUTE],pan=l->base[P_PAN],transpose=l->base[P_TRANS];
+    memcpy(l->base,sound->base,sizeof l->base);l->patch=sound->patch;l->engine=sound->engine;
+    l->base[P_MUTE]=mute;l->base[P_PAN]=pan;l->base[P_TRANS]=transpose;
+    if(!ambr.handoff[k])amb_apply_patch(k);
+}
+
+/* A style switch establishes a local starting arrangement, even mid-song. */
+static void amb_journey_recentre(void)
+{
+    ambr.loading=1;
+    memset(&travel,0,sizeof travel);
+    ambr.loading=0;
+}
+
+static void amb_journey_phrase(unsigned style,int movement)
+{
+    unsigned total=travel.distance+(unsigned)(movement<0?-movement:movement);
+    travel.direction=movement<0?-1:1;
+    unsigned interval=style==1?4:3;
+    travel.distance=total%interval;
+    if(total<interval)return;
+    travel.chapter+=total/interval;
+    unsigned pick=amb_hash(amb.policy.seed+travel.chapter);
+    if(style==1){
+        /* Keep three timbres and rotate the fourth through the ensemble. */
+        travel.pending_layers=1u<<((amb.policy.seed+travel.chapter)&3);
+    }else{
+        /* Rotate the anchor, vary the introduction order, carry its patch. */
+        travel.anchor=(travel.anchor+1+(pick%3))&3;
+        travel.pending_layers=15u^(1u<<travel.anchor);
+    }
+}
+static void amb_journey_orchestrate(int playing)
+{
+    static const uint8_t voices[7][2][4]={
+        {{5,15,20,9},{18,22,17,8}},{{3,13,6,8},{9,12,5,2}},
+        {{8,5,2,7},{13,14,11,10}},{{7,6,0,3},{1,10,8,9}},
+        {{5,4,6,0},{2,8,7,1}},{{10,7,5,3},{12,15,2,1}},{{3,1,5,11},{4,6,0,8}}
+    };
+    for(unsigned j=0;j<4;j++){
+        unsigned k=(j+travel.chapter)&3;
+        if(!(travel.pending_layers&(1u<<k)) || ambr.handoff[k] || ambr.fade_slot[k])continue;
+        amb_layer_t replacement=amb.layer[k];
+        int sample=replacement.role==6;
+        unsigned current=sample?replacement.base[P_E0]:replacement.patch;
+        const uint8_t *choices=voices[replacement.role][travel.direction>0];
+        unsigned index=amb_hash(amb.policy.seed+travel.chapter*37+k)&3;
+        while(choices[index]==current || choices[index]+1==travel.previous_sound[k])index=(index+1)&3;
+        if(sample)replacement.base[P_E0]=choices[index];
+        else amb_fill_patch(&replacement,amb.key,k,replacement.role,choices[index]);
+        travel.previous_sound[k]=current+1;
+        amb_landscape_apply(k,&replacement);
+        travel.pending_layers&=~(1u<<k);
+        if(playing)break;
+    }
+}
 static int amb_landscape_instrument(unsigned k,int position)
 {
     /* Orchestration changes only the sound. The sequence stays with its layer. */
@@ -114,21 +178,20 @@ static int amb_landscape_instrument(unsigned k,int position)
         else amb_fill_patch(&replacement,amb.key,k,l->role,choices[choice]);
         sound=&replacement;
     }
-    amb_sound_change(k);
-    int mute=l->base[P_MUTE],pan=l->base[P_PAN],transpose=l->base[P_TRANS];
-    memcpy(l->base,sound->base,sizeof l->base);l->patch=sound->patch;l->engine=sound->engine;
-    l->base[P_MUTE]=mute;l->base[P_PAN]=pan;l->base[P_TRANS]=transpose;
-    if(!ambr.handoff[k])amb_apply_patch(k);
+    amb_landscape_apply(k,sound);
     travel.stage[k]=stage;
     return 1;
 }
 static int amb_landscape_bar(void)
 {
     int position=travel.wanted;
-    for(unsigned k=0;k<4;k++)if(amb_landscape_instrument(k,position) && song.playing)break;
+    unsigned style=amb_journey_style();
+    if(style)amb_journey_orchestrate(song.playing);
+    else for(unsigned k=0;k<4;k++)if(amb_landscape_instrument(k,position) && song.playing)break;
     if(position==travel.harmony)return 0;
     int scale[12],count=amb_scale(amb_pool(),scale);
-    if(position>=-18 && position<=18)amb.chord=travel.chord[AMB_TRAVEL_RANGE+position]%count;
+    if(style)amb.chord=amb_walk_next(&travel.walk,amb.policy.seed+travel.chapter*31+(uint32_t)position,amb.chord,count);
+    else if(position>=-18 && position<=18)amb.chord=travel.chord[AMB_TRAVEL_RANGE+position]%count;
     else amb.chord=(amb_hash(amb.policy.seed+(uint32_t)position/4u)+(uint32_t)position)%count;
     amb_revoice();travel.harmony=position;
     return 1;
@@ -137,10 +200,13 @@ static void amb_landscape_turn(int delta)
 {
     ambr.loading=1;
     if(!travel.ready)amb_landscape_start();
-    int next=travel.wanted+delta;
+    int previous=travel.wanted;
+    int next=previous+delta;
     /* Wrap the distant numeric readout while staying on the same side. */
     if(amb_endless())travel.wanted=next>999999?20+(next-1000000)%16:next< -999999?-20-(-next-1000000)%16:next;
     else travel.wanted=clamp(next,-AMB_TRAVEL_RANGE,AMB_TRAVEL_RANGE);
+    if(amb_journey_style() && delta && travel.wanted!=previous)
+        amb_journey_phrase(amb_journey_style(),amb_endless()?delta:travel.wanted-previous);
     if(!song.playing){amb_landscape_colour(1);amb_landscape_bar();}
     ambr.dirty=1;
     ambr.loading=0;

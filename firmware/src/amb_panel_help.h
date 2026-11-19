@@ -83,6 +83,10 @@ static const char *amb_knob_hint(const amb_layer_t *l,unsigned knob)
         if(!knob && l->engine==ENGI_VOICE)return "Shift the starting vowel";
         return macro[l->role][knob];
     }
+    if(ambr.view==2 && ambr.page==7){
+        static const char *const timing[]={"Off, bars or seconds","Shortest wait","Longest wait","Farthest destination"};
+        return timing[knob];
+    }
     if(ambr.view==2 && ambr.page==6)return knob?"Sound replacement time":"Bounded or endless travel";
     if(ambr.view==2)return ambr.page<3?global[ambr.page][knob]:ambr.page==3?fx[ambr.fx%4][knob]:eq[knob];
     if(ambr.page==1)return amb_param_hint(l,amb_sound_id(l,ambr.bank,knob));

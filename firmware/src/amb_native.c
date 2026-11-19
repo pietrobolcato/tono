@@ -91,7 +91,7 @@ static const uint16_t AMB_SCALE[4] = {0x5adu,0xab5u,0x6adu,0xad5u}; /* minor/maj
 static const uint8_t AMB_AUTO[8] = {0,1,2,4,8,16,32,64};
 static const char *const AMB_ROLE[7] = {"PAD","DRONE","BELLS","BASS","DRUMS","TEXTURE","SAMPLE"};
 static const char *const AMB_EDIT[7] = {"MODE","SOUND","ENVELOPE","LFO","PATTERN","FX","LAYER EQ"};
-static const char *const AMB_GLO[] = {"EVOLVE","HARMONY","GENERATE","MASTER FX","EQ","THEME","PERFORMANCE"};
+static const char *const AMB_GLO[] = {"EVOLVE","HARMONY","GENERATE","MASTER FX","EQ","THEME","PERFORMANCE","AUTO TRAVEL"};
 static const char *const AMB_MOOD[7] = {"homeward","warmer","brighter","suspended","deeper","open","darker"};
 #include "amb_nostalgic.h"
 _Static_assert(sizeof(amb_piece_t)==1440 && AMB_VERSION==5, "upgrade embedded song before changing format");
@@ -300,7 +300,48 @@ static void amb_patch(unsigned k,unsigned role,unsigned patch)
     if(!ambr.handoff[k])amb_apply_patch(k);
     ambr.loading=0;ambr.dirty=1;
 }
+#include "amb_auto_travel.h"
 #include "amb_landscape.h"
+/* UI scheduler. BARS publishes during the final sixteenth before the due
+ * downbeat; the existing music engine applies both colour and harmony there.
+ * Seconds use elapsed transport time and the same musical handoff as a turn. */
+static int amb_auto_move(unsigned dice)
+{
+    unsigned style=amb_journey_style();
+    int reach=(int)amb_walk_value(3),pos=travel.wanted;
+    int target=auto_walk.goal;
+    if(style==0 && auto_walk.heading && target==pos){auto_walk.heading=0;return 0;}
+    if(!auto_walk.heading || target==pos || (style==2 && (dice&7)==0)){
+        int distance=1+(int)((dice>>7)%(unsigned)reach);
+        if(!style && (dice&8))distance=(distance+reach+1)/2;
+        int sign=dice&1?1:-1;
+        if(style==0 && pos && (dice&6))sign=pos>0?-1:1;
+        if(!amb_endless() && (pos<=-18 || pos>=18))sign=pos>0?-1:1;
+        target=pos+distance*sign;
+        if(!amb_endless())target=clamp(target,-18,18);
+        auto_walk.goal=target;auto_walk.heading=1;
+    }
+    int remaining=target-pos;
+    int stride=style==2?1+(int)((dice>>17)%3):1+(int)((dice>>17)&1);
+    return clamp(remaining,-stride,stride);
+}
+static void amb_auto_tick(void)
+{
+    unsigned clock=amb_walk_value(0);
+    if(!clock || !song.playing || ambr.loading){amb_auto_reset();return;}
+    unsigned now=clock==WALK_BARS?ambr.step:fm1_ms;
+    if(auto_walk.armed && (int32_t)(now-auto_walk.due)<0)return;
+    unsigned dice=amb_hash(amb.policy.seed+(++auto_walk.serial)*65537u);
+    if(auto_walk.armed){
+        int delta=amb_auto_move(dice);
+        if(delta)amb_landscape_turn(delta);
+    }
+    unsigned lo=amb_walk_value(1),hi=amb_walk_value(2);
+    unsigned delay=lo+((dice>>2)%(hi>=lo?hi-lo+1:1));
+    auto_walk.due=clock==WALK_BARS?(now/16+delay)*16:now+1000*delay;
+    auto_walk.armed=1;
+}
+
 static void amb_make_scene(amb_piece_t *p,unsigned scene)
 {
     static const uint8_t roles[6][4]={{0,1,2,4},{0,5,2,4},{1,0,3,5},{0,3,2,5},{2,0,3,4},{5,1,2,4}};
@@ -386,7 +427,7 @@ static void amb_install(const amb_piece_t *p)
         /* Silent old layers also wait for the coordinated piece handoff. */
         for(k=0;k<4;k++)if(!ambr.handoff[k]){ambr.handoff[k]=1;ambr.tail_left[k]=ambr.tail_total[k]=0;memcpy(ambr.tail_eq[k],amb.layer_eq[k],4);}
     }else ambr.piece_transition=0;
-    memset(&travel,0,sizeof travel);
+    memset(&travel,0,sizeof travel);amb_auto_reset();
     amb=*p;memcpy(amb_reset_grain,amb.grain,sizeof amb_reset_grain);memcpy(amb_reset_layer,amb.layer,sizeof amb_reset_layer);memcpy(amb_reset_eq,amb.layer_eq,sizeof amb_reset_eq);
     memset(ambr.recent,0,sizeof ambr.recent);
     memset(ambr.recent_valid,0,sizeof ambr.recent_valid);memset(ambr.playhead_valid,0,sizeof ambr.playhead_valid);memset(&ambr.harmony_walk,0,sizeof ambr.harmony_walk);ambr.reset_pending=0;
@@ -1395,6 +1436,7 @@ static void amb_knob(unsigned knob,int delta)
         if(id) {const param_desc_t *d=amb_param_desc(l,id);l->base[id]=(int16_t)param_turn(d,l->base[id],delta);}
     } else if(ambr.view==2) {
         if(ambr.page==5)return;
+        if(ambr.page==7){amb_walk_adjust(knob,delta);return;}
         if(ambr.page==6){
             if(knob==1)amb.release_ms=(uint16_t)clamp((int)amb.release_ms+delta*250,250,AMB_MAX_TAIL_MS);
             if(knob==0 && amb_endless()!=(delta>0)){
@@ -1505,6 +1547,7 @@ static void amb_input(void)
     if(amb_save_slot && !song.playing)amb_commit_snapshot();
     uint32_t pressed=fm1_input_edges(0),notes=fm1_input_note_edges();
     unsigned b,k; int s,sel=panel_enc(EN_SELECT),algo=panel_enc(EN_ALGO),pre=panel_enc(EN_PRESET);
+    if(algo && ambr.view==0)amb_auto_reset();else amb_auto_tick();
     unsigned home=(fm1_in.buttons>>panel.btn[B_HOME])&1u,play=(fm1_in.buttons>>panel.btn[B_PLAY])&1u;
     static uint8_t home0,play0;
     for(k=0;k<3;k++) if(ambr.gen_edit[k] && fm1_ms-ambr.gen_time[k]>=90u) {
@@ -1611,6 +1654,7 @@ static void amb_input(void)
             else if(ambr.page==6 && (sel%2)){
                 favorites.factory[15][13]^=1;settings_save();
             }else if(ambr.page==5) amb_theme_turn(sel);
+            else if(ambr.page==7)amb_walk_adjust(4,sel);
             /* SELECT deliberately inert on GENERATE. */
         }
         ambr.dirty=1;
@@ -1808,6 +1852,10 @@ static void amb_knob_value(unsigned knob,char *label,char *value)
             if(knob==0) {str_cpy(value,N_NOTE[amb.key],24);return;}
             if(knob==1) {str_cpy(value,scales[amb.scale],24);return;}
             v=knob==3?AMB_AUTO[amb.auto_index]:amb.global[G_BPM];
+        } else if(ambr.page==7){
+            str_cpy(label,amb_walk_labels[knob],16);
+            if(!knob){str_cpy(value,amb_walk_clocks[amb_walk_value(0)],24);return;}
+            v=amb_walk_value(knob);
         } else if(ambr.page==6){
             if(!knob){str_cpy(label,"TRAVEL",16);str_cpy(value,amb_endless()?"Endless":"Bounded",24);return;}
             str_cpy(label,"TAIL TIME",16);
@@ -1958,6 +2006,7 @@ static void amb_guidance(const amb_layer_t *l,const char **first,const char **se
         }else if(ambr.page==5)a="SCL PAGE / SELECT FX MODULE";
     }else if(ambr.view==2){
         if(ambr.page==0){a="SCL PAGE / SELECT AUTO BARS";b="ALGO CHORD / KNOBS EVOLVE";}
+        else if(ambr.page==7){a="SELECT JOURNEY STYLE";b="AUTO WHILE PLAYING";}
         else if(ambr.page==6){a="SELECT CHANGES TRANSITION";b="K1 TRAVEL / K2 TAIL TIME";}
         else if(ambr.page==2){a="SCL PAGE / KNOBS 1-3 STYLES";b="KNOB 4 VARIATION";}
         else if(ambr.page==3)a="SCL PAGE / SELECT FX MODULE";
@@ -1982,7 +2031,7 @@ static const char *amb_screen_help(void)
     static const char *const global[]={
         "Set how the piece changes as it plays.", "Set the key and scale of the piece.",
         "Choose how the layers generate music.", "Shape the effects shared by all layers.",
-        "Balance the tone of the whole mix.", "Choose the instrument display theme.", "Set travel and sound transitions."
+        "Balance the tone of the whole mix.", "Choose the instrument display theme.", "Set travel and sound transitions.", "Steer the song automatically."
     };
     if(ambr.reset_pending)return "Restore the layer from the loaded piece.";
     if(ambr.piece_preview!=255)return "Load a factory piece or a saved slot.";
@@ -2171,7 +2220,7 @@ static void amb_draw(void)
         }
     }
     if(ambr.view!=4)amb_number(146,8,ambr.view==0?ambr.target+1:ambr.view==3?ambr.slot+1:ambr.page+1,AINK);
-    if(ambr.view!=4)amb_text(155,8,ambr.view==0?"/5":ambr.view==1?"/7":ambr.view==2?"/7":"/8",AINK,3);
+    if(ambr.view!=4)amb_text(155,8,ambr.view==0?"/5":ambr.view==1?"/7":"/8",AINK,3);
     amb_text(175,8,song.playing?">":"-",song.playing?TONO_ORANGE:ADIM,1);amb_number(188,8,amb.global[G_BPM],AINK);amb_text(211,8,"BPM",ADIM,3);
     cv_rect(8,25,224,1,ALINE);cv_bg=ABG;
     if(ambr.help){
@@ -2350,6 +2399,10 @@ static void amb_draw(void)
             }
             cv_bg=SCOPE_BG;amb_text(17,112,"NOTE POOL",SCOPE_INK,10);
             cv_bg=ABG;
+        } else if(ambr.view==2 && ambr.page==7){
+            amb_text(12,58,"JOURNEY",ADIM,14);
+            cv_text(12,77,&AF_M,amb_walk_styles[amb_journey_style()],AINK);
+            amb_text(12,113,amb_walk_value(1)==amb_walk_value(2)?"Fixed interval":"Random interval",ADIM,31);
         } else if(ambr.view==2 && ambr.page==6){
             amb_text(12,58,"TRANSITION",ADIM,14);
             cv_text(12,77,&AF_M,amb_crossfade()?"Crossfade":"Release",AINK);
