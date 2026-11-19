@@ -1,8 +1,8 @@
 {
   "status": "DEVELOPMENT CANDIDATE; VALIDATION INCOMPLETE; NOT HARDWARE-VALIDATED",
   "flash_status": "NOT AUTHORISED",
-  "source_sha": "f57e128b0521b39d4e67d2bf31ed6ffb5543564d",
-  "artifact_sha256": "981f1bb51c2fe2345c455d3ae15c99c40b009b9e40166598367f04a98217590b",
+  "source_sha": "e47d754704f9e4976cb69d5f4a35dccb02510638",
+  "artifact_sha256": "a1cddf1ddc678029b53da16f1849ce30f2068b1b830c8b0805ea9aa517ca8090",
   "jiant": {
     "url": "https://github.com/juanjiant-bit/JIANT",
     "commit": "beffdd0b32ffebce1d62fd608ffc653fc7feec82",
@@ -53,11 +53,17 @@
   "excluded_sources": [
     "Shrub"
   ],
-  "previous_implementation_sha": "e981121972f111867acae3a0473df0d8a2c34984",
+  "previous_implementation_sha": "f57e128b0521b39d4e67d2bf31ed6ffb5543564d",
   "save_version": 4,
   "save_payload_bytes": 1420,
   "comparison_reference": {
     "fm1_base_commit": "3ae2a65ddd02e15bf9ce925b5a7136d5d207ee25",
     "recording_sha256": "75ac03ecb9761987f2ce2b56cb787afaa21503486166a9eee43247f198e0373f"
+  },
+  "acoustic_recordings": {
+    "VCSL": "c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e",
+    "VSCO-2-CE": "440300901dfe9275fd84e0b7763af1f8443ae62e",
+    "license": "CC0-1.0",
+    "conversion": "tools/gen_amb_acoustic.py"
   }
 }
