@@ -871,7 +871,7 @@ static void amb_master(int32_t raw,int boot)
 }
 /* Bounded three-band output EQ. One-pole splits at ~180 Hz / ~3 kHz;
  * smoothed gains, headroom and a final soft knee, both stereo channels. */
-static __attribute__((noinline)) void amb_master_eq_output(int32_t *out,uint32_t n)
+static inline __attribute__((always_inline)) void amb_master_eq_output(int32_t *out,uint32_t n)
 {
     static int32_t low[2],high[2],g[4]={4096,4096,4096,4096};
     static const uint16_t db[25]={1029,1154,1295,1453,1631,1830,2053,2304,2584,2900,3254,3650,4096,4596,5157,5786,6492,7285,8173,9170,10289,11544,12952,14532,16306};
@@ -895,7 +895,7 @@ static __attribute__((noinline)) void amb_master_eq_output(int32_t *out,uint32_t
         out[2*i+c]=soft_knee(y,12000);
     }
 }
-static void amb_output(int32_t *out,uint32_t n)
+static __attribute__((noinline)) void amb_output(int32_t *out,uint32_t n)
 {
     amb_master_eq_output(out,n);
     if(amb_monitor_active)amb_monitor_output(out,n);

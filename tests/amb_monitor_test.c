@@ -16,6 +16,7 @@ int main(void)
     toggle_fx();
     assert(amb_monitor_requested && ambr.view==1 && ambr.page==1);
     assert(!memcmp(&amb,&saved,sizeof amb));
+    amb_render(FS/4); /* allow pending engine changes to settle before note-on */
     trk_note_on(&trk[0],48,90);
     amb_render(FS/2);
     assert(amb_monitor_blend==AMB_MONITOR_RAMP);
