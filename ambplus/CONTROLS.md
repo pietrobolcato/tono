@@ -69,3 +69,5 @@ New acoustic patches are Solo Violin, Chamber Cello, Tenor Sax and Concert Flute
 ### Compare dry and processed sound
 
 Hold HOME and tap FX while playing. The footer shows **FX BYPASSED**. Repeat the shortcut to hear the processed mix again. The dry monitor takes each voice before layer drive, granular, EQ, auto-pan and shared effects. It retains synthesis, envelopes, pitch modulation, level, pan, solo and output protection. Effects keep running during the comparison. The switch lasts for the emulator session and does not edit saved pieces. In fm1-live hold **7** and tap **1**. **F3** records the monitored output.
+
+On LAYER EQ and GLOBAL EQ, the three segmented bars show live input levels below approximately 180 Hz, between 180 Hz and 3 kHz, and above 3 kHz. The line and orange points show the selected EQ gains. The Master display measures both channels.

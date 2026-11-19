@@ -4,19 +4,19 @@
 #include "amb_samples.h"
 #include "amb_acoustic_pcm.h"
 static const char *const N_AS_SOURCE[]={"SOFT CHIME","TAPE VOWEL","SOLO VIOLIN","BOWED CELLO","KAWAI GRAND","TENOR SAX","CONCERT FLUTE"};
-typedef struct {const int16_t *pcm;unsigned length,root,rate_q16,loop_percent;} amb_recording_t;
+typedef struct {const uint8_t *pcm;unsigned length,root,rate_q16,loop_percent;} amb_recording_t;
 static const amb_recording_t amb_recordings[]={
-    {AMB_SAMPLES[0],AMB_SAMPLE_N,60,16384,0},{AMB_SAMPLES[1],AMB_SAMPLE_N,60,16384,0},
-    {amb_pcm_violin,NELEM(amb_pcm_violin),60,23777,50},
-    {0,NELEM(amb_pcm_cello),60,17833,12},
-    {amb_pcm_piano,NELEM(amb_pcm_piano),72,23777,80},
-    {amb_pcm_tenor,NELEM(amb_pcm_tenor),72,23777,48},
-    {amb_pcm_flute,NELEM(amb_pcm_flute),72,23777,48}
+    {AMB_SAMPLES[0],AMB_SAMPLE_N,60,9511,24},{AMB_SAMPLES[1],AMB_SAMPLE_N,60,9511,24},
+    {amb_pcm_violin,NELEM(amb_pcm_violin),60,14861,29},
+    {amb_pcm_cello,NELEM(amb_pcm_cello),60,17833,12},
+    {amb_pcm_piano,NELEM(amb_pcm_piano),72,17833,29},
+    {amb_pcm_tenor,NELEM(amb_pcm_tenor),72,14861,29},
+    {amb_pcm_flute,NELEM(amb_pcm_flute),72,14861,15}
 };
-/* Cello uses companded storage to fit a longer bow in the firmware slot. */
-static inline int32_t amb_pcm_at(const int16_t *pcm,unsigned at)
+/* Direct lookup supports arbitrary pitch and sample trims without a decode buffer. */
+static inline int32_t amb_pcm_at(const uint8_t *pcm,unsigned at)
 {
-    return pcm ? pcm[at] : amb_cello_decode[amb_pcm_cello[at]];
+    return amb_pcm_decode[pcm[at]];
 }
 static const char *const N_AS_STYLE[4]={"PAD","DRONE","TEXTURE","ONE-SHOT"};
 static const char *const N_AS_LOOP[2]={"OFF","ON"};
@@ -28,7 +28,7 @@ static void amb_sample_on(track_t *t,voice_t *v)
 static void amb_sample_render(track_t *t,voice_t *v,int32_t *out,uint32_t n,const vmod_t *m)
 {
     const amb_recording_t *recording=&amb_recordings[clamp(t->p[P_E0],0,NELEM(amb_recordings)-1)];
-    const int16_t *src=recording->pcm;
+    const uint8_t *src=recording->pcm;
     unsigned start=(unsigned)clamp(t->p[P_E4],0,99)*recording->length/100u;
     unsigned end=(unsigned)clamp(t->p[P_E5],1,100)*recording->length/100u;
     unsigned ph=v->ph[0],i,style=(unsigned)t->p[P_E1];
@@ -46,8 +46,8 @@ static void amb_sample_render(track_t *t,voice_t *v,int32_t *out,uint32_t n,cons
         unsigned at=ph>>16,frac=(ph>>1)&32767u;int32_t x,b;
         if(at<start || at>=end) {
             if(style==3 || !t->p[P_E3]) {v->active=0;break;}
-            unsigned resume=loop+(recording->loop_percent?fade:0);
-            ph=(resume<<16)+(ph-(end<<16))%((end-resume-(recording->loop_percent?0:fade))<<16);at=ph>>16;
+            unsigned resume=loop+fade;
+            ph=(resume<<16)+(ph-(end<<16))%((end-resume)<<16);at=ph>>16;
         }
         x=amb_pcm_at(src,at);b=amb_pcm_at(src,at+1<end?at+1:start);x+=((b-x)*(int32_t)frac)>>15;
         if(at>=end-fade && style!=3 && t->p[P_E3]) {

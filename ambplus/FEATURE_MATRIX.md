@@ -11,7 +11,7 @@ PASS below means exercised in the stated software test level. It never means har
 | Macros preserve deep baselines | PASS in native C | Parameter serialization before/after macro and generation events; shared underlying destinations |
 | 48 recipes, six factory pieces | PASS signal generation; PARTIAL musical review | All 48 isolated renders have nonzero energy/distinct PCM hashes; six 12-second scene renders; human curation/listening outstanding |
 | Engine-specific PATCH/DETAIL, envelope, LFO | PASS in native C | Page/role/parameter fixtures and real DSP; one control-rate LFO/layer |
-| SAMPLE playback | PASS software | Two original 8192-sample PCM16 sources, four playback styles, looping/trim/pitch; all slots tested; 32768 flash bytes and no writable PCM sectors |
+| SAMPLE playback | PASS software | Two original 16000-sample companded sources and five acoustic recordings, four playback styles, looping/trim/pitch; all slots tested; read-only playback with no writable PCM sectors |
 | Harmony preview/REC/auto and voice leading | PASS in native C | Chord validity, deterministic helper tests, staged bar recall and harmony scheduling |
 | 8 rhythm / 8 phrase / 6 interplay policies | PASS in native C | All 22 distinct/repeatable traces; four-bar queuing/cancel; 1000-event local-state immutability comparison |
 | Absolute Knobs 1–3 | BLOCKED as written; encoder equivalent implemented | Verified HAL/emulator have quadrature KNOBS 1–4, no corresponding ADCs. Separate absolute decoder tested; MASTER is actual absolute pot |
