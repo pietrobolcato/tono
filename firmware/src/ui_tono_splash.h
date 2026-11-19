@@ -1,5 +1,4 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-#define TONO_NAME "Tono"
 #define TONO_INK RGB(37,39,38)
 #define TONO_PAPER RGB(234,235,230)
 #define TONO_ORANGE RGB(222,86,22)
@@ -48,20 +47,28 @@ static void tono_dial(uint32_t ms,uint16_t paper,uint16_t ink)
               ux.mono || settings.palette==UI_BW_INDEX?ink:TONO_ORANGE,3);
     cv_blit(TONO_ART_X,TONO_ART_Y);
 }
+/* Original 119 x 33 wordmark. Every size uses these same chamfered shapes. */
+static void tono_logo(int x,int y,int divisor,uint16_t paper,uint16_t ink)
+{
+    static const uint8_t shapes[][6]={
+        {0,0,30,6,0,1}, {12,0,6,33,0,1},
+        {31,9,25,24,7,1}, {37,15,13,12,4,0},
+        {64,9,23,24,6,1}, {70,15,11,22,3,0},
+        {64,9,6,24,0,1}, {81,19,6,14,0,1},
+        {94,9,25,24,7,1}, {100,15,13,12,4,0}
+    };
+    for(unsigned i=0;i<NELEM(shapes);i++){
+        const uint8_t *s=shapes[i];
+        int round=divisor/2,left=(s[0]+round)/divisor,top=(s[1]+round)/divisor;
+        int width=(s[0]+s[2]+round)/divisor-left;
+        int height=(s[1]+s[3]+round)/divisor-top;
+        tono_round(x+left,y+top,width,height,(s[4]+round)/divisor,s[5]?ink:paper);
+    }
+}
 static void tono_wordmark(uint16_t paper, uint16_t ink)
 {
     cv_begin(240, 68, paper);
-    /* Tono, drawn at integer coordinates for a sharp native wordmark. */
-    cv_rect(61, 7, 30, 6, ink);
-    cv_rect(73, 7, 6, 33, ink);
-    tono_round(92, 16, 25, 24, 7, ink);
-    tono_round(98, 22, 13, 12, 4, paper);
-    tono_round(125, 16, 23, 24, 6, ink);
-    tono_round(131, 22, 11, 22, 3, paper);
-    cv_rect(125, 16, 6, 24, ink);
-    cv_rect(142, 26, 6, 14, ink);
-    tono_round(155, 16, 25, 24, 7, ink);
-    tono_round(161, 22, 13, 12, 4, paper);
+    tono_logo(61,7,1,paper,ink);
     cv_text_in(0, 51, 240, &AF_TONO_LABEL, "FM1 AMBIENT SYNTHESIZER", ink, paper);
     cv_blit(0, 163);
 }

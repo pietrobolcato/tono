@@ -16,7 +16,7 @@ static void ar_blit(int,int,unsigned);
 #define AMB_MAIN unused_amb_main
 #include "amb_native_test.c"
 typedef struct {int x0,y0,x1,y1;char s[40];} abox;
-static abox ar_boxes[100];static unsigned ar_n,ar_bad,ar_frames,ar_tono_label;static const char *ar_name;
+static abox ar_boxes[100];static unsigned ar_n,ar_bad,ar_frames;static const char *ar_name;
 static void ar_begin(void){ar_n=0;}
 static void ar_cover(int a,int b,int c,int d)
 {unsigned i;for(i=0;i<ar_n;i++)if(ar_boxes[i].x0>=a && ar_boxes[i].y0>=b && ar_boxes[i].x1<=c && ar_boxes[i].y1<=d)ar_boxes[i].s[0]=0;}
@@ -25,7 +25,6 @@ static void ar_text(int a,int b,int c,int d,const char *s,unsigned f)
     if(!strcmp(s,"SELECT TARGET / EDIT / SCL ENSEMBLE") ||
        !strcmp(s,"MASTER picks up the saved level."))assert(ambr.help);
     if(f&2u){printf("CLIPPED %s %s\n",ar_name,s);ar_bad++;}
-    if(!strcmp(s,"Tono"))ar_tono_label++;
     assert(ar_n<100);ar_boxes[ar_n]=(abox){a,b,c,d,{0}};strncpy(ar_boxes[ar_n++].s,s,39);
 }
 static void ar_blit(int x,int y,unsigned row)
@@ -51,8 +50,9 @@ static void ar_save(const char *name,const char *dir)
 }
 static void ar_frame(const char *name,const char *dir,int save)
 {
-    ar_name=name;ar_tono_label=0;ambr.dirty=1;amb_draw();ar_frames++;
-    assert(ar_tono_label==1);
+    ar_name=name;ambr.dirty=1;amb_draw();ar_frames++;
+    assert(swap16(host_screen[6*240+8])==AINK); /* T cap */
+    assert(swap16(host_screen[12*240+22])==ABG); /* first o counter */
     if(save)ar_save(name,dir);
 }
 static void ar_splash(const char *dir)

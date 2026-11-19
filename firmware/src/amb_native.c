@@ -1474,7 +1474,7 @@ static void amb_draw(void)
     cv_begin(240,147,ABG);
 
 
-    cv_text(8,2,&AF_M,TONO_NAME,AINK);
+    tono_logo(8,6,3,ABG,AINK);
     amb_text(60,8,ambr.help?"HELP":ambr.view==4?"ENSEMBLE":ambr.view==0?"HOME":ambr.view==1?"EDIT":ambr.view==2?"GLOBAL":"SAVE",ADIM,8);
     if(ambr.view!=4)amb_number(146,8,ambr.view==0?ambr.target+1:ambr.view==3?ambr.slot+1:ambr.page+1,AINK);
     if(ambr.view!=4)amb_text(155,8,ambr.view==0?"/5":ambr.view==1?"/7":ambr.view==2?"/5":"/8",AINK,3);

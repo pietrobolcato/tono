@@ -104,7 +104,10 @@ static void fm1_fault(const fm1_crash_t *c)
     scr_wake_now();                                   /* (MENU > SCREEN OFF: the panel on first) */
     lcd_fill(0, 0, 240, 240, UI_CRASH_BG);            /* fixed, outside the palettes */
 #if AMBPLUS
-    draw_text_line(0, 8, 240, &AF_M, TONO_NAME " CRASH", UI_CRASH_INK, UI_CRASH_BG, 1);
+    cv_begin(240,22,UI_CRASH_BG);
+    tono_logo(71,5,3,UI_CRASH_BG,UI_CRASH_INK);
+    cv_text(117,0,&AF_M,"CRASH",UI_CRASH_INK);
+    cv_blit(0,8);
 #else
     draw_text_line(0, 8, 240, &AF_M, "JIANT CRASH", UI_CRASH_INK, UI_CRASH_BG, 1);
 #endif

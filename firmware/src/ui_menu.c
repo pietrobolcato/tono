@@ -232,7 +232,7 @@ static int32_t menu_document(int32_t y, int draw)
         return prof_document(y, draw);
     if (draw) {
 #if AMBPLUS
-        cv_text(6, y + 2, &AF_L, TONO_NAME, T_THEME);
+        tono_logo(6,y+2,2,T_BG,T_THEME);
 #else
         cv_text(6, y + 2, &AF_L, "JIANT FM", T_THEME);
 #endif
