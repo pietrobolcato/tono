@@ -287,6 +287,7 @@ static void amb_patch(unsigned k,unsigned role,unsigned patch)
     if(!ambr.handoff[k])amb_apply_patch(k);
     ambr.loading=0;ambr.dirty=1;
 }
+#include "amb_landscape.h"
 static void amb_make_scene(amb_piece_t *p,unsigned scene)
 {
     static const uint8_t roles[6][4]={{0,1,2,4},{0,5,2,4},{1,0,3,5},{0,3,2,5},{2,0,3,4},{5,1,2,4}};
@@ -362,6 +363,7 @@ static void amb_install(const amb_piece_t *p)
         /* Silent old layers also wait for the coordinated piece handoff. */
         for(k=0;k<4;k++)if(!ambr.handoff[k]){ambr.handoff[k]=1;ambr.tail_left[k]=ambr.tail_total[k]=0;memcpy(ambr.tail_eq[k],amb.layer_eq[k],4);}
     }else ambr.piece_transition=0;
+    memset(&travel,0,sizeof travel);
     amb=*p;memcpy(amb_reset_grain,amb.grain,sizeof amb_reset_grain);memcpy(amb_reset_layer,amb.layer,sizeof amb_reset_layer);memcpy(amb_reset_eq,amb.layer_eq,sizeof amb_reset_eq);
     memset(ambr.recent,0,sizeof ambr.recent);
     memset(ambr.recent_valid,0,sizeof ambr.recent_valid);memset(ambr.playhead_valid,0,sizeof ambr.playhead_valid);memset(&ambr.harmony_walk,0,sizeof ambr.harmony_walk);ambr.reset_pending=0;
@@ -806,11 +808,12 @@ static void amb_queue_octave(int direction)
 static void amb_step(void)
 {
     amb_participation_t part[4]; uint8_t mask; unsigned k,bar=ambr.step/16;
+    if(travel.ready)amb_landscape_colour(0);
     if(ambr.step%16==0) {
         amb_octave_boundary();
         if(amb_pending_ready){amb_install(&amb_pending);amb_pending_ready=0;amb_say("PRESET RECALLED ON BAR");}
         else if(ambr.chord_q!=255) { amb.chord=ambr.chord_q;ambr.chord_q=255;amb_revoice(); }
-        else if(amb.policy.active[0]!=8 && bar && AMB_AUTO[amb.auto_index] && bar%AMB_AUTO[amb.auto_index]==0 && amb_hash(amb.policy.seed+bar)%100u<amb.evolve[0]) {
+        else if((!travel.ready || !amb_landscape_bar()) && amb.policy.active[0]!=8 && bar && AMB_AUTO[amb.auto_index] && bar%AMB_AUTO[amb.auto_index]==0 && amb_hash(amb.policy.seed+bar)%100u<amb.evolve[0]) {
             int scale[12];unsigned count=(unsigned)amb_scale(amb_pool(),scale);
             amb.chord=(uint8_t)amb_walk_next(&ambr.harmony_walk,amb.policy.seed,amb.chord,count);amb_revoice();
         }
@@ -1524,7 +1527,8 @@ static void amb_input(void)
     }
     if(algo && ambr.piece_preview==255){
         ambr.reset_pending=0;
-        amb_browse_proposal(algo);
+        if(ambr.view==0)amb_landscape_turn(algo);
+        else amb_browse_proposal(algo);
         ambr.dirty=1;
     }
     if(pre && amb_page_bank()){
@@ -1814,7 +1818,7 @@ static void amb_guidance(const amb_layer_t *l,const char **first,const char **se
 {
     const char *a="SCL PAGE / KNOBS EDIT",*b="HOME RETURN";
     if(ambr.view==4){a="K1-K4 LAYER GAIN / SCL HOME";b="BARS SHOW LIVE LAYER OUTPUT";}
-    else if(ambr.view==0){a="SELECT TARGET / EDIT / SCL ENSEMBLE";b="KEYS NOTE POOL / ALGO CHORD";}
+    else if(ambr.view==0){a="SELECT TARGET / EDIT / SCL ENSEMBLE";b="ALGO SONG: DARKER / BRIGHTER";}
     else if(ambr.view==3){a="SELECT SLOT / REC SAVE";b=ambr.overwrite?"REC AGAIN OVERWRITE / HOME CANCEL":"HOME CANCEL";}
     else if(ambr.view==1){
         if(ambr.page==0){a="SCL PAGE / ALGO LAYER TYPE";b="EDIT RESTORE LOADED TRACK";}
@@ -2310,6 +2314,9 @@ static void amb_draw(void)
         amb_text(10,59,"LAYER GAIN",ADIM,10);amb_number(70,59,amb.layer[ambr.edit_layer].level*100/127,AQUEUE);
     }else if(ambr.notice[0] && fm1_ms-ambr.notice_ms<2500u)
         amb_text(10,59,ambr.notice,ADIM,39);
+    else if(ambr.view==0 && travel.ready){
+        amb_text(10,59,amb_landscape_name(travel.wanted),ADIM,28);amb_number(160,59,travel.wanted,AQUEUE);
+    }
     else if(amb_tail_any())
         amb_text(10,59,ambr.handoff[4] || ambr.handoff[5]?"CROSSFADE":"OLD SOUND RELEASING / NEXT QUEUED",ADIM,39);
     cv_rect(8,72,224,1,ALINE);
