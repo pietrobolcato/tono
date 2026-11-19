@@ -1812,18 +1812,21 @@ static void amb_space_plot(int reverb,int y,int amount,uint16_t ink)
     int reflection=0;
     int feedback=clamp(dly_fb(amb.global[G_DFDBK])*100/32768,0,100);
     if(type==6){spacing=clamp(spacing,6,11);feedback=clamp(feedback,0,32);}
-    int h=amount*26/127;
+    int height=amount?10+amount*16/127:0;
+    int h=height;
     cv_line(17,y,219,y,ALINE);
     for(int x=18;x<217 && h>0;){
         cv_rect(x,y-h,2,h,!reverb && type==5 && (reflection++&1)?TONO_ORANGE:ink);
         if(reverb){
             x+=fx.rtype==1?6:fx.rtype==4?2:3;
             int decay=9+amb.global[G_RSIZE]/3;
-            h=(amount*26/127)*(220-x)/(202+(x-18)*50/decay);
+            h=height*(220-x)/(202+(x-18)*50/decay);
             if((x/3)%3==0)h=h*(192-amb.global[G_RDAMP])/192;
         }else{
             if((type==3 || type==4) && x+spacing/2<219)cv_rect(x+spacing/2,y-h/2,2,h/2,ink);
-            x+=spacing;h=h*feedback/100;
+            x+=spacing;
+            /* Display level on a compressed scale so quiet repeats stay legible. */
+            h=feedback?h*(50+feedback/2)/100:0;
         }
     }
 }
