@@ -165,6 +165,9 @@ static struct {
 #define USB_DUPLEX usb_duplex
 #if FELUCCA_UAC_48K
 #include "uac_fir.h"
+#if AMBPLUS
+#include "tono_fir.h"
+#endif
 /* the resampler's input history: the last 32 frames, written twice so a window of UAC_FIR_N never wraps */
 #define RS_H 32u
 _Static_assert(RS_H >= UAC_FIR_N && (RS_H & (RS_H - 1u)) == 0 && UAC_FIR_N % 4u == 0u, "the history holds a window");
@@ -1211,13 +1214,28 @@ static void uac_rs_init(void)                           /* the resampler from si
         return;
     for (i = 0; i < UAC_FIR_N; i++) {                   /* each tap along the phases: its differences summed back */
         int32_t x = UAC_FIR0[0][i], a = UAC_FIR0[1][i], b = UAC_FIR0[2][i];
+#if AMBPLUS
+        int third = tono_fir_row[i].first;
+        unsigned width = tono_fir_row[i].bits;
+#endif
         for (p = 0; p < UAC_FIR_L / 2u; p++) {
             rs_tab[p][i] = x;
             rs_tab[UAC_FIR_L - 1u - p][UAC_FIR_N - 1u - i] = x;   /* (phase 159 - p: phase p backwards) */
             x += a;
             a += b;
-            if (p < UAC_FIR_L / 2u - 3u)
+            if (p < UAC_FIR_L / 2u - 3u) {
+#if AMBPLUS
+                b += third;
+                if (p < UAC_FIR_L / 2u - 4u) {
+                    unsigned pos = p * width;
+                    const uint8_t *src = tono_fir_data + tono_fir_row[i].start + pos / 8;
+                    unsigned code = ((src[0] | src[1] << 8) >> (pos % 8)) & ((1u << width) - 1u);
+                    third += (int)code + tono_fir_row[i].low;
+                }
+#else
                 b += UAC_FIR3[i][p];
+#endif
+            }
         }
     }
 }
