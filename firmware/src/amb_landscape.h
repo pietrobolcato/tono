@@ -71,7 +71,7 @@ static int amb_landscape_instrument(unsigned k,int position)
      * chosen sample sources keep their instruments throughout the gesture. */
     static const uint8_t palette[6][2][2]={
         {{5,20},{18,22}}, {{3,13},{9,12}}, {{8,12},{13,14}},
-        {{7,6},{1,10}}, {{5,6},{2,8}}, {{1,10},{8,11}}
+        {{7,6},{1,10}}, {{5,6},{2,8}}, {{10,21},{12,15}}
     };
     amb_layer_t *l=&amb.layer[k];
     int threshold=4+4*(int)k;
