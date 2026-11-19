@@ -37,7 +37,7 @@ GLO → AUTO TRAVEL (page 8) controls how HOME travel moves while PLAY runs. SEL
 
 ## Zen landscapes
 
-Hold **HOME + ARP** to open Zen. **SCL** switches between Contour and Train Ride. Tap **HOME** to return. SELECT, MASTER, the four macros, ALGORITHM travel, PRESETS and transport retain their HOME actions. The display keeps the Tono header and knob readouts. Real synth onsets make contours pulse and train-window glints appear. Envelopes shape contour sizes and ridge heights. Travel changes palette, contour spacing, horizon height, relief and weather. The transport clocks the landscape, including six scenic stretches, passing foreground objects and the day/night cycle.
+Hold **HOME + ARP** to open Zen. **SCL** switches between Contour and Train Ride. Tap **HOME** to return. SELECT, MASTER, the four macros, ALGORITHM travel, PRESETS and transport retain their HOME actions. The landscape fills the 240 × 240 display with the Tono wordmark in the corner. HOME + EDIT opens contextual help. Real synth onsets make contours pulse and train-window glints appear. Envelopes shape contour sizes and ridge heights. Travel changes palette, contour spacing, horizon height, relief and weather. The transport clocks the landscape, including dunes, mountains, town streets, working quays, sea, woodland and viaducts, passing foreground objects and the day/night cycle.
 
 ## Choir, ensemble and help
 

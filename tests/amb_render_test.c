@@ -51,8 +51,14 @@ static void ar_save(const char *name,const char *dir)
 static void ar_frame(const char *name,const char *dir,int save)
 {
     ar_name=name;ambr.dirty=1;amb_draw();ar_frames++;
-    assert(swap16(host_screen[6*240+8])==AINK); /* T cap */
-    assert(swap16(host_screen[12*240+22])==ABG); /* first o counter */
+    if(!ambr.zen || ambr.view || ambr.help){
+        assert(swap16(host_screen[6*240+8])==AINK); /* T cap */
+        assert(swap16(host_screen[12*240+22])==ABG); /* first o counter */
+    }else{
+        uint16_t ink=swap16(host_screen[6*240+8]);
+        assert(ink==TONO_INK || ink==TONO_PAPER);
+        assert(!ar_n); /* wordmark geometry only; no HUD text in either strip */
+    }
     if(save)ar_save(name,dir);
 }
 static void ar_splash(const char *dir)
@@ -187,7 +193,7 @@ int main(int argc,char **argv)
         for(unsigned k=0;k<4;k++)turn(EN_K1+k,1);
         assert(amb_theme()==theme);
         ambr.view=0;ambr.zen=1;
-        for(unsigned sample=0;sample<10;sample++){
+        for(unsigned sample=0;sample<11;sample++){
             ambr.zen_train=sample>=4;ambr.step=2+(sample<4?sample*32:(sample-4)*64);
             snprintf(name,sizeof name,"zen_%u_%u",theme,sample);ar_frame(name,dir,1);
         }

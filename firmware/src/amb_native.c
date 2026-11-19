@@ -2203,6 +2203,10 @@ static void amb_draw(void)
     if(!ambr.dirty && fm1_ms-ambr.last_draw<(ambr.zen?80u:(ambr.view==4 || (ambr.view==1 && ambr.page==4))?50u:((ambr.view==1 && (ambr.page==3 || ambr.page==6 || (ambr.page==5 && ambr.fx==4))) || (ambr.view==2 && ambr.page==4))?80u:250u))return;
     ambr.last_draw=fm1_ms;ambr.dirty=0;
     if(fm1_ms-travel.turned_ms>=1200u)travel.indicator=0;
+    static uint8_t was_zen;
+    unsigned zen_layout=ambr.zen && !ambr.view && !ambr.help && ambr.piece_preview==255;
+    if(zen_layout!=was_zen){dc_frame(1);was_zen=(uint8_t)zen_layout;}
+    if(zen_layout){amb_draw_zen();return;}
     cv_begin(240,147,ABG);
 
 
@@ -2242,7 +2246,7 @@ static void amb_draw(void)
     }else if(ambr.view==4){
         amb_draw_ensemble();
     }else if(ambr.view==0) {
-        if(ambr.zen)amb_draw_zen();else amb_draw_home();
+        amb_draw_home();
     } else {
         amb_display(29,20);
         if(ambr.view==1){
