@@ -65,7 +65,9 @@ int AMB_MAIN(int argc,char **argv)
     assert(!memcmp(&before.policy,&amb.policy,sizeof amb.policy));
     ambr.view=0;amb_target(1);press(B_EDIT);assert(ambr.view==1 && ambr.page==0);
     turn(EN_ALGO,1);turn(EN_SELECT,1);assert(ambr.proposal==2 && amb.layer[0].role==0);press(B_REC);assert(amb.layer[0].role==2);
-    press(B_SCL);assert(ambr.page==1);turn(EN_SELECT,1);assert(amb.layer[0].patch==1);
+    press(B_SCL);assert(ambr.page==1);before=amb;turn(EN_ALGO,2);turn(EN_SELECT,-1);
+    assert(ambr.proposal==1 && !memcmp(&amb,&before,sizeof amb));
+    press(B_REC);assert(amb.layer[0].patch==1 && ambr.proposal==255);
     for(i=0;i<7;i++)press(B_SCL);assert(ambr.page==1);
     amb_fixture_scene(0);ambr.view=1;ambr.page=4;ambr.edit_layer=2;press(B_REC);assert(ambr.recording);
     host_notes=1u<<8;amb_input();assert(amb.layer[2].notes[0]==61 && !amb.layer[2].generated);

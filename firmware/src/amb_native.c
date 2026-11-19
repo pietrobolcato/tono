@@ -998,6 +998,10 @@ static void amb_knob(unsigned knob,int delta)
     if(ambr.view==1 && id)amb_base_revision[ambr.edit_layer]++;
     ambr.dirty=1;
 }
+static int amb_sound_picker(void)
+{
+    return ambr.view==1 && ambr.page==1 && ambr.bank==0;
+}
 static void amb_rec(void)
 {
     if(ambr.reset_pending){
@@ -1032,6 +1036,13 @@ static void amb_rec(void)
     if(ambr.proposal==255) {if(amb_pending_ready){amb_pending_ready=0;amb_say("QUEUED RECALL CANCELLED");}else if(ambr.chord_q!=255){ambr.chord_q=255;amb_say("QUEUED CHORD CANCELLED");}return;}
     if(ambr.view==1 && ambr.page==0) {
         amb_patch(ambr.edit_layer,ambr.proposal,0);
+    } else if(amb_sound_picker()){
+        amb_layer_t *l=&amb.layer[ambr.edit_layer];
+        if(l->role==6){
+            amb_begin_change(ambr.edit_layer);
+            l->base[P_E0]=ambr.proposal;
+            if(!ambr.handoff[ambr.edit_layer])amb_apply_patch(ambr.edit_layer);
+        }else amb_patch(ambr.edit_layer,l->role,ambr.proposal);
     } else if(ambr.view==0 || (ambr.view==2 && ambr.page==0)) {
         if(song.playing) ambr.chord_q=ambr.proposal;
         else {amb.chord=ambr.proposal;amb_revoice();}
@@ -1040,7 +1051,13 @@ static void amb_rec(void)
 }
 static void amb_browse_proposal(int delta)
 {
-    if(ambr.view==1 && ambr.page==0) {
+    if(amb_sound_picker()){
+        const amb_layer_t *l=&amb.layer[ambr.edit_layer];
+        unsigned current=l->role==6?(l->base[P_E0]&1):l->patch;
+        unsigned count=l->role==6?NELEM(N_AS_SOURCE):amb_patch_count(l->role);
+        unsigned next=amb_wrap((ambr.proposal==255?current:ambr.proposal)+delta,count);
+        ambr.proposal=(next==current)?255:(uint8_t)next;
+    }else if(ambr.view==1 && ambr.page==0) {
         unsigned cur=ambr.proposal==255?amb.layer[ambr.edit_layer].role:ambr.proposal;
         ambr.proposal=(uint8_t)amb_wrap((int)cur+delta,7);
         if(ambr.proposal==amb.layer[ambr.edit_layer].role) ambr.proposal=255;
@@ -1105,7 +1122,7 @@ static void amb_input(void)
             }
         } else if(b==B_EDIT) {
             if(ambr.view==1 && ambr.page==0){ambr.reset_pending^=1;ambr.proposal=255;}
-            else if(ambr.view==1 && ambr.page==1) ambr.bank=(uint8_t)((ambr.bank+1)%(amb.layer[ambr.edit_layer].role==6?3:2));
+            else if(ambr.view==1 && ambr.page==1){ambr.proposal=255;ambr.bank=(uint8_t)((ambr.bank+1)%(amb.layer[ambr.edit_layer].role==6?3:2));}
             else if(ambr.view==1 && ambr.page==4) {amb_set_generated(ambr.edit_layer,!amb.layer[ambr.edit_layer].generated);}
             else {ambr.view=ambr.target?1:2;ambr.page=ambr.target?0:3;ambr.bank=0;ambr.detail=0;ambr.proposal=ambr.piece_preview=255;}
         } else if(b==B_GLO) {ambr.view=2;ambr.page=0;ambr.recording=0;ambr.reset_pending=0;ambr.proposal=ambr.piece_preview=255;}
@@ -1132,9 +1149,8 @@ static void amb_input(void)
         else if(ambr.view==1) {
             amb_layer_t *l=&amb.layer[ambr.edit_layer];
             if(ambr.page==1) {
-                if(l->role==6){if(ambr.bank==0){amb_begin_change(ambr.edit_layer);l->base[P_E0]=(int16_t)amb_wrap(l->base[P_E0]+sel,2);if(!ambr.handoff[ambr.edit_layer])amb_apply_patch(ambr.edit_layer);}}
-                else if(ambr.bank==0)amb_patch(ambr.edit_layer,l->role,amb_wrap(l->patch+sel,amb_patch_count(l->role)));
-                else ambr.detail=(uint8_t)amb_wrap(ambr.detail+sel,3);
+                if(amb_sound_picker())amb_browse_proposal(sel);
+                else if(l->role!=6)ambr.detail=(uint8_t)amb_wrap(ambr.detail+sel,3);
             }
             else if(ambr.page==4) {
                 if(l->role==4) ambr.lane=(uint8_t)amb_wrap(ambr.lane+sel,4);
@@ -1347,6 +1363,44 @@ static void amb_chord_label(unsigned degree,char *text)
     str_cpy(text+str_len(text),fifth==6?(n>3?"m7b5":"dim"):third==3?(n>3?"m7":"m"):n>3?(seventh==11?"maj7":"7"):"",16-str_len(text));
 }
 static uint32_t amb_lfo_phase(unsigned k){return trk[k].lfo_ph;}
+/* Compare the programmed destination to the current edited baseline. */
+static void amb_sound_preview(const amb_layer_t *current,unsigned next)
+{
+    const int sample=current->role==6;
+    amb_text(12,55,"CURRENT",ADIM,9);amb_text(83,55,sample?N_AS_SOURCE[current->base[P_E0]&1]:amb_patch_name(current),AINK,22);
+    amb_text(12,72,"PROPOSED",ADIM,9);
+    cv_text(83,68,&AF_M,sample?N_AS_SOURCE[next]:amb_recipe(current->role,next)->name,AINK);
+    if(sample){
+        amb_text(12,96,next?"Chime to a taped vowel":"Taped vowel to a chime",AINK,34);
+    }else{
+        static const struct {unsigned id;const char *up,*down;} changes[]={
+            {P_ATK,"Slower attack","Faster attack"},{P_REL,"Longer release","Shorter release"},
+            {P_FCUT,"Higher filter cutoff","Lower filter cutoff"},{P_REV,"More reverb","Less reverb"},
+            {P_DLY,"More echo","Less echo"},{P_CHOR,"More chorus","Less chorus"},
+            {P_SUS,"Higher sustain","Lower sustain"}
+        };
+        amb_layer_t candidate=*current;
+        amb_fill_patch(&candidate,amb.key,ambr.edit_layer,current->role,next);
+        int best[2]={0,0};const char *line[2]={0,0};
+        for(unsigned i=0;i<NELEM(changes);i++){
+            unsigned id=changes[i].id;
+            int diff=candidate.base[id]-current->base[id], magnitude=diff<0?-diff:diff;
+            const char *description=diff>0?changes[i].up:changes[i].down;
+            if(magnitude>best[0]){
+                best[1]=best[0];line[1]=line[0];best[0]=magnitude;line[0]=description;
+            }else if(magnitude>best[1]){best[1]=magnitude;line[1]=description;}
+        }
+        if(current->engine!=candidate.engine){
+            amb_text(12,91,ENGINES[current->engine]->name,ADIM,12);
+            amb_text(82,91,"to",ADIM,2);
+            amb_text(104,91,ENGINES[candidate.engine]->name,AINK,17);
+        }
+        amb_text(12,104,line[0]?line[0]:"Different oscillator preset",AINK,36);
+        if(line[1])amb_text(12,117,line[1],AINK,36);
+    }
+    amb_text(12,133,"REC APPLY / HOME CANCEL",AQUEUE,30);
+}
+
 static void amb_fx_diagram(unsigned k,unsigned module)
 {
     track_t *t=&trk[k];int send=0,x;
@@ -1384,6 +1438,7 @@ static void amb_guidance(const amb_layer_t *l,const char **first,const char **se
         else if(ambr.page==1){
             if(l->role==6){a=ambr.bank==0?"SCL PAGE / SELECT SOURCE":"SCL PAGE / KNOBS EDIT";b="EDIT NEXT SAMPLE PAGE";}
             else {a=ambr.bank?"SCL PAGE / SELECT DETAIL GROUP":"SCL PAGE / SELECT PATCH";b=ambr.bank?"EDIT PATCH / KNOBS EDIT":"EDIT DETAILS / KNOBS EDIT";}
+            if(amb_sound_picker()){a="ALGO OR SELECT PROPOSE SOUND";b="REC APPLY / HOME CANCEL";}
         }else if(ambr.page==4){
             a=l->role==4?"SCL PAGE / SELECT DRUM LANE":!l->generated && l->notes[ambr.cursor]?"SELECT STEP / ARP CLEAR / SCL PAGE":"SCL PAGE / SELECT EDIT STEP";
             b=ambr.recording?"REC STOP / KEYS RECORD":l->generated?"EDIT OR SEQ MANUAL / REC CAPTURE":"EDIT OR SEQ AUTO / REC OVERDUB";
@@ -1613,7 +1668,8 @@ static void amb_draw(void)
             amb_text(12,58,ambr.handoff[ambr.edit_layer]?"NEXT":"CURRENT",ADIM,12);amb_text(130,58,"PROPOSED",ADIM,12);
             amb_text(12,78,AMB_ROLE[l->role],AINK,12);amb_text(130,78,ambr.proposal==255?"-":AMB_ROLE[ambr.proposal],AQUEUE,12);
         } else if(ambr.view==1 && ambr.page==1) {
-            if(l->role!=6 && ambr.bank){
+            if(amb_sound_picker() && ambr.proposal!=255)amb_sound_preview(l,ambr.proposal);
+            else if(l->role!=6 && ambr.bank){
                 static const char *const group[3]={"ENGINE","FILTER","PLAY"};
                 amb_text(12,54,ENGINES[l->engine]->name,ADIM,12);amb_text(125,54,group[ambr.detail],AINK,12);
                 for(i=0;i<4;i++){

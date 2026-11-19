@@ -195,5 +195,14 @@ int main(int argc,char **argv)
             }
         }
     }
+    ambr.view=1;ambr.page=1;ambr.bank=0;ambr.edit_layer=0;
+    for(role=0;role<7;role++){
+        amb_patch(0,role,0);
+        unsigned count=role==6?2:amb_patch_count(role);
+        for(unsigned patch=1;patch<count;patch++){
+            ambr.proposal=patch;
+            ar_frame("sound_proposal",dir,0);
+        }
+    }
     printf("Tono native bitmap audit: %u frames, %u clipping/bounds/overlap findings\n",ar_frames,ar_bad);return ar_bad?1:0;
 }
