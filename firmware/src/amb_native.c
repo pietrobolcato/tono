@@ -1366,43 +1366,44 @@ static void amb_guidance(const amb_layer_t *l,const char **first,const char **se
 
 /* Layer numbers are shared by HOME and ENSEMBLE. The orange mark tracks
  * the selected target, including when several tracks have the same role. */
+#define DISPLAY_GRID RGB(76,80,77)
+#define DISPLAY_TRACE RGB(172,209,221)
+static void amb_display(int top,int height)
+{
+    cv_bg=AINK;cv_rect(8,top,224,height,AINK);
+    cv_rect(8,top,3,height,TONO_ORANGE);
+}
+
+static void amb_digit(int x,int y,unsigned digit)
+{
+    static const uint8_t mask[]={63,6,91,79,102,109,125,7,127,111};
+    static const uint8_t seg[][4]={{2,0,9,2},{11,2,2,7},{11,11,2,7},{2,18,9,2},{0,11,2,7},{0,2,2,7},{2,9,9,2}};
+    for(unsigned i=0;i<7;i++)cv_rect(x+seg[i][0],y+seg[i][1],seg[i][2],seg[i][3],mask[digit]&(1u<<i)?ABG:DISPLAY_GRID);
+}
+
 static void amb_draw_home(void)
 {
     unsigned target=amb_level_feedback(),value=target?amb.layer[target-1].level:amb.master;
-    unsigned max=target?127u:1023u;
-    uint16_t ink=target?AQUEUE:AINK;
+    unsigned percent=value*100u/(target?127u:1023u);
     char label[16]="MASTER",chord[16];
-
-    cv_rect(8,31,224,29,(target || ambr.target==0)?ASEL:ABG);
-    cv_rect(8,31,2,29,ink);
-    if(target){
-        const unsigned role=amb.layer[target-1].role;
-        label[0]='L';label[1]=(char)('0'+target);label[2]=' ';
-        str_cpy(label+3,AMB_ROLE[role],sizeof label-3);
-        tono_disc(24,45,4,ink);
-    }else{
-        tono_disc(24,45,6,ink);
-    }
-    amb_text(44,36,label,AINK,14);amb_number(207,36,value*100u/max,AINK);
-    cv_rect(44,52,181,3,ALINE);cv_rect(44,52,181u*value/max,3,ink);
-
+    if(target){label[0]='L';label[1]=(char)('0'+target);label[2]=' ';str_cpy(label+3,AMB_ROLE[amb.layer[target-1].role],sizeof label-3);}
+    amb_display(29,56);
+    amb_text(17,35,label,ABG,14);amb_text(98,35,"CHORD",ABG,7);
+    int x=17;
+    if(percent==100){amb_digit(x,50,1);x+=16;}
+    if(percent>=10){amb_digit(x,50,percent/10%10);x+=16;}
+    amb_digit(x,50,percent%10);amb_text(x+16,61,"%",ABG,1);
+    amb_chord_label(amb.chord,chord);cv_text(98,48,&AF_M,chord,ABG);
+    if(ambr.chord_q!=255)amb_text(162,52,"QUEUED",TONO_ORANGE,7);
+    for(unsigned i=0;i<24;i++)cv_rect(17+9*i,77,7,2,i*100<24*percent?TONO_ORANGE:DISPLAY_GRID);
     for(unsigned k=0;k<4;k++){
-        const amb_layer_t *layer=&amb.layer[k];
-        int x=8+(int)(k%2)*114,y=65+(int)(k/2)*32;
-        int selected=ambr.target==k+1;
-        cv_rect(x,y,110,29,selected?ASEL:ABG);
-        cv_rect(x,y,110,1,selected?AINK:ALINE);
-        if(selected)tono_disc(x+9,y+10,3,TONO_ORANGE);
-        amb_number(x+27,y+4,k+1,ADIM);
-        amb_text(x+39,y+4,AMB_ROLE[layer->role],AINK,8);
-        amb_text(x+27,y+15,layer->role==6?N_AS_SOURCE[layer->base[P_E0]&1]:amb_patch_name(layer),ADIM,14);
-        if(layer->base[P_MUTE] || (ambr.solo>=0 && ambr.solo!=(int)k))
-            amb_text(x+99,y+4,"M",AQUEUE,1);
-        cv_rect(x+3,y+26,17,1,ALINE);cv_rect(x+3,y+26,17*layer->level/127,1,AINK);
+        const amb_layer_t *l=&amb.layer[k];int left=8+(k%2)*114,y=90+(k/2)*28;
+        cv_bg=ambr.target==k+1?TONO_ORANGE:AINK;cv_rect(left,y,14,13,cv_bg);
+        amb_number(left+4,y+2,k+1,ABG);cv_bg=ABG;
+        amb_text(left+19,y,AMB_ROLE[l->role],AINK,8);
+        amb_text(left+19,y+13,l->role==6?N_AS_SOURCE[l->base[P_E0]&1]:amb_patch_name(l),ADIM,14);
+        if(l->base[P_MUTE] || (ambr.solo>=0 && ambr.solo!=(int)k))amb_text(left+99,y,"M",AQUEUE,1);
     }
-    cv_rect(8,128,224,1,ALINE);
-    amb_text(8,134,"CHORD",ADIM,6);amb_chord_label(amb.chord,chord);amb_text(49,134,chord,AINK,10);
-    if(ambr.chord_q!=255) amb_text(138,134,"CHORD QUEUED",AQUEUE,14);
 }
 
 static void amb_draw_ensemble(void)
@@ -1421,7 +1422,7 @@ static void amb_draw_ensemble(void)
         cv_rect(8,y+19,224,1,ALINE);
         if(held && !muted)tono_disc(18,y+9,3,TONO_ORANGE);
         amb_number(35,y+5,k+1,ADIM);amb_text(46,y+5,AMB_ROLE[role],AINK,8);
-        cv_rect(102,y+8,74,4,ALINE);cv_rect(102,y+8,width,4,AINK);
+        cv_rect(102,y+8,74,4,ALINE);cv_rect(102,y+8,width,4,TONO_ORANGE);
         amb_text(192,y+5,muted?"MUTE":ambr.handoff[k]?"TAIL":held?"NOTE":active?"REL":"REST",
                  muted || ambr.handoff[k]?AQUEUE:held?AINK:ADIM,6);
     }
@@ -1435,11 +1436,11 @@ static void amb_draw(void)
     cv_begin(240,147,ABG);
 
 
-    amb_text(8,8,TONO_NAME,AINK,8);
+    cv_text(8,2,&AF_M,TONO_NAME,AINK);
     amb_text(60,8,ambr.help?"HELP":ambr.view==4?"ENSEMBLE":ambr.view==0?"HOME":ambr.view==1?"EDIT":ambr.view==2?"GLOBAL":"SAVE",ADIM,8);
     if(ambr.view!=4)amb_number(146,8,ambr.view==0?ambr.target+1:ambr.view==3?ambr.slot+1:ambr.page+1,AINK);
     if(ambr.view!=4)amb_text(155,8,ambr.view==0?"/5":ambr.view==1?"/7":ambr.view==2?"/5":"/8",AINK,3);
-    amb_text(182,8,song.playing?">":"-",song.playing?AQUEUE:ADIM,1);amb_number(211,8,amb.global[G_BPM],AINK);
+    amb_text(175,8,song.playing?">":"-",song.playing?TONO_ORANGE:ADIM,1);amb_number(188,8,amb.global[G_BPM],AINK);amb_text(211,8,"BPM",ADIM,3);
     cv_rect(8,25,224,1,ALINE);cv_bg=ABG;
     if(ambr.help){
         if(ambr.view==3 || ambr.reset_pending || ambr.piece_preview!=255){
@@ -1457,9 +1458,13 @@ static void amb_draw(void)
     }else if(ambr.view==0) {
         amb_draw_home();
     } else {
-        if(ambr.view==1) {amb_text(9,35,"L",ADIM,1);amb_number(16,35,ambr.edit_layer+1,ADIM);amb_text(35,35,AMB_ROLE[l->role],ADIM,8);amb_text(122,35,ambr.page==2 && l->role==4?"HIT SHAPE":AMB_EDIT[ambr.page],AINK,16);}
-        else amb_text(9,35,ambr.view==2?AMB_GLO[ambr.page]:"USER SAVE DESTINATION",AINK,32);
-        cv_rect(8,48,224,1,ALINE);
+        amb_display(29,20);
+        if(ambr.view==1){
+            cv_text(16,30,&AF_M,ambr.page==2 && l->role==4?"HIT SHAPE":AMB_EDIT[ambr.page],ABG);
+            amb_text(151,35,"L",ABG,1);amb_number(158,35,ambr.edit_layer+1,ABG);
+            amb_text(173,35,AMB_ROLE[l->role],ABG,8);
+        }else cv_text(16,30,&AF_M,ambr.view==2?AMB_GLO[ambr.page]:"SAVE",ABG);
+        cv_bg=ABG;
         if(ambr.view==1 && ambr.page==0) {
             cv_rect(12,97,83,1,ALINE);if(ambr.proposal!=255)cv_rect(130,97,83,2,TONO_ORANGE);
             amb_text(12,58,ambr.handoff[ambr.edit_layer]?"NEXT":"CURRENT",ADIM,12);amb_text(130,58,"PROPOSED",ADIM,12);
@@ -1498,12 +1503,19 @@ static void amb_draw(void)
             }
         } else if(ambr.view==1 && ambr.page==3) {
             track_t *t=&trk[ambr.edit_layer];uint32_t ph=amb_lfo_phase(ambr.edit_layer);int last=0;
-            cv_rect(12,59,216,70,ASEL);cv_line(14,96,224,96,ALINE);
-            for(i=0;i<210;i++){int y=96-lfo_wave(t,i*20452225u)*28/32768;
-                if(i)cv_line(13+i,last,14+i,y,ADIM);last=y;}
-            {int x=14+(int)((ph>>16)*209u/65536u),y=96-lfo_wave(t,ph)*28/32768;
-                cv_line(x,62,x,126,ALINE);cv_rect(x-2,y-2,5,5,AQUEUE);}
-            amb_text(12,133,"LIVE LFO PHASE / ONE CYCLE",ADIM,34);
+            amb_display(49,75);
+            for(int x=19;x<=219;x+=50)for(int y=57;y<109;y+=5)cv_rect(x,y,1,1,DISPLAY_GRID);
+            cv_line(19,82,219,82,DISPLAY_GRID);
+            for(i=0;i<=200;i++){
+                int y=82-lfo_wave(t,i*21474836u)*22/32768;
+                if(i){cv_line(18+i,last,19+i,y,DISPLAY_TRACE);cv_rect(19+i,y+1,1,1,DISPLAY_TRACE);}
+                last=y;
+            }
+            int x=19+(int)((ph>>16)*200u/65536u),y=82-lfo_wave(t,ph)*22/32768;
+            cv_line(x,56,x,107,TONO_ORANGE);tono_disc(x,y,3,TONO_ORANGE);
+            amb_text(17,112,"0",ABG,1);amb_text(178,112,"1 CYCLE",ABG,8);cv_bg=ABG;
+            char label[16],dest[24];amb_knob_value(3,label,dest);
+            amb_text(10,133,"MODULATION",ADIM,12);amb_text(84,133,dest,AINK,18);
         } else if(ambr.view==1 && ambr.page==4) {
             amb_text(12,60,l->generated?"AUTO / GENERATED":"MANUAL / EDITED",AINK,32);
             if(l->role==4) {amb_text(12,78,amb_drum_lanes[ambr.lane],ADIM,12);}
@@ -1593,12 +1605,12 @@ static void amb_draw(void)
         amb_text(16,81,"LAST LOADED PIECE VERSION",ADIM,31);
         amb_text(16,101,"SOUND / MACROS / PATTERN",ADIM,31);
     }else if(!ambr.help && ambr.piece_preview!=255) {
-        GFX_HOOK_COVER(8,60,232,130);cv_rect(8,60,224,70,ASEL);amb_text(16,67,"PRESET PROPOSAL",ADIM,30);
+        GFX_HOOK_COVER(8,29,232,145);cv_rect(8,29,224,116,ASEL);amb_text(16,67,"PRESET PROPOSAL",ADIM,30);
         cv_text(16,85,&AF_M,ambr.piece_preview<NELEM(AMB_SCENE)?AMB_SCENE[ambr.piece_preview]:"USER SLOT",AINK);
         if(ambr.piece_preview>=NELEM(AMB_SCENE)) amb_number(113,90,ambr.piece_preview-NELEM(AMB_SCENE)+1,AINK);
     } else if(!ambr.help && ambr.view==0 && ambr.proposal!=255) {
-        GFX_HOOK_COVER(8,64,232,129);cv_rect(8,64,224,65,ASEL);amb_text(18,74,"NEXT HARMONY",ADIM,24);
-        amb_chord_label(ambr.proposal,b);amb_text(18,96,b,AINK,16);amb_text(115,96,AMB_MOOD[ambr.proposal],ADIM,16);
+        GFX_HOOK_COVER(8,86,232,146);cv_rect(8,86,224,60,ASEL);amb_text(18,91,"NEXT HARMONY",ADIM,24);
+        amb_chord_label(ambr.proposal,b);amb_text(18,112,b,AINK,16);amb_text(115,112,AMB_MOOD[ambr.proposal],ADIM,16);
     }
     cv_blit_cells(0,0);
     cv_begin(240,93,ABG);
@@ -1629,7 +1641,9 @@ static void amb_draw(void)
     }else for(k=0;k<4;k++) {
         char label[16]={0},value[24]={0};amb_knob_value(k,label,value);cv_bg=ABG;
         if(k)cv_rect(k*60,42,1,38,ALINE);
-        amb_text(5+k*60,43,label,ADIM,9);amb_text(5+k*60,63,value,AINK,9);
+        amb_text(5+k*60,44,label,ADIM,9);cv_rect(5+k*60,58,17,2,TONO_ORANGE);
+        if(text_w(&AF_M,value)<=54)cv_text(5+k*60,63,&AF_M,value,AINK);
+        else amb_text(5+k*60,66,value,AINK,9);
 
     }
     cv_blit_cells(0,147);
