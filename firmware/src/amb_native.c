@@ -449,7 +449,7 @@ static void amb_install(const amb_piece_t *p)
         /* Silent old layers also wait for the coordinated piece handoff. */
         for(k=0;k<4;k++)if(!ambr.handoff[k]){ambr.handoff[k]=1;ambr.tail_left[k]=ambr.tail_total[k]=0;memcpy(ambr.tail_eq[k],amb.layer_eq[k],4);}
     }else ambr.piece_transition=0;
-    memset(&travel,0,sizeof travel);amb_auto_reset();
+    memset(&travel,0,sizeof travel);amb_auto_reset();amb_reset_lanes();
     amb=*p;memcpy(amb_reset_grain,amb.grain,sizeof amb_reset_grain);memcpy(amb_reset_layer,amb.layer,sizeof amb_reset_layer);memcpy(amb_reset_eq,amb.layer_eq,sizeof amb_reset_eq);
     memset(ambr.recent,0,sizeof ambr.recent);
     memset(ambr.recent_valid,0,sizeof ambr.recent_valid);memset(ambr.playhead_valid,0,sizeof ambr.playhead_valid);memset(&ambr.harmony_walk,0,sizeof ambr.harmony_walk);ambr.reset_pending=0;
@@ -477,7 +477,7 @@ static void amb_init(void)
 #if defined(USB_DUPLEX) && FELUCCA_UAC
     usb_duplex_switch(1);
 #endif
-    tono_init_tables();
+    amb_speech_init();tono_init_tables();
     memset(&ambr,0,sizeof ambr);amb_factory(AMB_SCENE_GARDEN);amb_scan_slots();
     ambr.dirty=1; kb_mask=0;perf_mask=0;song.grid=2;
 }
@@ -910,6 +910,7 @@ static void amb_step(void)
         }
     }
     {uint8_t before[3];memcpy(before,amb.policy.active,3);
+        if(!(ambr.step%16u))amb_ensemble_downbeat();
         if(!(ambr.step%64u))amb_travel_patterns(1);
         amb_policy_boundary(&amb.policy,ambr.step);
         if(memcmp(before,amb.policy.active,3))for(k=0;k<4;k++)if(amb.layer[k].generated)amb_begin_change(k);
@@ -948,7 +949,7 @@ static __attribute__((noinline)) void amb_clock(uint32_t n)
     if(!song.playing) {
         for(k=0;k<4;k++)ambr.due[k]=0;
         if(ambr.last_play)for(k=0;k<4;k++)amb_release(k);
-        ambr.last_play=0;return;
+        amb_reset_lanes();ambr.last_play=0;return;
     }
     if(!ambr.last_play){
         ambr.phase=ambr.step=0;ambr.last_play=1;memset(ambr.grid_cue,0,sizeof ambr.grid_cue);
@@ -1478,7 +1479,8 @@ static void amb_knob(unsigned knob,int delta)
     } else if(ambr.view==2) {
         if(ambr.page==5)return;
         if(ambr.page==7){
-            if(knob)amb_walk_adjust(knob,delta);
+            if(timing_tab)amb_lane_adjust(timing_tab-1,knob,delta);
+            else if(knob)amb_walk_adjust(knob,delta);
             else amb_walk_clock(delta>0?WALK_SECONDS:WALK_BARS,amb_walk_value(0)!=0);
             return;
         }
@@ -1681,7 +1683,7 @@ static void amb_input(void)
                 }
             }
         } else if(b==B_EDIT) {
-            if(ambr.view==2 && ambr.page>=6)ambr.page=ambr.page==6?7:6;
+            if(ambr.view==2 && ambr.page>=6){ambr.page=ambr.page==6?7:6;timing_tab=0;}
             else if(ambr.view==1 && ambr.page==0){ambr.reset_pending^=1;ambr.proposal=255;}
             else if(ambr.view==1 && ambr.page==1){ambr.proposal=255;ambr.bank=(uint8_t)((ambr.bank+1)%(amb.layer[ambr.edit_layer].role==6?3:2));}
             else if(ambr.view==1 && ambr.page==4) {amb_set_generated(ambr.edit_layer,!amb.layer[ambr.edit_layer].generated);}
@@ -1725,10 +1727,7 @@ static void amb_input(void)
             else if(ambr.page==3) ambr.fx=(uint8_t)amb_wrap(ambr.fx+sel,4);
             else if(ambr.page==5) amb_theme_turn(sel);
             else if(ambr.page==6)amb_walk_adjust(4,sel);
-            else if(ambr.page==7 && amb_vary_patterns()!=(sel>0)){
-                favorites.factory[15][13]^=4;
-                amb_anchor_patterns();settings_save();ambr.dirty=1;
-            }
+            else if(ambr.page==7)timing_tab=amb_wrap(timing_tab+sel,3);
             /* SELECT deliberately inert on GENERATE. */
         }
         ambr.dirty=1;
@@ -1941,6 +1940,16 @@ static void amb_knob_value(unsigned knob,char *label,char *value)
             if(knob==1) {str_cpy(value,scales[amb.scale],24);return;}
             v=amb.global[G_BPM];
         } else if(ambr.page==7){
+            if(timing_tab){
+                static const char *const labels[]={"ACTIVE","CLOCK","MIN","MAX"};
+                unsigned lane=timing_tab-1,unit=amb_lane_value(lane,1);
+                str_cpy(label,labels[knob],16);
+                if(!knob)str_cpy(value,amb_lane_value(lane,0)?"On":"Off",24);
+                else if(knob==1)str_cpy(value,lane_units[unit],24);
+                else if(!unit || unit==3)str_cpy(value,"-",24);
+                else fmt_int(value,amb_lane_value(lane,knob));
+                return;
+            }
             str_cpy(label,amb_walk_labels[knob],16);
             if(!knob){str_cpy(value,amb_walk_clocks[amb_walk_unit()],24);return;}
             v=amb_walk_value(knob);
@@ -2096,7 +2105,7 @@ static void amb_guidance(const amb_layer_t *l,const char **first,const char **se
         }else if(ambr.page==5)a="SCL PAGE / SELECT FX MODULE";
     }else if(ambr.view==2){
         if(ambr.page==0){a="SELECT CHORD INTERVAL";b="ALGO CHORD / KNOBS EVOLVE";}
-        else if(ambr.page==7){a="SELECT VARY PATTERNS";b="EDIT BACK / SCL NEXT TOPIC";}
+        else if(ambr.page==7){a="SELECT TIMING LANE";b="EDIT BACK / SCL NEXT TOPIC";}
         else if(ambr.page==6){a="SELECT JOURNEY STYLE";b="EDIT FOR TRAVEL TIMING";}
         else if(ambr.page==2){a="SCL PAGE / KNOBS 1-3 STYLES";b="KNOB 4 VARIATION";}
         else if(ambr.page==3)a="SCL PAGE / SELECT FX MODULE";
@@ -2508,11 +2517,12 @@ static void amb_draw(void)
         } else if(ambr.view==2 && ambr.page>=6){
             static const char *const hints[]={"Reverse to retrace your sound.","Four travel steps bring a new sound.","Keep one instrument as others change."};
             int timing=ambr.page==7;
-            amb_text(12,58,timing?"VARY PATTERNS":"JOURNEY",ADIM,20);
-            cv_text(12,77,&AF_M,timing?(amb_vary_patterns()?"On":"Off"):amb_walk_styles[amb_journey_style()],AINK);
-            amb_text(12,100,timing?"SELECT changes pattern travel":hints[amb_journey_style()],ADIM,40);
+            amb_text(12,58,timing?"TIMING":"JOURNEY",ADIM,20);
+            cv_text(12,77,&AF_M,timing?timing_names[timing_tab]:amb_walk_styles[amb_journey_style()],AINK);
+            amb_text(12,100,timing?"SELECT chooses timing lane":hints[amb_journey_style()],ADIM,40);
             const char *status=!amb_walk_value(0)?"Auto off  /  manual turns only":
                 amb_walk_value(1)==amb_walk_value(2)?"Auto on  /  fixed interval":"Auto on  /  random interval";
+            if(timing && timing_tab)status=timing_tab==1?"Rotate rhythm, phrase, interplay":"Replace one generated layer";
             amb_text(12,126,status,AINK,36);
         } else if(ambr.view==2 && ambr.page==4) {
             amb_eq_plot(amb.eq,0);

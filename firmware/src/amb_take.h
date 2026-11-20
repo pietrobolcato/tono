@@ -18,11 +18,14 @@ static int amb_take_delta(unsigned code,int *predict,int *step)
     *step=clamp(code&1?*step+(*step+1)/2:*step-(*step+3)/4,1,64);
     return *predict;
 }
+static void amb_decode_codes(const uint8_t *codes,int pred,int step,int16_t out[32])
+{
+    for(unsigned i=0;i<32;i++)
+        out[i]=(int16_t)(256*amb_take_delta((codes[i/4]>>(2*(i%4)))&3,&pred,&step));
+}
 static void amb_take_decode(const uint8_t *b,int16_t out[32])
 {
-    int pred=(int8_t)b[0],step=b[1];
-    for(unsigned i=0;i<32;i++)
-        out[i]=(int16_t)(256*amb_take_delta((b[2+i/4]>>(2*(i%4)))&3,&pred,&step));
+    amb_decode_codes(b+2,(int8_t)b[0],b[1],out);
 }
 static void amb_take_start(void)
 {

@@ -20,6 +20,22 @@ static struct {
     amb_walk_t walk;
 } travel;
 
+/* Two independent clocks. Zero in an older settings record means Journey. */
+static uint8_t timing_tab;
+static const char *const timing_names[]={"Movement","Patterns","Layer types"};
+static const char *const lane_units[]={"Journey","Bars","Seconds","Move tick"};
+static struct {uint32_t due,serial;uint8_t armed;} lane_clock[2];
+static uint8_t role_pending,pattern_pending;
+static unsigned amb_lane_value(unsigned lane,unsigned knob)
+{
+    if(!knob)return !!(favorites.factory[15][13]&(4u<<lane));
+    unsigned raw=favorites.factory[14][24+3*lane+knob-1];
+    return knob==1?(raw<=3?raw:0):(raw && raw<=120?raw:4);
+}
+static void amb_reset_lanes(void)
+{
+    lane_clock[0].armed=lane_clock[1].armed=role_pending=pattern_pending=0;
+}
 static int amb_endless(void){return (favorites.factory[15][13]&2)!=0;}
 static int amb_vary_patterns(void){return (favorites.factory[15][13]&4)!=0;}
 static int amb_pattern_position(void)
@@ -32,9 +48,39 @@ static void amb_anchor_patterns(void)
     for(unsigned f=0;f<3;f++)
         travel.pattern_base[f]=amb.policy.pending[f]==255?amb.policy.active[f]:amb.policy.pending[f];
 }
+static void amb_lane_adjust(unsigned lane,unsigned knob,int delta)
+{
+    unsigned old=amb_lane_value(lane,knob);
+    if(knob>=2 && (amb_lane_value(lane,1)%3)==0)return;
+    unsigned v=knob?(unsigned)clamp((int)old+delta,knob==1?0:1,knob==1?3:120):(unsigned)(delta>0);
+    if(v==old)return;
+    uint8_t *cfg=&favorites.factory[14][24+3*lane];
+    if(!knob)favorites.factory[15][13]^=4u<<lane;
+    else cfg[knob-1]=v;
+    if(knob==2 && amb_lane_value(lane,3)<v)cfg[2]=v;
+    if(knob==3 && amb_lane_value(lane,2)>v)cfg[1]=v;
+    lane_clock[lane].armed=0;
+    if(lane)role_pending=0;else {pattern_pending=0;amb_anchor_patterns();}
+    settings_save();ambr.dirty=1;
+}
+static int amb_lane_due(unsigned lane)
+{
+    unsigned unit=amb_lane_value(lane,1);
+    if(!unit || unit==3 || !amb_lane_value(lane,0))return 0;
+    uint32_t now=unit==WALK_BARS?ambr.step:fm1_ms;
+    int fire=lane_clock[lane].armed;
+    if(fire && (int32_t)(now-lane_clock[lane].due)<0)return 0;
+    unsigned lo=amb_lane_value(lane,2),hi=amb_lane_value(lane,3);
+    unsigned dice=amb_hash(amb.policy.seed+lane*937u+lane_clock[lane].serial);
+    unsigned wait=lo+dice%(hi>=lo?hi-lo+1:1);
+    lane_clock[lane].due=now+wait*(unit==WALK_BARS?16:1000);
+    lane_clock[lane].armed=1;
+    if(fire)lane_clock[lane].serial++;
+    return fire;
+}
 static void amb_travel_patterns(int playing)
 {
-    if(!travel.ready || !amb_vary_patterns())return;
+    if(!travel.ready || !amb_vary_patterns() || amb_lane_value(0,1))return;
     int stage=amb_pattern_position()-travel.pattern_origin;
     if(!amb_journey_style())stage/=4;
     int distance=stage<0?-stage:stage;
@@ -127,16 +173,59 @@ static void amb_landscape_apply(unsigned k,const amb_layer_t *sound)
     amb_layer_t *l=&amb.layer[k];
     amb_sound_change(k);
     int mute=l->base[P_MUTE],pan=l->base[P_PAN],transpose=l->base[P_TRANS];
+    if(l->role!=sound->role){l->role=sound->role;l->mode=sound->mode;l->density=sound->density;}
     memcpy(l->base,sound->base,sizeof l->base);l->patch=sound->patch;l->engine=sound->engine;
     l->base[P_MUTE]=mute;l->base[P_PAN]=pan;l->base[P_TRANS]=transpose;
     if(!ambr.handoff[k])amb_apply_patch(k);
+}
+
+/* Replace one generated voice. Keep a harmonic foundation and introduce
+ * only a role which is absent from the ensemble. Personal takes stay put. */
+static void amb_change_role(void)
+{
+    unsigned serial=lane_clock[1].serial,dice=amb_hash(amb.policy.seed+serial);
+    if(ambr.solo>=0)return;
+    for(unsigned i=0;i<4;i++){
+        unsigned k=(serial+i)&3;
+        amb_layer_t *l=&amb.layer[k];
+        if(!l->generated || l->base[P_MUTE] || ambr.handoff[k] || ambr.fade_slot[k] ||
+           (l->role==6 && l->base[P_E0]==AMB_MIC_SOURCE))continue;
+        unsigned used=0,foundation=0;
+        for(unsigned j=0;j<4;j++)if(j!=k){
+            used|=1u<<amb.layer[j].role;
+            if(!amb.layer[j].base[P_MUTE] && amb.layer[j].role<2)foundation=1;
+        }
+        for(unsigned n=0;n<7;n++){
+            unsigned role=(dice%7+n)%7;
+            if(role==l->role || (used&(1u<<role)) || (!foundation && role>=2))continue;
+            amb_layer_t next=*l;
+            amb_fill_patch(&next,amb.key,k,role,(dice>>8)%amb_patch_count(role));
+            if(role==6)next.base[P_E0]=(dice>>16)%13;
+            amb_landscape_apply(k,&next);
+            ambr.recent_valid[k]=0;travel.previous_sound[k]=0;
+            travel.pending_layers&=~(1u<<k);amb_travel_rebase(k);
+            return;
+        }
+    }
+}
+static void amb_pattern_tick(void)
+{
+    pattern_pending=0;
+    unsigned f=(lane_clock[0].serial-1)%3;
+    if(amb.policy.pending[f]==255)
+        amb_policy_choose(&amb.policy,f,(amb.policy.active[f]+1)%amb_style_count(f),0);
+}
+static void amb_ensemble_downbeat(void)
+{
+    if(amb_lane_due(0) || pattern_pending)amb_pattern_tick();
+    if(amb_lane_due(1) || role_pending){role_pending=0;amb_change_role();}
 }
 
 /* A style switch establishes a local starting arrangement, even mid-song. */
 static void amb_journey_recentre(void)
 {
     ambr.loading=1;
-    memset(&travel,0,sizeof travel);
+    memset(&travel,0,sizeof travel);role_pending=pattern_pending=0;
     ambr.loading=0;
 }
 
@@ -229,13 +318,24 @@ static void amb_landscape_turn(int delta)
 {
     ambr.loading=1;
     if(!travel.ready)amb_landscape_start();
-    int previous=travel.wanted;
+    int previous=travel.wanted;unsigned chapter=travel.chapter;
     int next=previous+delta;
     /* Wrap the distant numeric readout while staying on the same side. */
     if(amb_endless())travel.wanted=next>999999?20+(next-1000000)%16:next< -999999?-20-(-next-1000000)%16:next;
     else travel.wanted=clamp(next,-AMB_TRAVEL_RANGE,AMB_TRAVEL_RANGE);
     if(amb_journey_style() && delta && travel.wanted!=previous)
         amb_journey_phrase(amb_journey_style(),amb_endless()?delta:travel.wanted-previous);
+    int moved=previous!=travel.wanted;
+    if(moved && amb_vary_patterns() && amb_lane_value(0,1)==3 && !pattern_pending){
+        lane_clock[0].serial++;pattern_pending=1;
+        if(!song.playing)amb_pattern_tick();
+    }
+    unsigned role_unit=amb_lane_value(1,1);
+    if(amb_lane_value(1,0) && ((role_unit==3 && moved) || (!role_unit &&
+       (amb_journey_style()?chapter!=travel.chapter:previous/4!=travel.wanted/4)))){
+        lane_clock[1].serial++;
+        if(song.playing)role_pending=1;else amb_change_role();
+    }
     if(!song.playing){amb_travel_patterns(0);amb_landscape_colour(1);amb_landscape_bar();}
     ambr.dirty=1;
     ambr.loading=0;

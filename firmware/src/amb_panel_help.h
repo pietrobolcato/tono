@@ -85,7 +85,8 @@ static const char *amb_knob_hint(const amb_layer_t *l,unsigned knob)
     }
     if(ambr.view==2 && ambr.page==7){
         static const char *const timing[]={"Count bars or seconds","Shortest wait","Longest wait","Farthest destination"};
-        return timing[knob];
+        static const char *const lane[]={"Enable this lane","Follow journey or set interval","Shortest interval","Longest interval"};
+        return timing_tab?lane[knob]:timing[knob];
     }
     if(ambr.view==2 && ambr.page==6){
         static const char *const live[]={"Bounded or endless travel","Sound replacement time","Release or crossfade","Move while playing"};

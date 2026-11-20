@@ -23,6 +23,24 @@ static const amb_recording_t amb_recordings[]={
     {speech_eagle,SPEECH_EAGLE_FRAMES,60,7280,0},{speech_radio,SPEECH_RADIO_FRAMES,60,7280,0},
     {speech_moon,SPEECH_MOON_FRAMES,60,7280,0},{0,0,60,7280,12}
 };
+/* Factory speech omits redundant predictor bytes in flash. Reconstruct
+ * them once at boot so random seeks have the same cost as a personal take. */
+static int8_t speech_predict[(sizeof speech_eagle+sizeof speech_radio+sizeof speech_moon)/9];
+static const unsigned speech_offset[]={0,sizeof speech_eagle/9,(sizeof speech_eagle+sizeof speech_radio)/9};
+static void amb_speech_init(void)
+{
+    for(unsigned n=0;n<3;n++){
+        const amb_recording_t *r=&amb_recordings[13+n];
+        int pred=0;
+        for(unsigned b=0;b<(r->length+31)/32;b++){
+            const uint8_t *block=r->pcm+9*b;
+            int step=*block++;
+            speech_predict[speech_offset[n]+b]=pred;
+            for(unsigned i=0;i<32;i++)
+                amb_take_delta((block[i/4]>>(2*(i%4)))&3,&pred,&step);
+        }
+    }
+}
 /* Direct lookup supports arbitrary pitch and sample trims without a decode buffer. */
 static inline int32_t amb_pcm_at(const uint8_t *pcm,unsigned at)
 {
@@ -107,8 +125,12 @@ static void amb_sample_render(track_t *t,voice_t *v,int32_t *out,uint32_t n,cons
                     unsigned pos=positions[j];
                     unsigned id=pos/32,slot=id&1;
                     if(block_id[slot]!=id){
-                        const uint8_t *block=source==AMB_MIC_SOURCE?take->block[id]:src+10*id;
-                        amb_take_decode(block,decoded[slot]);block_id[slot]=id;
+                        if(source==AMB_MIC_SOURCE)amb_take_decode(take->block[id],decoded[slot]);
+                        else {
+                            const uint8_t *block=src+9*id;
+                            amb_decode_codes(block+1,speech_predict[speech_offset[source-13]+id],block[0],decoded[slot]);
+                        }
+                        block_id[slot]=id;
                     }
                     values[j]=decoded[slot][pos%32];
                 }

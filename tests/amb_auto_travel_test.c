@@ -17,8 +17,8 @@ int main(void)
     turn(EN_SELECT,1);assert(amb_journey_style()==1);
     press(B_EDIT);
     assert(ambr.view==2 && ambr.page==7 && !amb_page_bank());
-    assert(!amb_vary_patterns());turn(EN_SELECT,1);assert(amb_vary_patterns());
-    turn(EN_SELECT,-1);assert(!amb_vary_patterns());
+    assert(!amb_vary_patterns());turn(EN_SELECT,1);turn(EN_K1,1);assert(amb_vary_patterns());
+    turn(EN_K1,-1);turn(EN_SELECT,-1);assert(!amb_vary_patterns());
     turn(EN_K1,2);turn(EN_K2,-3);turn(EN_K3,-3);
     assert(amb_walk_value(0)==WALK_SECONDS && amb_walk_value(1)==1 && amb_walk_value(2)==1);
     uint8_t pref[5];memcpy(pref,amb_walk_config(),sizeof pref);

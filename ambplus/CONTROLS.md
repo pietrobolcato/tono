@@ -90,7 +90,15 @@ On HOME each ALGORITHM turn shows the signed position and colour for 1.2 seconds
 
 On a layer’s FX → DELAY page, knob 1 sets that layer’s send and knob 4 chooses the shared echo type. GLO → MASTER FX → DELAY also controls its time and feedback. PING PONG alternates channels. SLAPBACK keeps repeats short with low feedback. The delay and reverb diagrams sketch the response to an impulse. PAN shows the smoothed position actually applied to the sounding layer.
 
-**Vary patterns** is off by default. Open GLO → TRAVEL → EDIT and turn SELECT right to enable it or left to hold the current generator choices. Manual and automatic travel then cycle Rhythm, Phrase and Interplay in turn. Long Journeys advances every four net clicks and retraces the choices in reverse. New Chapters advances every four clicks travelled and Branching Paths every three. During playback, at most one travel-driven family changes per four-bar boundary. Every song uses the same rule, including Garden. Edits in GENERATE establish a new starting combination.
+In **GLO → TRAVEL → EDIT**, turn **SELECT** between **Movement**, **Patterns** and **Layer types**. Movement sets the automatic travel clock and reach. Patterns and Layer types each have four knobs: **Active**, **Clock**, **Min** and **Max**. Both lanes are optional. A new installation starts with both off and Journey selected. An existing Vary patterns preference carries over.
+
+| Clock | When the lane changes |
+|---|---|
+| Journey | Follows the selected journey’s musical milestones, including manual turns. Long Journeys uses four net clicks. New Chapters counts four clicks travelled, Branching Paths three. Linked pattern changes use the existing four-bar boundary during playback. |
+| Move tick | Follows each actual automatic or manual move. Edits to Movement timing take effect automatically. Multiple moves before a downbeat share one change. |
+| Bars / Seconds | Runs independently during playback, including when Auto Movement is off. Min and Max accept 1–120. Equal values give a fixed interval. A range chooses another wait each time. Seconds land on the first downbeat after the wait. Stop and restart begin a fresh interval. |
+
+Patterns changes one generator family at a time, cycling Rhythm, Phrase and Interplay. A manually queued choice takes priority for its family. Layer types changes at most one generated instrument per event using the layer’s existing release or crossfade. It introduces a role missing from the ensemble and keeps an audible Pad or Drone as a harmonic foundation. Manual patterns, muted layers, personal takes and layers in a handoff are ineligible for role replacement. Solo pauses role replacement. These rules apply to Garden too.
 
 ### Voice sampling
 
