@@ -7,10 +7,9 @@ static int in_pool(unsigned note)
     return (amb_pool() >> ((note+12-amb.key)%12))&1u;
 }
 
-/* Garden schedules free-running breaths and delayed strikes in audio frames.
- * A sixteenth-only dry run cannot count them. Observe actual native voice
- * starts after each mixer block, including short drum hits between beats. */
-static void garden_catalog(unsigned scene)
+/* Garden and the piano phrasing schedule delayed strikes in audio frames.
+ * Observe native voice starts after each mixer block to count them. */
+static void timed_catalog(unsigned scene)
 {
     uint32_t age[4][NVOICE]={{0}};
     unsigned events[4]={0};
@@ -42,7 +41,7 @@ static void catalog(void)
             assert(amb.layer[k].generated);
             trk[k].engine=amb.layer[k].engine;
         }
-        if(amb.policy.active[0]==8){garden_catalog(scene);continue;}
+        if(amb.policy.active[0]==8 || scene==AMB_SCENE_WINDOW_LIGHT){timed_catalog(scene);continue;}
         /* The actual sequencer writes its emitted pitched notes to PATTERN. */
         for(unsigned step=0;step<1024;step++){
             amb_participation_t parts[4];amb_participation(parts,step);
