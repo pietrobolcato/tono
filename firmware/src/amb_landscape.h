@@ -20,17 +20,23 @@ static struct {
     amb_walk_t walk;
 } travel;
 
-/* Two independent clocks. Zero in an older settings record means Journey. */
+/* Unconfigured lanes follow movement. Active 0.35 pattern travel retains
+ * its original journey milestones until the player chooses another clock. */
+enum { LANE_MOVE, LANE_BARS, LANE_SECONDS, LANE_JOURNEY };
 static uint8_t timing_tab;
 static const char *const timing_names[]={"Movement","Patterns","Layer types"};
-static const char *const lane_units[]={"Journey","Bars","Seconds","Move tick"};
+static const char *const lane_units[]={"Move tick","Bars","Seconds","Journey"};
 static struct {uint32_t due,serial;uint8_t armed;} lane_clock[2];
 static uint8_t role_pending,pattern_pending;
 static unsigned amb_lane_value(unsigned lane,unsigned knob)
 {
     if(!knob)return !!(favorites.factory[15][13]&(4u<<lane));
     unsigned raw=favorites.factory[14][24+3*lane+knob-1];
-    return knob==1?(raw<=3?raw:0):(raw && raw<=120?raw:4);
+    if(knob==1){
+        if(raw && raw<=4)return raw-1;
+        return !lane && (favorites.factory[15][13]&4)?LANE_JOURNEY:LANE_MOVE;
+    }
+    return raw && raw<=120?raw:4;
 }
 static void amb_reset_lanes(void)
 {
@@ -51,22 +57,26 @@ static void amb_anchor_patterns(void)
 static void amb_lane_adjust(unsigned lane,unsigned knob,int delta)
 {
     unsigned old=amb_lane_value(lane,knob);
-    if(knob>=2 && (amb_lane_value(lane,1)%3)==0)return;
+    unsigned unit=amb_lane_value(lane,1);
+    if(knob>=2 && (unit==LANE_MOVE || unit==LANE_JOURNEY))return;
     unsigned v=knob?(unsigned)clamp((int)old+delta,knob==1?0:1,knob==1?3:120):(unsigned)(delta>0);
     if(v==old)return;
     uint8_t *cfg=&favorites.factory[14][24+3*lane];
-    if(!knob)favorites.factory[15][13]^=4u<<lane;
-    else cfg[knob-1]=v;
+    ambr.loading=1;
+    if(!knob){
+        cfg[0]=unit+1;
+        favorites.factory[15][13]^=4u<<lane;
+    }else cfg[knob-1]=knob==1?v+1:v;
     if(knob==2 && amb_lane_value(lane,3)<v)cfg[2]=v;
     if(knob==3 && amb_lane_value(lane,2)>v)cfg[1]=v;
     lane_clock[lane].armed=0;
     if(lane)role_pending=0;else {pattern_pending=0;amb_anchor_patterns();}
-    settings_save();ambr.dirty=1;
+    ambr.loading=0;settings_save();ambr.dirty=1;
 }
 static int amb_lane_due(unsigned lane)
 {
     unsigned unit=amb_lane_value(lane,1);
-    if(!unit || unit==3 || !amb_lane_value(lane,0))return 0;
+    if(unit==LANE_MOVE || unit==LANE_JOURNEY || !amb_lane_value(lane,0))return 0;
     uint32_t now=unit==WALK_BARS?ambr.step:fm1_ms;
     int fire=lane_clock[lane].armed;
     if(fire && (int32_t)(now-lane_clock[lane].due)<0)return 0;
@@ -80,7 +90,7 @@ static int amb_lane_due(unsigned lane)
 }
 static void amb_travel_patterns(int playing)
 {
-    if(!travel.ready || !amb_vary_patterns() || amb_lane_value(0,1))return;
+    if(!travel.ready || !amb_vary_patterns() || amb_lane_value(0,1)!=LANE_JOURNEY)return;
     int stage=amb_pattern_position()-travel.pattern_origin;
     if(!amb_journey_style())stage/=4;
     int distance=stage<0?-stage:stage;
@@ -326,12 +336,12 @@ static void amb_landscape_turn(int delta)
     if(amb_journey_style() && delta && travel.wanted!=previous)
         amb_journey_phrase(amb_journey_style(),amb_endless()?delta:travel.wanted-previous);
     int moved=previous!=travel.wanted;
-    if(moved && amb_vary_patterns() && amb_lane_value(0,1)==3 && !pattern_pending){
+    if(moved && amb_vary_patterns() && amb_lane_value(0,1)==LANE_MOVE && !pattern_pending){
         lane_clock[0].serial++;pattern_pending=1;
         if(!song.playing)amb_pattern_tick();
     }
     unsigned role_unit=amb_lane_value(1,1);
-    if(amb_lane_value(1,0) && ((role_unit==3 && moved) || (!role_unit &&
+    if(amb_lane_value(1,0) && ((role_unit==LANE_MOVE && moved) || (role_unit==LANE_JOURNEY &&
        (amb_journey_style()?chapter!=travel.chapter:previous/4!=travel.wanted/4)))){
         lane_clock[1].serial++;
         if(song.playing)role_pending=1;else amb_change_role();

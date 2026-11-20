@@ -90,7 +90,7 @@ On HOME each ALGORITHM turn shows the signed position and colour for 1.2 seconds
 
 On a layer’s FX → DELAY page, knob 1 sets that layer’s send and knob 4 chooses the shared echo type. GLO → MASTER FX → DELAY also controls its time and feedback. PING PONG alternates channels. SLAPBACK keeps repeats short with low feedback. The delay and reverb diagrams sketch the response to an impulse. PAN shows the smoothed position actually applied to the sounding layer.
 
-In **GLO → TRAVEL → EDIT**, turn **SELECT** between **Movement**, **Patterns** and **Layer types**. Movement sets the automatic travel clock and reach. Patterns and Layer types each have four knobs: **Active**, **Clock**, **Min** and **Max**. Both lanes are optional. A new installation starts with both off and Journey selected. An existing Vary patterns preference carries over.
+In **GLO → TRAVEL → EDIT**, turn **SELECT** between **Movement**, **Patterns** and **Layer types**. Movement sets the automatic travel clock and reach. Patterns and Layer types each have four knobs: **Active**, **Clock**, **Min** and **Max**. Both lanes are optional. A new installation starts with both off and Move tick selected. An existing enabled Vary patterns preference keeps its Journey timing.
 
 | Clock | When the lane changes |
 |---|---|

@@ -53,6 +53,7 @@ int main(void)
     song.playing=0;amb_walk_config()[4]=0;amb_journey_recentre();
     amb.policy.active[0]=8;memset(amb.policy.pending,255,3);
     amb_landscape_turn(4);assert(amb.policy.active[0]==8);
+    favorites.factory[14][24]=0; /* Active 0.35 preference with no lane-clock bytes. */
     favorites.factory[15][13]|=4;amb_anchor_patterns();
     song.playing=1;amb_landscape_turn(4);assert(amb.policy.active[0]==8);
     amb_travel_patterns(1);amb_policy_boundary(&amb.policy,64);assert(amb.policy.active[0]==0);
