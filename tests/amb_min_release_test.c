@@ -38,7 +38,7 @@ int main(void)
     song.playing=0;amb_fixture_scene(0);amb.release_ms=3000;amb_patch(0,2,0);
     amb_prepare();trk[0].engine=trk[0].eng_req;panic_req=0;trk_note_on(&trk[0],60,100);
     for(i=0;i<FS/5u/CTL;i++)mix_block(out,CTL);assert(amb_track_active(0));amb_patch(0,0,0);
-    for(i=0;i<FS*59u/10u/CTL;i++)mix_block(out,CTL);
+    for(i=0;i<FS*29u/10u/CTL;i++)mix_block(out,CTL);
     assert(ambr.handoff[0] && amb_track_active(0));
     for(i=0;i<FS/5u/CTL;i++)mix_block(out,CTL);assert(!ambr.handoff[0]);
     /* Ordinary musical note-off keeps its original short release. */
