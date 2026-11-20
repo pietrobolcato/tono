@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Tono · Voice sampler</title>
+<link rel="icon" href="data:,"><title>Tono · Voice sampler</title>
 <style>
 *{box-sizing:border-box}body{max-width:42rem;margin:6vh auto;padding:0 1.5rem;background:#edeae3;color:#242521;font:1rem/1.5 Helvetica,Arial,sans-serif}
 h1{font-size:2.4rem;letter-spacing:-.06em;margin:0}h2{font-size:1.2rem;margin:.3rem 0}section{border-top:1px solid #999;padding:1.25rem 0}
@@ -34,13 +34,16 @@ function wav(buf,begin,duration){
 function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000)}
 async function load(blob){
  const b=await context().decodeAudioData(await blob.arrayBuffer());
- buffer=b;el('start').max=Math.max(0,b.duration-.06);el('start').value=0;el('time').textContent='0.00 s';
+ let onset=b.length;
+ for(let ch=0;ch<b.numberOfChannels;ch++){const samples=b.getChannelData(ch);for(let i=0;i<onset;i++)if(Math.abs(samples[i])>.009){onset=i;break}}
+ if(onset===b.length)throw Error('No signal in that recording. Check the microphone and try again.');
+ buffer=b;el('start').max=Math.max(0,b.duration-.06);el('start').value=Math.max(0,onset/b.sampleRate-.025);el('time').textContent=Number(el('start').value).toFixed(2)+' s';
  for(const id of ['save','full','start','preview'])el(id).disabled=false;
  if(url)URL.revokeObjectURL(url);url=URL.createObjectURL(blob);el('player').src=url;msg('Recording ready.');
 }
 el('rec').onclick=async()=>{
  if(recorder?.state==='recording'){recorder.stop();return}
- try{el('rec').disabled=true;mic=await navigator.mediaDevices.getUserMedia({audio:true});chunks=[];recorder=new MediaRecorder(mic);
+ try{el('rec').disabled=true;mic=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});chunks=[];recorder=new MediaRecorder(mic);
  recorder.ondataavailable=e=>chunks.push(e.data);recorder.onstop=async()=>{stopTracks(mic);el('rec').textContent='Record microphone';try{await load(new Blob(chunks,{type:recorder.mimeType}))}catch(e){msg(e.message)}};
  recorder.start();el('rec').textContent='Stop recording';msg('Recording microphone…')}
  catch(e){stopTracks(mic);msg(e.message)}finally{el('rec').disabled=false}

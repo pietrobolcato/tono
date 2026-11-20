@@ -17,4 +17,9 @@ for AMB_TEST in amb_native_test amb_feedback_test amb_transition_test amb_normal
         *) "build/host/$AMB_TEST" ;;
     esac
 done
+# The firmware's compact USB resampler and its actual sample packet handler.
+set -- -O2 -DT_CDC=1 -DHALF_FRAMES=128 -Ibuild/gen
+if [ "$(uname -s)" = Darwin ]; then set -- "$@" '-D__attribute__(x)='; fi
+cc "$@" tests/amb_uac_take_test.c -lm -o build/host/amb_uac_take_test
+build/host/amb_uac_take_test
 printf '%s\n' 'AMB+ targeted tests completed. Also run the full JIANT suite against an AMBPLUS=0 build and exact-package emulator tests; see ambplus/README.md.'
