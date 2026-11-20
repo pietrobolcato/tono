@@ -2324,18 +2324,24 @@ static void amb_draw_home_status(void)
     char cpu[16];
     fmt_int(cpu, (int32_t)((song.cpu_q8 * 100u) >> 8));
     str_cpy(cpu + str_len(cpu), "%", 2);
-    amb_text(153, 15, "CPU", ADIM, 3);
-    amb_text(175, 15, cpu, AINK, 8);
+    cv_frame(116, 8, 8, 8, ADIM);
+    for(int offset=0;offset<8;offset+=3){
+        cv_rect(116+offset, 7, 1, 1, ADIM);
+        cv_rect(116+offset, 16, 1, 1, ADIM);
+        cv_rect(115, 8+offset, 1, 1, ADIM);
+        cv_rect(124, 8+offset, 1, 1, ADIM);
+    }
+    amb_text(129, 8, cpu, AINK, 8);
 
     // The stock ADC thresholds give a coarse level, even on USB power.
     int32_t level = batt_level();
     uint16_t ink = !song.batt_raw ? ADIM : level == 0 ? AQUEUE : AINK;
-    cv_frame(215, 14, 15, 9, ink);
-    cv_rect(230, 17, 2, 3, ink);
+    cv_frame(157, 8, 15, 9, ink);
+    cv_rect(172, 11, 2, 3, ink);
     for (int32_t segment = 0; segment < level; segment++)
-        cv_rect(217 + segment * 3, 16, 2, 5, ink);
+        cv_rect(159 + segment * 3, 10, 2, 5, ink);
     if (!song.batt_raw)
-        cv_rect(221, 18, 3, 1, ADIM);
+        cv_rect(163, 12, 3, 1, ADIM);
 }
 
 static void amb_draw(void)
@@ -2353,6 +2359,7 @@ static void amb_draw(void)
 
     tono_logo(8,6,3,ABG,AINK);
     amb_text(60,8,ambr.help?"HELP":ambr.view==4?"ENSEMBLE":ambr.view==0?(ambr.zen?(ambr.zen_train?"TRAIN RIDE":"CONTOUR"):"HOME"):ambr.view==1?"EDIT":ambr.view==2?"GLOBAL":"SAVE",ADIM,10);
+    int home_header=!ambr.view && !ambr.help;
     if(!ambr.help && (ambr.view==0 || ambr.view==1 || ambr.view==4)){
         unsigned target=ambr.view==1?ambr.edit_layer+1:ambr.target;
         int queued=amb_octave_delta(0)+(target?amb_octave_delta(target):0);
@@ -2361,14 +2368,15 @@ static void amb_draw(void)
         int offset=clamp(queued?queued:active,-3,3);
         if(offset){
             char tag[]="Q+1";tag[0]=queued?'Q':'O';tag[1]=offset<0?'-':'+';
-            tag[2]='0'+(offset<0?-offset:offset);amb_text(116,8,tag,AQUEUE,3);
+            tag[2]='0'+(offset<0?-offset:offset);amb_text(home_header?92:116,8,tag,AQUEUE,3);
         }
     }
-    int header_y = !ambr.view && !ambr.help ? 3 : 8;
-    if(ambr.view!=4)amb_number(146,header_y,ambr.view==0?ambr.target+1:ambr.view==3?ambr.slot+1:ambr.view==2?amb_global_index(ambr.page)+1:ambr.page+1,AINK);
-    if(ambr.view!=4)amb_text(155,header_y,ambr.view==0?"/5":ambr.view==3?"/8":"/7",AINK,3);
-    amb_text(175,header_y,song.playing?">":"-",song.playing?TONO_ORANGE:ADIM,1);amb_number(188,header_y,amb.global[G_BPM],AINK);amb_text(211,header_y,"BPM",ADIM,3);
-    if(header_y==3)amb_draw_home_status();
+    if(home_header)amb_draw_home_status();
+    else if(ambr.view!=4){
+        amb_number(146,8,ambr.view==0?ambr.target+1:ambr.view==3?ambr.slot+1:ambr.view==2?amb_global_index(ambr.page)+1:ambr.page+1,AINK);
+        amb_text(155,8,ambr.view==0?"/5":ambr.view==3?"/8":"/7",AINK,3);
+    }
+    amb_text(177,8,song.playing?">":"-",song.playing?TONO_ORANGE:ADIM,1);amb_number(188,8,amb.global[G_BPM],AINK);amb_text(211,8,"BPM",ADIM,3);
     cv_rect(8,25,224,1,ALINE);cv_bg=ABG;
     if(ambr.help){
         amb_text(10,32,amb_screen_help(),AINK,39);

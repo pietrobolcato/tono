@@ -101,7 +101,7 @@ export function candidatePorts(access) {
     const output = outs.find((o) => o.name === input.name && o.state !== "disconnected");
     if (output) out.push({ input, output, name: input.name || "MIDI", bluetooth: isBluetooth(input) || isBluetooth(output) });
   }
-  const rank = (c) => (/fm-1|jiant|felucca/i.test(c.name) ? 0 : 2) + (c.bluetooth ? 1 : 0);
+  const rank = (c) => (/fm-1|jiant|felucca|tono/i.test(c.name) ? 0 : 2) + (c.bluetooth ? 1 : 0);
   return out.sort((a, b) => rank(a) - rank(b));
 }
 /* the first candidate that answers INFO as an FM-1 does: { side, info, name, bluetooth, link }. A slow link (Bluetooth)

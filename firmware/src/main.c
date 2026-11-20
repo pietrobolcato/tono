@@ -109,7 +109,7 @@ static void fm1_fault(const fm1_crash_t *c)
     cv_text(117,0,&AF_M,"CRASH",UI_CRASH_INK);
     cv_blit(0,8);
 #else
-    draw_text_line(0, 8, 240, &AF_M, "JIANT CRASH", UI_CRASH_INK, UI_CRASH_BG, 1);
+    draw_text_line(0, 8, 240, &AF_M, AMBPLUS ? "TONO CRASH" : "JIANT CRASH", UI_CRASH_INK, UI_CRASH_BG, 1);
 #endif
     str_cpy(b, FELUCCA_VERSION "  CORE ", 20);
     i = str_len(b);

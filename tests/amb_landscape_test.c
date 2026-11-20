@@ -27,6 +27,33 @@ static void evolving_manual_turns(unsigned style)
     amb_landscape_bar();assert(__builtin_popcount(waiting)-__builtin_popcount(travel.pending_layers)==1);
     song.playing=0;
 }
+static void preserve_open_editor(void)
+{
+    amb_fixture_scene(AMB_SCENE_GARDEN);
+    amb_walk_config()[4]=0;amb_journey_recentre();
+    song.playing=1;ambr.view=1;ambr.page=6;ambr.edit_layer=0;
+    amb_layer_t edited=amb.layer[0],other=amb.layer[1];
+    amb_landscape_turn(9);
+    ambr.view=0; /* Close between the scheduled move and its downbeat. */
+    for(unsigned i=0;i<50;i++)amb_landscape_colour(0);
+    for(unsigned i=0;i<4;i++)amb_landscape_bar();
+    assert(!memcmp(&amb.layer[0],&edited,sizeof edited));
+    assert(memcmp(&amb.layer[1],&other,sizeof other));
+    amb_landscape_turn(-18);
+    amb_landscape_colour(0);amb_landscape_bar();
+    assert(memcmp(&amb.layer[0],&edited,sizeof edited));
+
+    amb_fixture_scene(AMB_SCENE_GARDEN);
+    amb_walk_config()[4]=2;amb_journey_recentre();
+    ambr.view=0;amb_landscape_turn(3);
+    unsigned affected=(unsigned)__builtin_ctz(travel.pending_layers);
+    ambr.view=1;ambr.edit_layer=affected;
+    edited=amb.layer[affected];
+    for(unsigned i=0;i<4;i++)amb_landscape_bar();
+    ambr.view=0;amb_landscape_bar();
+    assert(!memcmp(&amb.layer[affected],&edited,sizeof edited));
+    song.playing=0;
+}
 int main(void)
 {
     memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();
@@ -62,6 +89,7 @@ int main(void)
     ambr.view=0;turn(EN_ALGO,-4);assert(amb.layer[0].patch==picked);
     turn(EN_ALGO,4);assert(amb.layer[0].patch!=picked);
     evolving_manual_turns(1);evolving_manual_turns(2);
+    preserve_open_editor();
     puts("Manual chapters and branches continue through reversals, retain an anchor and respect bar handoffs PASS");
     puts("Edited patch remains eligible, and becomes the return sound PASS");
     puts("Endless travel across both boundaries and reversible chord/patch selections PASS");

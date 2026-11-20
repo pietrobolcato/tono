@@ -101,6 +101,12 @@ In **GLO → TRAVEL → EDIT**, turn **SELECT** between **Movement**, **Patterns
 
 Patterns changes one generator family at a time, cycling Rhythm, Phrase and Interplay. A manually queued choice takes priority for its family. Layer types changes at most one generated instrument per event using the layer’s existing release or crossfade. It introduces a role missing from the ensemble and keeps an audible Pad or Drone as a harmonic foundation. Manual patterns, muted layers, personal takes and layers in a handoff are ineligible for role replacement. Solo pauses role replacement. These rules apply to Garden too.
 
+Auto Travel skips sound, macro and role changes for the layer whose EDIT screen is open. It can evolve that layer at the next eligible change after you leave EDIT.
+
+### Recording the stereo mix over USB
+
+Connect the FM-1 directly to the Mac with a USB data cable while running Tono. In QuickTime Player, open **File → New Audio Recording** and choose **TONO** as the input (**JIANT** on earlier builds). Start playback on the FM-1, check the recording meter, then record and save. In a DAW choose the same device as the audio input and record stereo inputs 1/2. At 44.1 kHz the USB path sends the instrument’s stereo master mix.
+
 ### Voice sampling
 
 On a Texture layer, browse to Eagle Landed, Radio Check or Moon Address with ALGORITHM and confirm with REC. These repeat at their recorded speed by default. The same recordings are sources in Sample.

@@ -310,7 +310,11 @@ static void midi_out_event(uint32_t pkt)            /* from the audio ISR */
  * INIT_USBAUDIO_PRODUCT_NAME), written the first time it sees the device and never again: every FM-1 that had
  * Felucca (1209:0001, index 2) kept showing "Felucca" in Live / Windows after JIANT's rename. A new index is a new
  * GUID, so the host reads the name again. Index 2 is no longer answered. Rename the product again: move it again. */
+#if AMBPLUS && !defined(FELUCCA_LOADER)
+#define USB_STR_PRODUCT 5u
+#else
 #define USB_STR_PRODUCT 4u
+#endif
 #ifndef FELUCCA_USB_PID
 #define FELUCCA_USB_PID 0x0001   /* the update loader is 0x0002 */
 #endif
@@ -491,11 +495,17 @@ static uint8_t usb_cdc_on = FELUCCA_CDC_DEFAULT != 0;      /* the console is pre
 #endif
 #define UAC_AS_IF (AUD_IF + 2u)
 static const uint8_t STR0[4] = {4, 3, 0x09, 0x04};
+#if AMBPLUS && !defined(FELUCCA_LOADER)
+static const uint8_t STR1[] = {10, 3, 'T', 0, 'o', 0, 'n', 0, 'o', 0};
+#else
 static const uint8_t STR1[] = {22, 3, 'J', 0, 'u', 0, 'a', 0, 'n', 0, ' ', 0, 'J', 0, 'i', 0, 'a', 0, 'n', 0, 't', 0};   /* (0.7.0) the names JIANT's; the editor and the installer match /jiant|felucca/ */
+#endif
 /* the product (USB_STR_PRODUCT): Windows names the MIDI port after it, macOS the device and its port; no interface
  * or jack has a name of its own (iInterface / iJack 0). 0.7.0..0.9.11: "JIANT FM" (index 2); Felucca: "Felucca" */
 #ifdef FELUCCA_LOADER
 static const uint8_t STR_PROD[] = {26, 3, 'J', 0, 'I', 0, 'A', 0, 'N', 0, 'T', 0, ' ', 0, 'U', 0, 'p', 0, 'd', 0, 'a', 0, 't', 0, 'e', 0};
+#elif AMBPLUS
+static const uint8_t STR_PROD[] = {10, 3, 'T', 0, 'O', 0, 'N', 0, 'O', 0};
 #else
 static const uint8_t STR_PROD[] = {12, 3, 'J', 0, 'I', 0, 'A', 0, 'N', 0, 'T', 0};
 #endif

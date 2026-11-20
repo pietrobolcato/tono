@@ -11,7 +11,7 @@ static struct {
     int16_t origin_macro[4][4], origin_clip, origin_echo_colour;
     amb_layer_t origin[4];
     uint32_t turned_ms;
-    uint8_t indicator;
+    uint8_t indicator, edit_guard;
     uint8_t distance, pending_layers, anchor, previous_sound[4];
     int8_t direction;
     uint32_t chapter;
@@ -37,6 +37,10 @@ static unsigned amb_lane_value(unsigned lane,unsigned knob)
 static void amb_reset_lanes(void)
 {
     lane_clock[0].armed=lane_clock[1].armed=role_pending=pattern_pending=0;
+}
+static unsigned amb_edit_guard(void)
+{
+    return ambr.view==1?1u<<ambr.edit_layer:0;
 }
 static int amb_endless(void){return (favorites.factory[15][13]&2)!=0;}
 static int amb_vary_patterns(void){return (favorites.factory[15][13]&4)!=0;}
@@ -122,13 +126,16 @@ static void amb_landscape_colour(int stopped)
         tone=72+(phase<8?phase:16-phase)*2;
     }
     int old=travel.colour,delta=(position<0?-tone:tone)-old;
+    travel.edit_guard|=amb_edit_guard();
     if(!delta)return;
     int next=old+(stopped?delta:clamp(delta,-2,2));
     for(unsigned k=0;k<4;k++)for(unsigned j=0;j<4;j++){
         amb_layer_t *l=&amb.layer[k];
         int offset=amb_colour_offset(l->role,j,old);
         /* An intervening live knob edit becomes the new local starting value. */
-        l->macro[j]=amb_landscape_value(l->macro[j],&travel.origin_macro[k][j],offset,amb_colour_offset(l->role,j,next),0,127);
+        int next_offset=amb_colour_offset(l->role,j,next);
+        if(travel.edit_guard&(1u<<k))travel.origin_macro[k][j]=l->macro[j]-next_offset;
+        else l->macro[j]=amb_landscape_value(l->macro[j],&travel.origin_macro[k][j],offset,next_offset,0,127);
     }
     amb.global[G_CLIP]=amb_landscape_value(amb.global[G_CLIP],&travel.origin_clip,-old/2,-next/2,GP[G_CLIP].min,GP[G_CLIP].max);
     amb.global[G_DCOLOR]=amb_landscape_value(amb.global[G_DCOLOR],&travel.origin_echo_colour,old/2,next/2,GP[G_DCOLOR].min,GP[G_DCOLOR].max);
@@ -168,7 +175,7 @@ static void amb_change_role(void)
     for(unsigned i=0;i<4;i++){
         unsigned k=(serial+i)&3;
         amb_layer_t *l=&amb.layer[k];
-        if(!l->generated || l->base[P_MUTE] || ambr.handoff[k] || ambr.fade_slot[k] ||
+        if(((amb_edit_guard()|role_pending)&(1u<<k)) || !l->generated || l->base[P_MUTE] || ambr.handoff[k] || ambr.fade_slot[k] ||
            (l->role==6 && l->base[P_E0]==AMB_MIC_SOURCE))continue;
         unsigned used=0,foundation=0;
         for(unsigned j=0;j<4;j++)if(j!=k){
@@ -198,7 +205,7 @@ static void amb_pattern_tick(void)
 static void amb_ensemble_downbeat(void)
 {
     if(amb_lane_due(0) || pattern_pending)amb_pattern_tick();
-    if(amb_lane_due(1) || role_pending){role_pending=0;amb_change_role();}
+    if(amb_lane_due(1) || role_pending){amb_change_role();role_pending=0;}
 }
 
 /* A style switch establishes a local starting arrangement, even mid-song. */
@@ -284,8 +291,13 @@ static int amb_landscape_bar(void)
 {
     int position=travel.wanted;
     unsigned style=amb_journey_style();
+    travel.edit_guard|=amb_edit_guard();
+    travel.pending_layers&=~travel.edit_guard;
     if(style)amb_journey_orchestrate(song.playing);
-    else for(unsigned k=0;k<4;k++)if(amb_landscape_instrument(k,position) && song.playing)break;
+    else{
+        for(unsigned k=0;k<4;k++)if(travel.edit_guard&(1u<<k))amb_travel_rebase(k);
+        for(unsigned k=0;k<4;k++)if(amb_landscape_instrument(k,position) && song.playing)break;
+    }
     if(position==travel.harmony)return 0;
     int scale[12],count=amb_scale(amb_pool(),scale);
     if(style)amb.chord=amb_walk_next(&travel.walk,amb.policy.seed+travel.chapter*31+(uint32_t)position,amb.chord,count);
@@ -303,8 +315,15 @@ static void amb_landscape_turn(int delta)
     /* Wrap the distant numeric readout while staying on the same side. */
     if(amb_endless())travel.wanted=next>999999?20+(next-1000000)%16:next< -999999?-20-(-next-1000000)%16:next;
     else travel.wanted=clamp(next,-AMB_TRAVEL_RANGE,AMB_TRAVEL_RANGE);
+    if(travel.wanted!=previous){
+        // Discard changes blocked by this edit, even if it closes before the downbeat.
+        travel.pending_layers&=~amb_edit_guard();
+        travel.edit_guard=(uint8_t)amb_edit_guard();
+        for(unsigned k=0;k<4;k++)if(travel.edit_guard&(1u<<k))amb_travel_rebase(k);
+    }
     if(amb_journey_style() && delta && travel.wanted!=previous)
         amb_journey_phrase(amb_journey_style(),amb_endless()?delta:travel.wanted-previous);
+    travel.pending_layers&=~travel.edit_guard;
     if(!song.playing){amb_landscape_colour(1);amb_landscape_bar();}
     ambr.dirty=1;
     ambr.loading=0;
@@ -316,6 +335,6 @@ static void amb_follow_travel_tick(void)
         lane_clock[0].serial++;pattern_pending=1;
     }
     if(amb_lane_value(1,0) && amb_lane_value(1,1)==LANE_FOLLOW && !role_pending){
-        lane_clock[1].serial++;role_pending=1;
+        lane_clock[1].serial++;role_pending=(uint8_t)(0x80u|amb_edit_guard());
     }
 }

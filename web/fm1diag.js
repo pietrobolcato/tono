@@ -44,12 +44,12 @@ export function infoVersion(a) {
 export function isJiantInfo(a) {
   const z = a.indexOf(0); if (z < 0) return false;
   const version = String.fromCharCode(...a.slice(0, z));
-  if (!/^(FELUCCA|JIANT) /i.test(version)) return false;
+  if (!/^(FELUCCA|JIANT|TONO) /i.test(version)) return false;
   let pos = z + 1; const engines = a[pos]; pos += 5;
   for (let i = 0; i < engines; i++) { const end = a.indexOf(0, pos); if (end < 0) return false; pos = end + 1; }
   const ntrk = a[pos], ext = a.slice(pos + 1);
   for (let i = 0; i + 2 < ext.length; i++) if (ext[i] === 0x4A && ext[i + 1] === 1 && ext[i + 2] === 1) return true;
-  return ntrk === 6 && /^(FELUCCA|JIANT) v0\./i.test(version);
+  return ntrk === 6 && /^(FELUCCA|JIANT|TONO) v0\./i.test(version);
 }
 /* the complete backup (cmds 65..67, INFO 42 01 bit 0): JIANT, Felucca 1.0.3 and later, Skiff (all lay INFO out alike) */
 export function archiveInfo(a) {
@@ -58,7 +58,7 @@ export function archiveInfo(a) {
   const engines = a[pos]; pos += 5;
   for (let i = 0; i < engines; i++) { const end = a.indexOf(0, pos); if (end < 0) throw new Error("Invalid INFO"); pos = end + 1; }
   const ext = a.slice(pos + 1);
-  const supported = /^(FELUCCA|JIANT) /i.test(version) && ext[0] === 16 && ext[1] === 0x55 && ext[2] === 1 &&
+  const supported = /^(FELUCCA|JIANT|TONO) /i.test(version) && ext[0] === 16 && ext[1] === 0x55 && ext[2] === 1 &&
     ext[4] === 0x4d && ext[5] === 1 && ext[8] === 0x42 && ext[9] === 1 && !!(ext[10] & 1);
   return { version, supported };
 }
@@ -269,7 +269,7 @@ export function stockFileProblem(name, bytes, v15size, allowV16 = false) {
   if (/\.(rar|7z|exe|dmg|pkg|apk)$/i.test(n)) return { code: "stockZip", detail: n };
   let product = "";
   try { product = bytes.length > 960 ? productOf(bytes) : ""; } catch (_) {}
-  if (/^FM-1_9\d\d$|^FM-1_7\d\d$/.test(product) || /^(felucca|jiant|skiff)/i.test(n)) return { code: "stockCustom", detail: `${n} ${product}`.trim() };
+  if (/^FM-1_9\d\d$|^FM-1_7\d\d$/.test(product) || /^(felucca|jiant|tono|skiff)/i.test(n)) return { code: "stockCustom", detail: `${n} ${product}`.trim() };
   if (allowV16 && product === "FM-1_016") return null;                  /* (beta) official V16: the full check next */
   if (/^FM-1_0\d\d$/.test(product) && product !== "FM-1_015") return { code: "stockOtherVer", detail: `${n}: ${product}` };
   if (bytes.length !== v15size) return { code: "stockNotV15", detail: `${n}: ${bytes.length} B` };
