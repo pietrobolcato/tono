@@ -6,6 +6,72 @@ static void settle(void)
 {
     for(unsigned n=0;n<300;n++)amb_prepare();
 }
+
+static void link_last_edit(void)
+{
+    fm1_in.buttons|=1u<<panel.btn[B_HOME];
+    frame();
+    press(B_LFO);
+    fm1_in.buttons&=~(1u<<panel.btn[B_HOME]);
+    frame();
+    assert(ambr.view==1 && ambr.page==3);
+}
+
+static void check_layer_shortcut(void)
+{
+    amb_fixture_scene(0);
+    amb_target(1);
+    amb_patch(0,0,8);
+    amb_layer_t *l=&amb.layer[0];
+    assert(l->engine==ENGI_VOICE);
+    l->lfo_dest=2;l->lfo_depth=31;
+    int rate=l->base[P_LRATE],wave=l->base[P_LWAVE],breath=l->base[P_E5];
+    ambr.view=1;ambr.page=1;ambr.bank=0;
+    turn(EN_K3,1);
+    assert(l->base[P_E5]!=breath);
+    press(B_LFO);
+    assert(l->lfo_dest==2);
+    link_last_edit();
+    assert(!strcmp(amb_route_name(l,l->lfo_dest),"BREATH"));
+    assert(l->lfo_depth==31 && l->base[P_LRATE]==rate && l->base[P_LWAVE]==wave);
+
+    held_turn(B_HOME,1);
+    assert(ambr.edit_layer==1);
+    uint8_t previous=amb.layer[1].lfo_dest;
+    link_last_edit();
+    assert(amb.layer[1].lfo_dest==previous);
+    assert(!strcmp(ambr.notice,"TURN A LAYER KNOB FIRST"));
+    held_turn(B_HOME,-1);
+    assert(ambr.edit_layer==0);
+
+    ambr.page=5;ambr.fx=5;
+    turn(EN_K1,1);
+    link_last_edit();
+    assert(l->lfo_dest==ROUTE_GRAIN);
+    ambr.page=6;
+    turn(EN_K2,1);
+    link_last_edit();
+    assert(l->lfo_dest==ROUTE_EQ+1);
+    ambr.page=5;ambr.fx=2;
+    turn(EN_K4,1);
+    link_last_edit();
+    assert(l->lfo_dest==ROUTE_EQ+1);
+    assert(!strcmp(ambr.notice,"THIS CONTROL CANNOT USE LFO"));
+
+    amb_patch(0,0,0);
+    l->lfo_dest=2;
+    ambr.page=2;
+    turn(EN_K4,-1);
+    l->base[P_ATK]=0;
+    turn(EN_K1,-1);
+    link_last_edit();
+    assert(!strcmp(amb_route_name(l,l->lfo_dest),"REL"));
+    amb_patch(0,0,1);
+    link_last_edit();
+    assert(l->lfo_dest==0);
+    assert(!strcmp(ambr.notice,"TURN A LAYER KNOB FIRST"));
+}
+
 int main(void)
 {
     unsigned patches=0, routes=0, voice_patches=0;
@@ -59,6 +125,8 @@ int main(void)
     amb.layer[0].lfo_dest=ROUTE_EQ;amb.release_ms=30000;ambr.slot=2;amb_save();
     amb_fixture_scene(0);assert(amb_recall(2));
     assert(amb.layer[0].lfo_dest==ROUTE_EQ && amb.release_ms==30000);
+    check_layer_shortcut();
+    puts("HOME + LFO uses last actual layer edit, keeps LFO settings and rejects unavailable targets PASS");
     printf("%u patch/source macro sweeps, %u destinations, %u voice Breath sweeps, master reversibility and v4/v5 recall PASS\n",patches,routes,voice_patches);
     return 0;
 }

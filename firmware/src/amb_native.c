@@ -65,6 +65,7 @@ static struct {
     uint32_t applied_revision[4];
     int master_offset[4];
     uint8_t last_routed_param[4]; /* parameter ID plus one */
+    uint8_t last_edit_route[4]; /* destination plus one; zero before a knob edit */
     uint8_t handoff[NTRK],overlap[4],fade_slot[4],playhead[4],playhead_valid[4];
     uint32_t tail_left[NTRK],tail_total[NTRK];
     int32_t tail_env[NTRK][NVOICE],tail_gain[NTRK];
@@ -241,6 +242,7 @@ static void amb_begin_change(unsigned k)
 static int amb_crossfade(void){return !(favorites.factory[15][13]&1);}
 static void amb_sound_change(unsigned k)
 {
+    ambr.last_edit_route[k]=0;
     amb_begin_change(k);
     ambr.overlap[k]=ambr.handoff[k] && amb_crossfade();
 }
@@ -1360,6 +1362,10 @@ static unsigned amb_pattern_param(const amb_layer_t *l,unsigned knob)
 }
 static const char *const amb_speeds[]={"1/16","1/8","1/4","1/2"};
 static const char *const amb_drum_lanes[]={"KICK","SNARE","HATS","PERC"};
+static void amb_remember_edit(unsigned route,int before,int after)
+{
+    if(before!=after)ambr.last_edit_route[ambr.edit_layer]=(uint8_t)(route+1);
+}
 static void amb_manual_knob(amb_layer_t *l,unsigned knob,int delta)
 {
     unsigned at=ambr.cursor;
@@ -1368,15 +1374,31 @@ static void amb_manual_knob(amb_layer_t *l,unsigned knob,int delta)
         if(knob==1)ambr.lane=(uint8_t)amb_wrap(ambr.lane+delta,4);
         if(knob==2){
             uint16_t bit=(uint16_t)(1u<<at);
+            unsigned before=l->drums[ambr.lane];
             if(delta>0)l->drums[ambr.lane]|=bit;else l->drums[ambr.lane]&=(uint16_t)~bit;
+            amb_remember_edit(ROUTE_COUNT,before,l->drums[ambr.lane]);
         }
-        if(knob==3)l->swing=(uint8_t)clamp(l->swing+delta*2,0,100);
-    }else if(knob==1)l->speed=(uint8_t)clamp(l->speed+delta,0,3);
+        if(knob==3){
+            unsigned before=l->swing;
+            l->swing=(uint8_t)clamp(l->swing+delta*2,0,100);
+            amb_remember_edit(ROUTE_SWING,before,l->swing);
+        }
+    }else if(knob==1){
+        unsigned before=l->speed;
+        l->speed=(uint8_t)clamp(l->speed+delta,0,3);
+        amb_remember_edit(ROUTE_SPEED,before,l->speed);
+    }
     else if(knob==2){
+        unsigned before=l->notes[at];
         if(!l->notes[at] && delta>0)l->notes[at]=(uint8_t)ambr.voicing[ambr.edit_layer];
         else l->notes[at]=(uint8_t)clamp(l->notes[at]+delta,0,127);
         if(l->notes[at] && !l->velocity[at])l->velocity[at]=76;
-    }else l->velocity[at]=(uint8_t)clamp(l->velocity[at]+delta,1,127);
+        amb_remember_edit(ROUTE_NOTE,before,l->notes[at]);
+    }else {
+        unsigned before=l->velocity[at];
+        l->velocity[at]=(uint8_t)clamp(l->velocity[at]+delta,1,127);
+        amb_remember_edit(ROUTE_VEL,before,l->velocity[at]);
+    }
 }
 static unsigned amb_envelope_id(const amb_layer_t *l,unsigned knob)
 {
@@ -1477,6 +1499,14 @@ static unsigned amb_route_turn(const amb_layer_t *l,int delta)
     }
     return route;
 }
+static unsigned amb_param_route(unsigned id)
+{
+    if(id==P_FCUT)return 0;
+    if(id==P_PAN)return 2;
+    for(unsigned i=0;i<NELEM(amb_route_param);i++)
+        if(amb_route_param[i]==id)return ROUTE_PARAM+i;
+    return ROUTE_COUNT;
+}
 static void amb_knob(unsigned knob,int delta)
 {
     amb_layer_t *l=&amb.layer[ambr.edit_layer]; unsigned id=0;
@@ -1493,7 +1523,9 @@ static void amb_knob(unsigned knob,int delta)
             id=amb_master_macros[knob];amb.global[id]=(int16_t)clamp(amb.global[id]+(knob==3?-delta*2:delta*4),GP[id].min,GP[id].max);
         } else {
             if(ambr.view==0) l=&amb.layer[ambr.target-1];
+            unsigned before=l->macro[knob];
             l->macro[knob]=(uint8_t)clamp(l->macro[knob]+delta*2,0,127);
+            if(ambr.view==1)amb_remember_edit(ROUTE_MACRO+knob,before,l->macro[knob]);
         }
     } else if(ambr.view==1) {
         if(ambr.page==1) id=amb_sound_id(l,ambr.bank,knob);
@@ -1501,31 +1533,55 @@ static void amb_knob(unsigned knob,int delta)
         else if(ambr.page==3) {
             if(knob==0)id=P_LWAVE;
             else if(knob==1)id=P_LRATE;
-            else if(knob==2)l->lfo_depth=(uint8_t)clamp(l->lfo_depth+delta*2,0,100);
+            else if(knob==2){
+                unsigned before=l->lfo_depth;
+                l->lfo_depth=(uint8_t)clamp(l->lfo_depth+delta*2,0,100);
+                amb_remember_edit(ROUTE_COUNT,before,l->lfo_depth);
+            }
             else l->lfo_dest=amb_route_turn(l,delta);
         } else if(ambr.page==4) {
             id=amb_pattern_param(l,knob);
             if(!l->generated)amb_manual_knob(l,knob,delta);
             else if(l->role==4) {
+                static const uint8_t routes[]={ROUTE_DENSITY,ROUTE_SWING,ROUTE_FILL,ROUTE_MUTATE};
                 uint8_t *v0=knob==0?&l->density:knob==1?&l->swing:knob==2?&l->fill:&l->mutation;
+                unsigned before=*v0;
                 *v0=(uint8_t)clamp(*v0+delta*2,0,100);
+                amb_remember_edit(routes[knob],before,*v0);
             } else if(knob==0){
+                unsigned before=l->mode;
                 l->mode=(uint8_t)amb_wrap(l->mode+delta,l->role==0?AMB_CHANT+1:5);
+                amb_remember_edit(ROUTE_MODE,before,l->mode);
                 ambr.grid_cue[ambr.edit_layer]=(amb_grid_cue_t){0};
+            } else if(!id){
+                static const uint8_t routes[]={ROUTE_MODE,ROUTE_SPEED,ROUTE_DENSITY,ROUTE_FOLLOW};
+                uint8_t *v0=knob==1?&l->speed:knob==2?&l->density:&l->follow;
+                unsigned before=*v0;
+                *v0=(uint8_t)clamp(*v0+delta*(knob==1?1:2),0,knob==1?3:100);
+                amb_remember_edit(routes[knob],before,*v0);
             }
-            else if(!id && knob==1) l->speed=(uint8_t)clamp(l->speed+delta,0,3);
-            else if(!id && knob==2) l->density=(uint8_t)clamp(l->density+delta*2,0,100);
-            else if(!id)l->follow=(uint8_t)clamp(l->follow+delta*2,0,100);
-        } else if(ambr.page==6)amb.layer_eq[ambr.edit_layer][knob]=(int8_t)clamp(amb.layer_eq[ambr.edit_layer][knob]+delta,-12,12);
-        else if(ambr.page==5) {
+        } else if(ambr.page==6){
+            int8_t *value=&amb.layer_eq[ambr.edit_layer][knob];
+            int before=*value;
+            *value=(int8_t)clamp(before+delta,-12,12);
+            amb_remember_edit(ROUTE_EQ+knob,before,*value);
+        } else if(ambr.page==5) {
             if(ambr.fx==5){
-                int v=amb.grain[ambr.edit_layer][knob]+delta*(knob==2?1:2);
-                amb.grain[ambr.edit_layer][knob]=clamp(v,knob==2?-12:0,knob==2?12:100);
+                int8_t *value=&amb.grain[ambr.edit_layer][knob];
+                int before=*value;
+                *value=(int8_t)clamp(before+delta*(knob==2?1:2),knob==2?-12:0,knob==2?12:100);
+                amb_remember_edit(ROUTE_GRAIN+knob,before,*value);
             }else if(ambr.fx==2 && knob==3){
-                amb.global[G_DTYPE]=param_turn(&GP[G_DTYPE],amb.global[G_DTYPE],delta);
+                int before=amb.global[G_DTYPE];
+                amb.global[G_DTYPE]=param_turn(&GP[G_DTYPE],before,delta);
+                amb_remember_edit(ROUTE_COUNT,before,amb.global[G_DTYPE]);
             }else id=amb_fx_id(l,knob);
         }
-        if(id) {const param_desc_t *d=amb_param_desc(l,id);l->base[id]=(int16_t)param_turn(d,l->base[id],delta);}
+        if(id){
+            int before=l->base[id];
+            l->base[id]=(int16_t)param_turn(amb_param_desc(l,id),before,delta);
+            if(before!=l->base[id])amb_remember_edit(amb_param_route(id),before,l->base[id]);
+        }
     } else if(ambr.view==2) {
         if(ambr.page==5)return;
         if(ambr.page==7){
@@ -1588,6 +1644,7 @@ static void amb_rec(void)
     if(ambr.local_preset){amb_apply_page_preset();return;}
     if(ambr.reset_pending){
         unsigned k=ambr.edit_layer,solo=amb.layer[0].solo_plus1;uint8_t p0=amb.layer[0].reserved,p1=amb.layer[1].reserved,p3=amb.layer[3].reserved;
+        ambr.last_edit_route[k]=0;
         ambr.loading=1;amb_begin_change(k);amb.layer[k]=amb_reset_layer[k];memcpy(amb.grain[k],amb_reset_grain[k],4);memcpy(amb.layer_eq[k],amb_reset_eq[k],4);
         amb.layer[0].solo_plus1=(uint8_t)solo;amb.layer[0].reserved=p0;amb.layer[1].reserved=p1;amb.layer[3].reserved=p3;
         if(!ambr.handoff[k])amb_apply_patch(k);
@@ -1730,6 +1787,14 @@ static void amb_input(void)
         }else if(home && b==B_FX){
             ambr.home_used=1;amb_monitor_requested^=1;
             amb_say(amb_monitor_requested?"ALL FX BYPASSED":"EFFECTS ON");
+        }else if(home && b==B_LFO && ambr.view==1){
+            unsigned saved=ambr.last_edit_route[ambr.edit_layer];
+            amb_layer_t *l=&amb.layer[ambr.edit_layer];
+            ambr.home_used=1;ambr.reset_pending=ambr.recording=0;ambr.page=3;
+            ambr.proposal=ambr.piece_preview=255;
+            if(!saved)amb_say("TURN A LAYER KNOB FIRST");
+            else if(saved>ROUTE_COUNT || !amb_route_name(l,saved-1))amb_say("THIS CONTROL CANNOT USE LFO");
+            else {l->lfo_dest=(uint8_t)(saved-1);amb_say("LAST EDIT LINKED TO LFO");}
         }else if((home && b==B_SEQ) || (b==B_SCL && (ambr.view==0 || ambr.view==4))){
             ambr.view=ambr.view==4?0:4;ambr.home_used=(uint8_t)home;
             ambr.proposal=ambr.piece_preview=255;ambr.reset_pending=ambr.recording=ambr.overwrite=0;
@@ -2691,7 +2756,8 @@ static void amb_draw(void)
         amb_text(10,44,ambr.view==1 && ambr.page==1?"MASTER controls the edited layer.":"MASTER controls the selected level.",ADIM,39);
         if(!ambr.view)amb_text(10,57,"HOME + PLAY locks the layer sound",ADIM,39);
         else if(amb_page_bank())amb_text(10,57,"PRESETS variation / REC apply",ADIM,39);
-        amb_text(10,75,"HOME close / HOME + FX bypass",AQUEUE,37);
+        if(ambr.view==1)amb_text(10,69,"HOME + LFO links last knob edit",ADIM,39);
+        amb_text(10,82,"HOME close / HOME + FX bypass",AQUEUE,37);
         cv_blit_cells(0,147);
         return;
     }
