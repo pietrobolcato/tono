@@ -4,6 +4,12 @@
 int main(void)
 {
     memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();
+    amb_fresh_travel();
+    assert(amb_walk_value(0)==WALK_BARS && amb_walk_value(1)==4 && amb_walk_value(2)==16 && amb_walk_value(3)==32);
+    assert(amb_journey_style()==2 && amb_endless() && amb_crossfade() && amb.release_ms==6000);
+    assert(!amb_lane_value(0,0) && !amb_lane_value(1,0));
+    /* Imported legacy settings take precedence, including an explicit Off. */
+    memset(amb_walk_config(),0,6);
     assert(!amb_walk_value(0) && !amb_journey_style());
     press(B_GLO);turn(EN_SELECT,1);unsigned interval=amb.auto_index;
     press(B_SCL);assert(ambr.page==6);press(B_EDIT);assert(ambr.page==7);

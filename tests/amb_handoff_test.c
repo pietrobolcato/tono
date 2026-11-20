@@ -36,7 +36,7 @@ int main(void)
 {
     check_eq_display();
     unsigned i,k,old_engine;int32_t out[CTL*2];amb_piece_t old;
-    memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();amb_fixture_scene(0);favorites.factory[15][13]=1;assert(amb.release_ms==3000);
+    memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();amb_fixture_scene(0);favorites.factory[15][13]=1;assert(amb.release_ms==6000);amb.release_ms=3000;
     amb.auto_index=0;ambr.solo=0;seq_start();for(i=0;i<FS*5u/CTL;i++)mix_block(out,CTL);
     old_engine=trk[0].engine;amb_patch(0,2,0);
     assert(ambr.handoff[0] && trk[0].engine==old_engine && trk[0].eng_req==old_engine);

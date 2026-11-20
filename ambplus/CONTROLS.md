@@ -86,6 +86,8 @@ The Texture role includes ten recorded-grain beds. Select one on EDIT → SOUND 
 
 ### Live travel and space
 
+Fresh settings use Branching Paths, Endless and Auto On. Movement waits 4–16 bars with Reach 32. New factory arrangements use a six-second tail with Crossfade selected on a fresh launch. Patterns and Layer types are off. Saved preferences and user-song tails retain their values.
+
 On HOME each ALGORITHM turn shows the signed position and colour for 1.2 seconds. The centre tick marks the loaded arrangement. GLO → THEME uses SELECT for the display theme. GLO → TRAVEL uses knob 1 for travel, knob 2 for tail time and knob 3 for crossfade or release. BOUNDED keeps the original 37 positions. ENDLESS lets you keep turning on either side. Beyond the former endpoints, harmony and orchestration keep evolving within the dark or bright palette. The setting persists between sessions.
 
 On a layer’s FX → DELAY page, knob 1 sets that layer’s send and knob 4 chooses the shared echo type. GLO → MASTER FX → DELAY also controls its time and feedback. PING PONG alternates channels. SLAPBACK keeps repeats short with low feedback. The delay and reverb diagrams sketch the response to an impulse. PAN shows the smoothed position actually applied to the sounding layer.

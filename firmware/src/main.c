@@ -241,6 +241,9 @@ static __attribute__((noinline)) void cpu_clock(void)
 static void fm1_main(void)
 {
     uint32_t ms, said;
+#if AMBPLUS
+    amb_fresh_travel();
+#endif
     persist_boot();
 #if FELUCCA_OTA
     if (flash_ok)

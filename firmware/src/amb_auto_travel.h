@@ -6,6 +6,12 @@ static const char *const amb_walk_styles[]={"Long Journeys","New Chapters","Bran
 static const char *const amb_walk_clocks[]={"Off","Bars","Seconds"};
 static const char *const amb_walk_labels[]={"UNIT","MIN","MAX","REACH"};
 static uint8_t *amb_walk_config(void){return &favorites.factory[15][8];}
+/* Seed RAM before persist_boot so even an explicitly disabled saved clock wins. */
+static void amb_fresh_travel(void)
+{
+    static const uint8_t fresh[]={WALK_BARS,4,16,32,2,2}; /* Branching Paths, Endless */
+    memcpy(amb_walk_config(),fresh,sizeof fresh);
+}
 static unsigned amb_journey_style(void){unsigned v=amb_walk_config()[4];return v<3?v:0;}
 static unsigned amb_walk_value(unsigned k)
 {

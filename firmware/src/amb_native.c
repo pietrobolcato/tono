@@ -382,7 +382,7 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
     const arrangement_t *arr=scene<6?0:&arrangements[scene-6];
     unsigned i,j;
     memset(p,0,sizeof *p);p->magic=AMB_MAGIC;p->version=AMB_VERSION;
-    amb_policy_init(&p->policy,0x414d4200u+scene);p->release_ms=3000;p->master=760;
+    amb_policy_init(&p->policy,0x414d4200u+scene);p->release_ms=6000;p->master=760;
     p->key=arr?arr->key:roots[scene];p->scale=arr?arr->scale:0;p->auto_index=arr?arr->auto_index:3;
     if(arr)memcpy(p->policy.active,arr->styles,3);
     p->evolve[0]=100;p->evolve[1]=35;p->evolve[2]=20;p->evolve[3]=15;
