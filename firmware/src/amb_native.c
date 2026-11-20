@@ -2139,15 +2139,15 @@ static void amb_guidance(const amb_layer_t *l,const char **first,const char **se
 static const char *amb_screen_help(void)
 {
     static const char *const edit[]={
-        "Choose the role this layer plays.", "Choose a patch and shape its sound.",
+        "Choose the layer role.", "Choose and edit a patch.",
         "Shape how each note starts and ends.", "Set how a parameter moves over time.",
         "Edit this layer's rhythm and notes.", "Shape the layer and its effect sends.",
-        "Balance the frequencies of this layer."
+        "Adjust the layer EQ."
     };
     static const char *const global[]={
-        "Set how the piece changes as it plays.", "Set the key and scale of the piece.",
-        "Choose how the layers generate music.", "Shape the effects shared by all layers.",
-        "Balance the tone of the whole mix.", "Choose the instrument display theme.", "Set travel and sound transitions.", "Steer the song automatically."
+        "Set how the piece changes as it plays.", "Set the key and scale.",
+        "Choose how the layers generate music.", "Adjust shared effects.",
+        "Adjust the master EQ.", "Choose a display theme.", "Set travel and sound transitions.", "Steer the song automatically."
     };
     if(ambr.reset_pending)return "Restore the layer from the loaded piece.";
     if(ambr.piece_preview!=255)return "Load a factory piece or a saved slot.";
