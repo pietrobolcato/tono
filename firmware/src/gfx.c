@@ -782,10 +782,11 @@ static int32_t kern(const aafont_t *f, uint32_t a, uint32_t b)       /* 1/16 px 
     if (ga < 0 || (uint32_t)ga >= f->nk)
         return 0;
     if (f->classes) {
-        if (b > 255u)
+        int32_t gb = glyph_at(f, b);
+        if (gb < 0)
             return 0;
         ga = f->classes[ga];
-        b = f->classes[f->nk + b];
+        b = f->classes[f->nk + gb];
     }
     lo = f->ki[ga];
     hi = f->ki[ga + 1];

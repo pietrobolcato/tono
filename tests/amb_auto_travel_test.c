@@ -14,9 +14,11 @@ int main(void)
     press(B_EDIT);turn(EN_K1,1);assert(amb_walk_value(0)==WALK_SECONDS);
     press(B_EDIT);assert(ambr.page==6);turn(EN_K4,-1);assert(!amb_walk_value(0) && amb_walk_unit()==WALK_SECONDS);
     turn(EN_K4,1);assert(amb_walk_value(0)==WALK_SECONDS);
+    turn(EN_SELECT,1);assert(amb_journey_style()==1);
     press(B_EDIT);
     assert(ambr.view==2 && ambr.page==7 && !amb_page_bank());
-    turn(EN_SELECT,1);assert(amb_journey_style()==1);
+    assert(!amb_vary_patterns());turn(EN_SELECT,1);assert(amb_vary_patterns());
+    turn(EN_SELECT,-1);assert(!amb_vary_patterns());
     turn(EN_K1,2);turn(EN_K2,-3);turn(EN_K3,-3);
     assert(amb_walk_value(0)==WALK_SECONDS && amb_walk_value(1)==1 && amb_walk_value(2)==1);
     uint8_t pref[5];memcpy(pref,amb_walk_config(),sizeof pref);
@@ -48,6 +50,14 @@ int main(void)
         }
         assert(low<-3 && high>3);
     }
+    song.playing=0;amb_walk_config()[4]=0;amb_journey_recentre();
+    amb.policy.active[0]=8;memset(amb.policy.pending,255,3);
+    amb_landscape_turn(4);assert(amb.policy.active[0]==8);
+    favorites.factory[15][13]|=4;amb_anchor_patterns();
+    song.playing=1;amb_landscape_turn(4);assert(amb.policy.active[0]==8);
+    amb_travel_patterns(1);amb_policy_boundary(&amb.policy,64);assert(amb.policy.active[0]==0);
+    amb_landscape_turn(-4);amb_travel_patterns(1);amb_policy_boundary(&amb.policy,128);
+    assert(amb.policy.active[0]==8);
     puts("Automatic travel: clock wrap, fixed/random intervals, bounds, all three routes, manual priority, persistent settings and STOP PASS");
     return 0;
 }

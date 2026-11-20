@@ -184,7 +184,7 @@ def huff_unpack(hc, data, n):
     return out
 
 
-def kern_classes(rows):
+def kern_classes(rows, glyph_codes):
     """Left and right glyphs with identical kerning share a lookup class."""
     columns = list(zip(*rows))
     distinct = list(dict.fromkeys(columns))
@@ -199,7 +199,8 @@ def kern_classes(rows):
                 kp.extend([i, delta & 255])
         ki.append(len(kp) // 2)
     assert all(unique[left[a]][right[b]] == v for a, row in enumerate(rows) for b, v in enumerate(row))
-    return left + right, ki, kp
+    assert all(b in glyph_codes or not any(columns[b]) for b in range(256))
+    return left + [right[b] for b in glyph_codes], ki, kp
 
 
 def emit(face, tracking, gamma, kern_min, compact=False):
@@ -258,7 +259,7 @@ def emit(face, tracking, gamma, kern_min, compact=False):
         rows = [[0] * 256 for _ in range(nki)]
         for ga, b, d in pairs:
             rows[ga][b] = d
-        classes, ki, kp = kern_classes(rows)
+        classes, ki, kp = kern_classes(rows, gi)
         lines.append(ar.c_array(f"AF_{name}_CLASSES", "uint8_t", classes, 24))
     psh = phases.bit_length() - 1
     lines.append(f"/* {name}: {os.path.basename(font.split('#')[0])} {px}px, h {r['h']}, baseline {r['asc']}, "

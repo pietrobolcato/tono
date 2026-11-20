@@ -14,11 +14,39 @@ static struct {
     uint8_t indicator;
     uint8_t distance, pending_layers, anchor, previous_sound[4];
     int8_t direction;
+    int32_t pattern_origin;
+    uint8_t pattern_base[3];
     uint32_t chapter;
     amb_walk_t walk;
 } travel;
 
 static int amb_endless(void){return (favorites.factory[15][13]&2)!=0;}
+static int amb_vary_patterns(void){return (favorites.factory[15][13]&4)!=0;}
+static int amb_pattern_position(void)
+{
+    return amb_journey_style()?(int)travel.chapter:travel.wanted;
+}
+static void amb_anchor_patterns(void)
+{
+    travel.pattern_origin=amb_pattern_position();
+    for(unsigned f=0;f<3;f++)
+        travel.pattern_base[f]=amb.policy.pending[f]==255?amb.policy.active[f]:amb.policy.pending[f];
+}
+static void amb_travel_patterns(int playing)
+{
+    if(!travel.ready || !amb_vary_patterns())return;
+    int stage=amb_pattern_position()-travel.pattern_origin;
+    if(!amb_journey_style())stage/=4;
+    int distance=stage<0?-stage:stage;
+    for(unsigned f=0;f<3;f++){
+        int advances=(distance+2-(int)f)/3;
+        int count=(int)amb_style_count(f);
+        int target=(travel.pattern_base[f]+(stage<0?-advances:advances)%count+count)%count;
+        if(target==amb.policy.active[f] || amb.policy.pending[f]!=255)continue;
+        amb_policy_choose(&amb.policy,f,(unsigned)target,playing);
+        if(playing)break;
+    }
+}
 static const char *amb_landscape_name(int position)
 {
     if(position<=-12)return "DARK / DRIVEN";
@@ -42,6 +70,7 @@ static void amb_landscape_start(void)
     for(unsigned k=0;k<4;k++)for(unsigned j=0;j<4;j++)
         travel.origin_macro[k][j]=amb.layer[k].macro[j];
     travel.origin_clip=amb.global[G_CLIP];travel.origin_echo_colour=amb.global[G_DCOLOR];
+    amb_anchor_patterns();
     travel.ready=1;
 }
 static int amb_colour_offset(unsigned role,unsigned knob,int colour)
@@ -207,7 +236,7 @@ static void amb_landscape_turn(int delta)
     else travel.wanted=clamp(next,-AMB_TRAVEL_RANGE,AMB_TRAVEL_RANGE);
     if(amb_journey_style() && delta && travel.wanted!=previous)
         amb_journey_phrase(amb_journey_style(),amb_endless()?delta:travel.wanted-previous);
-    if(!song.playing){amb_landscape_colour(1);amb_landscape_bar();}
+    if(!song.playing){amb_travel_patterns(0);amb_landscape_colour(1);amb_landscape_bar();}
     ambr.dirty=1;
     ambr.loading=0;
 }

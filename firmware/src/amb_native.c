@@ -892,6 +892,7 @@ static void amb_step(void)
         }
     }
     {uint8_t before[3];memcpy(before,amb.policy.active,3);
+        if(!(ambr.step%64u))amb_travel_patterns(1);
         amb_policy_boundary(&amb.policy,ambr.step);
         if(memcmp(before,amb.policy.active,3))for(k=0;k<4;k++)if(amb.layer[k].generated)amb_begin_change(k);
     }
@@ -1567,6 +1568,7 @@ static void amb_input(void)
     static uint8_t home0,play0;
     for(k=0;k<3;k++) if(ambr.gen_edit[k] && fm1_ms-ambr.gen_time[k]>=90u) {
         amb_policy_choose(&amb.policy,k,ambr.gen_candidate[k],song.playing);
+        amb_anchor_patterns();
         ambr.gen_edit[k]=0;ambr.dirty=1;
     }
     if(home && !home0) ambr.home_used=0;
@@ -1668,7 +1670,11 @@ static void amb_input(void)
             if(ambr.page==0) amb.auto_index=(uint8_t)amb_wrap(amb.auto_index+sel,8);
             else if(ambr.page==3) ambr.fx=(uint8_t)amb_wrap(ambr.fx+sel,4);
             else if(ambr.page==5) amb_theme_turn(sel);
-            else if(ambr.page==6 || ambr.page==7)amb_walk_adjust(4,sel);
+            else if(ambr.page==6)amb_walk_adjust(4,sel);
+            else if(ambr.page==7 && amb_vary_patterns()!=(sel>0)){
+                favorites.factory[15][13]^=4;
+                amb_anchor_patterns();settings_save();ambr.dirty=1;
+            }
             /* SELECT deliberately inert on GENERATE. */
         }
         ambr.dirty=1;
@@ -2033,7 +2039,7 @@ static void amb_guidance(const amb_layer_t *l,const char **first,const char **se
         }else if(ambr.page==5)a="SCL PAGE / SELECT FX MODULE";
     }else if(ambr.view==2){
         if(ambr.page==0){a="SELECT CHORD INTERVAL";b="ALGO CHORD / KNOBS EVOLVE";}
-        else if(ambr.page==7){a="SELECT JOURNEY STYLE";b="EDIT BACK / SCL NEXT TOPIC";}
+        else if(ambr.page==7){a="SELECT VARY PATTERNS";b="EDIT BACK / SCL NEXT TOPIC";}
         else if(ambr.page==6){a="SELECT JOURNEY STYLE";b="EDIT FOR TRAVEL TIMING";}
         else if(ambr.page==2){a="SCL PAGE / KNOBS 1-3 STYLES";b="KNOB 4 VARIATION";}
         else if(ambr.page==3)a="SCL PAGE / SELECT FX MODULE";
@@ -2434,9 +2440,10 @@ static void amb_draw(void)
             cv_bg=ABG;
         } else if(ambr.view==2 && ambr.page>=6){
             static const char *const hints[]={"Reverse to retrace your sound.","Four travel steps bring a new sound.","Keep one instrument as others change."};
-            amb_text(12,58,"JOURNEY",ADIM,20);
-            cv_text(12,77,&AF_M,amb_walk_styles[amb_journey_style()],AINK);
-            amb_text(12,100,hints[amb_journey_style()],ADIM,40);
+            int timing=ambr.page==7;
+            amb_text(12,58,timing?"VARY PATTERNS":"JOURNEY",ADIM,20);
+            cv_text(12,77,&AF_M,timing?(amb_vary_patterns()?"On":"Off"):amb_walk_styles[amb_journey_style()],AINK);
+            amb_text(12,100,timing?"SELECT changes pattern travel":hints[amb_journey_style()],ADIM,40);
             const char *status=!amb_walk_value(0)?"Auto off  /  manual turns only":
                 amb_walk_value(1)==amb_walk_value(2)?"Auto on  /  fixed interval":"Auto on  /  random interval";
             amb_text(12,126,status,AINK,36);
