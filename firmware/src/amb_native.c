@@ -174,15 +174,16 @@ static void amb_fill_patch(amb_layer_t *l,unsigned key,unsigned k,unsigned role,
     l->lfo_dest=0;l->lfo_depth=6;
     if(l->engine==ENGI_AMB_SAMPLE){l->base[P_LN7]=100;l->base[P_LN6]=20;}
     if(role==5 && patch>=8 && patch<12){
-        static const uint8_t texture[][5]={{27,42,29,6,107},{76,94,48,92,24},{80,64,32,19,11},{48,84,89,0,86}};
+        static const uint8_t texture[][5]={{27,42,29,6,107},{62,71,38,69,48},{80,64,32,19,11},{53,56,52,0,101}};
         const uint8_t *v=texture[patch-8];
         l->base[P_E1]=v[0];l->base[P_E2]=v[1];l->base[P_E3]=v[2];l->base[P_E4]=0;l->base[P_E5]=v[3];l->base[P_E6]=v[4];
     }
     if(role==5 && patch>=22){
         l->base[P_E0]=13+(patch-22);l->base[P_E1]=4;l->base[P_E6]=4;
+        if(patch==23){l->base[P_E1]=2;l->base[P_E2]=-9;l->base[P_E6]=76;}
     }else if(role==5 && patch>=12){
         static const int8_t texture[][3]={
-            {0,-2,39},{1,0,46},{2,-5,25},{3,3,52},{4,-4,26},
+            {0,-2,39},{1,0,55},{2,-5,25},{3,3,52},{4,-4,26},
             {5,-3,55},{0,-14,65},{1,8,58},{2,-13,36},{4,-16,60}
         };
         const int8_t *bed=texture[patch-12];

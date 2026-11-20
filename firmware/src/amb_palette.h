@@ -13,7 +13,7 @@ static const amb_recipe_t amb_pad_patches[] = {
   AR("Slow Orbit",2,6,88,110,85,85,45,60),AR("Distant Light",0,3,102,118,90,92,32,63),
   AR("Open Aah",5,0,76,112,85,74,12,93),AR("Round Ooh",5,4,86,116,86,82,16,95),
   AR("Plainchant",5,5,52,108,91,86,8,97),AR("Reed Cloud",7,3,84,112,78,62,14,86),
-  AR("Float Garden",3,11,91,112,70,77,28,66),
+  AR("Float Garden",3,11,96,112,70,86,22,33),
   AR("Amber Brass",0,9,74,116,87,55,12,43),AR("Cedar Triangle",0,21,81,116,94,58,8,61),
   AR("Umber Pulse",0,24,90,116,82,62,15,37),
   AR("Garden Rhodes",ENGI_SINEFM,0,116,111,88,62,30,80),
@@ -34,11 +34,11 @@ static const amb_recipe_t amb_drone_patches[] = {
 };
 static const amb_recipe_t amb_bells_patches[] = {
   AR("Felt Glass",12,11,0,100,86,88,45,65),AR("Distant Chime",12,8,4,110,80,94,53,79),
-  AR("Wooden Star",12,14,0,86,92,65,37,49),AR("Rain Glass",2,9,3,94,84,84,58,72),
+  AR("Wooden Star",12,14,0,86,92,65,37,49),AR("Rain Glass",2,4,2,88,84,78,34,56),
   AR("Soft FM",12,0,8,98,86,80,39,61),AR("Resonant Dust",12,10,1,89,84,73,49,54),
   AR("Floating Metal",0,13,2,106,82,92,56,85),AR("Night Sparks",12,7,0,90,84,83,62,70),
-  AR("Felt Piano",2,8,12,90,94,76,21,92),AR("Nylon Harp",2,13,9,91,84,58,19,80),
-  AR("Porcelain",3,15,15,85,75,70,34,88),
+  AR("Felt Piano",2,8,12,90,94,76,21,92),AR("Nylon Harp",2,13,6,109,84,76,15,46),
+  AR("Porcelain",3,13,2,92,75,74,24,52),
   AR("Garden Bell",ENGI_SINEFM,1,22,102,86,80,94,90),
   AR("Willow Tine",ENGI_SINEFM,6,3,91,86,58,24,76),
   AR("Dew Bell",ENGI_SINEFM,7,13,103,81,82,44,94),
@@ -63,16 +63,16 @@ static const amb_recipe_t amb_drums_patches[] = {
 static const amb_recipe_t amb_texture_patches[] = {
   AR("Ocean Air",11,4,110,117,83,89,38,42),AR("Tape Mist",11,7,98,114,82,81,46,55),
   AR("High Air",11,0,87,108,81,93,53,68),AR("Paper Grain",11,6,28,83,78,69,43,64),
-  AR("Distant Hiss",11,5,100,116,80,92,39,53),AR("Rainfield",11,1,60,101,77,85,56,73),
+  AR("Distant Hiss",11,5,110,116,80,100,19,26),AR("Rainfield",11,1,68,101,77,79,21,33),
   AR("Organic Noise",11,0,105,115,80,88,47,60),AR("Midnight Static",11,5,96,120,76,94,37,41),
-  AR("Shore Wash",11,4,89,110,77,68,13,47),AR("Rain on Tin",11,1,36,96,76,57,18,92),
-  AR("Ember Bed",11,6,57,92,79,35,9,58),AR("Window Draft",11,0,90,112,80,61,13,75),
-  AR("Ocean Beads",15,0,90,117,83,75,18,93),AR("Cabasa Silk",15,0,78,112,80,54,14,90),
+  AR("Shore Wash",11,4,89,110,77,68,13,47),AR("Rain on Tin",11,1,40,96,76,66,13,59),
+  AR("Ember Bed",11,6,57,92,79,35,9,58),AR("Window Draft",11,0,100,112,80,71,10,45),
+  AR("Ocean Beads",15,0,90,117,83,75,18,93),AR("Cabasa Silk",15,0,83,112,80,66,14,90),
   AR("Wood Rasp",15,0,61,101,78,43,23,101),AR("Seed Rain",15,0,72,110,82,72,26,102),
   AR("Clockwork",15,0,64,106,76,38,20,87),AR("Bowed Sheet",15,0,99,119,78,87,37,98),
   AR("Undertow",15,0,108,120,86,88,24,62),AR("Wire Brush",15,0,80,117,74,81,32,102),
   AR("Dry Timber",15,0,57,102,78,31,11,75),AR("Distant Cogs",15,0,99,118,78,88,39,66),
-  AR("Eagle Landed",15,0,8,88,96,50,21,103),AR("Radio Check",15,0,7,85,94,65,35,108),
+  AR("Eagle Landed",15,0,33,88,89,99,36,71),AR("Radio Check",15,0,28,85,88,92,22,49),
   AR("Moon Address",15,0,9,94,89,54,16,101)
 };
 #undef AR
