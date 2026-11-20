@@ -2313,6 +2313,25 @@ static void amb_draw_ensemble(void)
 }
 
 #include "amb_zen.h"
+static void amb_draw_home_status(void)
+{
+    char cpu[16];
+    fmt_int(cpu, (int32_t)((song.cpu_q8 * 100u) >> 8));
+    str_cpy(cpu + str_len(cpu), "%", 2);
+    amb_text(153, 15, "CPU", ADIM, 3);
+    amb_text(175, 15, cpu, AINK, 8);
+
+    // The stock ADC thresholds give a coarse level, even on USB power.
+    int32_t level = batt_level();
+    uint16_t ink = !song.batt_raw ? ADIM : level == 0 ? AQUEUE : AINK;
+    cv_frame(215, 14, 15, 9, ink);
+    cv_rect(230, 17, 2, 3, ink);
+    for (int32_t segment = 0; segment < level; segment++)
+        cv_rect(217 + segment * 3, 16, 2, 5, ink);
+    if (!song.batt_raw)
+        cv_rect(221, 18, 3, 1, ADIM);
+}
+
 static void amb_draw(void)
 {
     unsigned i,k;char b[32];amb_layer_t *l=&amb.layer[ambr.edit_layer];
@@ -2339,9 +2358,11 @@ static void amb_draw(void)
             tag[2]='0'+(offset<0?-offset:offset);amb_text(116,8,tag,AQUEUE,3);
         }
     }
-    if(ambr.view!=4)amb_number(146,8,ambr.view==0?ambr.target+1:ambr.view==3?ambr.slot+1:ambr.view==2?amb_global_index(ambr.page)+1:ambr.page+1,AINK);
-    if(ambr.view!=4)amb_text(155,8,ambr.view==0?"/5":ambr.view==3?"/8":"/7",AINK,3);
-    amb_text(175,8,song.playing?">":"-",song.playing?TONO_ORANGE:ADIM,1);amb_number(188,8,amb.global[G_BPM],AINK);amb_text(211,8,"BPM",ADIM,3);
+    int header_y = !ambr.view && !ambr.help ? 3 : 8;
+    if(ambr.view!=4)amb_number(146,header_y,ambr.view==0?ambr.target+1:ambr.view==3?ambr.slot+1:ambr.view==2?amb_global_index(ambr.page)+1:ambr.page+1,AINK);
+    if(ambr.view!=4)amb_text(155,header_y,ambr.view==0?"/5":ambr.view==3?"/8":"/7",AINK,3);
+    amb_text(175,header_y,song.playing?">":"-",song.playing?TONO_ORANGE:ADIM,1);amb_number(188,header_y,amb.global[G_BPM],AINK);amb_text(211,header_y,"BPM",ADIM,3);
+    if(header_y==3)amb_draw_home_status();
     cv_rect(8,25,224,1,ALINE);cv_bg=ABG;
     if(ambr.help){
         amb_text(10,32,amb_screen_help(),AINK,39);

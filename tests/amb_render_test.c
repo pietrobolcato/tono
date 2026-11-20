@@ -196,6 +196,19 @@ int main(int argc,char **argv)
         ambr.view=2;ambr.page=5;if(theme)turn(EN_SELECT,1);
         for(unsigned k=0;k<4;k++)turn(EN_K1+k,1);
         assert(amb_theme()==theme);
+        ambr.view=0;
+        song.cpu_q8=320;
+        song.batt_raw=565;
+        amb.global[G_BPM]=140;
+        snprintf(name,sizeof name,"home_status_%u",theme);ar_frame(name,dir,1);
+        assert(swap16(host_screen[18*240+217])==AINK);
+        assert(swap16(host_screen[18*240+220])==AINK);
+        assert(swap16(host_screen[18*240+223])==ABG);
+        song.batt_raw=0;
+        ar_frame("home_battery_unread",dir,0);
+        assert(swap16(host_screen[18*240+217])==ABG);
+        song.cpu_q8=0;
+        amb.global[G_BPM]=72;
         ambr.view=2;ambr.page=7;
         for(timing_tab=0;timing_tab<3;timing_tab++){
             snprintf(name,sizeof name,"timing_%u_%u",theme,timing_tab);
