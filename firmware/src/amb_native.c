@@ -84,7 +84,7 @@ static struct {
     int8_t solo;
     int16_t macro_smooth[4][4];
     int32_t master_smooth;
-    amb_pickup_t pickup;uint8_t pickup_target;
+    uint16_t master_raw;
     char notice[38];
 } ambr;
 static const uint16_t AMB_SCALE[4] = {0x5adu,0xab5u,0x6adu,0xad5u}; /* minor/major/dorian/lydian */
@@ -345,10 +345,11 @@ static void amb_auto_tick(void)
     if(auto_walk.armed){
         int delta=amb_auto_move(dice);
         if(delta)amb_landscape_turn(delta);
+        amb_follow_travel_tick();
     }
     unsigned lo=amb_walk_value(1),hi=amb_walk_value(2);
     unsigned delay=lo+((dice>>2)%(hi>=lo?hi-lo+1:1));
-    auto_walk.due=clock==WALK_BARS?(now/16+delay)*16:now+1000*delay;
+    auto_walk.due=clock==WALK_BARS?(now/16+delay)*16:now+amb_clock_interval(clock)*delay;
     auto_walk.armed=1;
 }
 
@@ -472,7 +473,6 @@ static void amb_install(const amb_piece_t *p)
     memset(ambr.recent_valid,0,sizeof ambr.recent_valid);memset(ambr.playhead_valid,0,sizeof ambr.playhead_valid);memset(&ambr.harmony_walk,0,sizeof ambr.harmony_walk);ambr.reset_pending=0;
     ambr.solo=(int8_t)amb.layer[0].solo_plus1-1;ambr.chord_q=ambr.proposal=255;
     for(k=0;k<4;k++)if(!ambr.handoff[k])amb_apply_patch(k);
-    amb_pickup_arm(&ambr.pickup,ambr.target?amb.layer[ambr.target-1].level*1023u/127u:amb.master);
     if(amb.policy.active[0]==8)for(k=0;k<4;k++)ambr.voicing[k]=50+(int)k*7;
     amb_revoice();ambr.loading=0;ambr.dirty=1;
 }
@@ -495,7 +495,7 @@ static void amb_init(void)
     usb_duplex_switch(1);
 #endif
     amb_speech_init();tono_init_tables();
-    memset(&ambr,0,sizeof ambr);amb_factory(AMB_SCENE_GARDEN);amb_scan_slots();
+    memset(&ambr,0,sizeof ambr);ambr.master_raw=1024;amb_factory(AMB_SCENE_GARDEN);amb_scan_slots();
     ambr.dirty=1; kb_mask=0;perf_mask=0;song.grid=2;
 }
 static void amb_release(unsigned k)
@@ -928,7 +928,6 @@ static void amb_step(void)
     }
     {uint8_t before[3];memcpy(before,amb.policy.active,3);
         if(!(ambr.step%16u))amb_ensemble_downbeat();
-        if(!(ambr.step%64u))amb_travel_patterns(1);
         amb_policy_boundary(&amb.policy,ambr.step);
         if(memcmp(before,amb.policy.active,3))for(k=0;k<4;k++)if(amb.layer[k].generated)amb_begin_change(k);
     }
@@ -994,13 +993,16 @@ static unsigned amb_level_feedback(void)
 static void amb_master(int32_t raw,int boot)
 {
     unsigned target=ambr.view==1 && ambr.page==1?ambr.edit_layer+1:ambr.target;
-    if(target!=ambr.pickup_target){
-        ambr.pickup_target=target;
-        amb_pickup_arm(&ambr.pickup,target?amb.layer[target-1].level*1023u/127u:amb.master);
+    if(raw<0 || raw>1023)return;
+    if(boot || ambr.master_raw>1023){
+        ambr.master_raw=(uint16_t)raw;
+        if(boot){amb.master=(uint16_t)raw;ambr.master_smooth=raw*256;}
+        return;
     }
-    if(raw<0 || raw>1023) return;
-    if(boot) { amb.master=(uint16_t)raw;ambr.master_smooth=raw*256;amb_pickup_arm(&ambr.pickup,(uint16_t)raw); }
-    if(!amb_pickup_read(&ambr.pickup,raw)) return;
+    // Only act on physical motion. Changing target or loading a song is silent.
+    int delta=raw-ambr.master_raw;
+    if(delta>-4 && delta<4 && ((raw!=0 && raw!=1023) || !delta))return;
+    ambr.master_raw=(uint16_t)raw;
     if(target==0){amb.master=(uint16_t)raw;if(ambr.piece_transition)ambr.piece_master=(uint16_t)raw;}
     else {
         unsigned level=(unsigned)raw*127u/1023u;
@@ -1255,7 +1257,6 @@ static void amb_target(unsigned target)
 {
     ambr.target=(uint8_t)(target%5);
     if(target) {ambr.edit_layer=(uint8_t)(target-1);song.sel=target-1;}
-    amb_pickup_arm(&ambr.pickup,target?amb.layer[target-1].level*1023u/127u:amb.master);
     ambr.dirty=1;
 }
 static const param_desc_t *amb_param_desc(const amb_layer_t *l,unsigned id)
@@ -1451,7 +1452,6 @@ static void amb_knob(unsigned knob,int delta)
     if(ambr.view==4){
         amb_layer_t *part=&amb.layer[knob];
         int level=clamp(part->level+delta*2,0,127);
-        if(level!=part->level && ambr.target==knob+1)amb_pickup_arm(&ambr.pickup,level*1023u/127u);
         part->level=(uint8_t)level;ambr.dirty=1;return;
     }
     if(ambr.view==0 || (ambr.view==1 && ambr.page==0)) {
@@ -1497,8 +1497,7 @@ static void amb_knob(unsigned knob,int delta)
         if(ambr.page==5)return;
         if(ambr.page==7){
             if(timing_tab)amb_lane_adjust(timing_tab-1,knob,delta);
-            else if(knob)amb_walk_adjust(knob,delta);
-            else amb_walk_clock(delta>0?WALK_SECONDS:WALK_BARS,amb_walk_value(0)!=0);
+            else amb_walk_adjust(knob,delta);
             return;
         }
         if(ambr.page==6){
@@ -1560,7 +1559,6 @@ static void amb_rec(void)
         amb.layer[0].solo_plus1=(uint8_t)solo;amb.layer[0].reserved=p0;amb.layer[1].reserved=p1;
         if(!ambr.handoff[k])amb_apply_patch(k);
         amb_travel_rebase(k);ambr.recent_valid[k]=0;ambr.reset_pending=0;ambr.loading=0;
-        if(ambr.target==k+1)amb_pickup_arm(&ambr.pickup,amb.layer[k].level*1023u/127u);
         amb_say("TRACK RESTORED TO LOADED PIECE");return;
     }
     if(ambr.view==2 && ambr.page==2)return;
@@ -1641,7 +1639,6 @@ static void amb_input(void)
     static uint8_t home0,play0;
     for(k=0;k<3;k++) if(ambr.gen_edit[k] && fm1_ms-ambr.gen_time[k]>=90u) {
         amb_policy_choose(&amb.policy,k,ambr.gen_candidate[k],song.playing);
-        amb_anchor_patterns();
         ambr.gen_edit[k]=0;ambr.dirty=1;
     }
     if(home && !home0) ambr.home_used=0;
@@ -1803,8 +1800,17 @@ static int amb_rec_action(void)
     if(ambr.view==2 && ambr.page==2)return 0;
     return amb_pending_ready || ambr.proposal!=255 || ambr.chord_q!=255 || ambr.piece_preview!=255 || ambr.view==3 || (ambr.view==1 && ambr.page==4);
 }
+static int amb_zen_fullscreen(void)
+{
+    return ambr.zen && !ambr.view && !ambr.help && ambr.piece_preview==255;
+}
 static void amb_leds(void)
 {
+    if(amb_zen_fullscreen()){
+        for(unsigned k=0;k<FM1_NCOL;k++)
+            fm1_led[k]=fm1_led_dim[k]=fm1_led_breath[k]=fm1_led_mid[k]=fm1_led_hi[k]=0;
+        return;
+    }
     uint8_t lit[FM1_NCOL]={0},dim[FM1_NCOL]={0},breath[FM1_NCOL]={0},hi[FM1_NCOL]={0};unsigned b,k;
     int pcs[4],nt=amb_chord_tones(amb_pool(),amb.key,amb.chord,pcs);
     led_pos_init();
@@ -1962,8 +1968,8 @@ static void amb_knob_value(unsigned knob,char *label,char *value)
                 unsigned lane=timing_tab-1,unit=amb_lane_value(lane,1);
                 str_cpy(label,labels[knob],16);
                 if(!knob)str_cpy(value,amb_lane_value(lane,0)?"On":"Off",24);
-                else if(knob==1)str_cpy(value,lane_units[unit],24);
-                else if(!unit || unit==3)str_cpy(value,"-",24);
+                else if(knob==1)str_cpy(value,unit==LANE_FOLLOW?"Follow Travel":amb_walk_clocks[unit],24);
+                else if(unit==LANE_FOLLOW)str_cpy(value,"-",24);
                 else fmt_int(value,amb_lane_value(lane,knob));
                 return;
             }
@@ -2339,7 +2345,7 @@ static void amb_draw(void)
     ambr.last_draw=fm1_ms;ambr.dirty=0;
     if(fm1_ms-travel.turned_ms>=1200u)travel.indicator=0;
     static uint8_t was_zen;
-    unsigned zen_layout=ambr.zen && !ambr.view && !ambr.help && ambr.piece_preview==255;
+    unsigned zen_layout=amb_zen_fullscreen();
     if(zen_layout!=was_zen){dc_frame(1);was_zen=(uint8_t)zen_layout;}
     if(zen_layout){amb_draw_zen();return;}
     cv_begin(240,147,ABG);
@@ -2560,7 +2566,11 @@ static void amb_draw(void)
             amb_text(12,100,timing?"SELECT chooses timing lane":hints[amb_journey_style()],ADIM,40);
             const char *status=!amb_walk_value(0)?"Auto off  /  manual turns only":
                 amb_walk_value(1)==amb_walk_value(2)?"Auto on  /  fixed interval":"Auto on  /  random interval";
-            if(timing && timing_tab)status=timing_tab==1?"Rotate rhythm, phrase, interplay":"Replace one generated layer";
+            if(timing && timing_tab){
+                unsigned lane=timing_tab-1;
+                status=amb_lane_value(lane,1)==LANE_FOLLOW?"Follows the Auto Travel clock":
+                    timing_tab==1?"Rotate rhythm, phrase, interplay":"Replace one generated layer";
+            }
             amb_text(12,126,status,AINK,36);
         } else if(ambr.view==2 && ambr.page==4) {
             amb_eq_plot(amb.eq,0);
@@ -2610,7 +2620,7 @@ static void amb_draw(void)
         amb_guidance(l,&first,&second);
         amb_text(10,8,first,AINK,39);
         amb_text(10,23,second,AINK,39);
-        amb_text(10,44,ambr.view==1 && ambr.page==1?"MASTER adjusts this layer after pickup.":"MASTER picks up the saved level.",ADIM,39);
+        amb_text(10,44,ambr.view==1 && ambr.page==1?"MASTER controls the edited layer.":"MASTER controls the selected level.",ADIM,39);
         if(amb_page_bank())
             amb_text(10,57,"PRESETS variation / REC apply",ADIM,39);
         amb_text(10,75,"HOME close / HOME + FX bypass",AQUEUE,37);

@@ -17,6 +17,10 @@ int main(void)
     fm1_in.buttons|=1u<<panel.btn[B_HOME];frame();press(B_ARP);
     fm1_in.buttons&=~(1u<<panel.btn[B_HOME]);frame();
     assert(ambr.zen && !ambr.view);
+    song.playing=1;fm1_in.notes=1;amb_leds();
+    for(unsigned i=0;i<FM1_NCOL;i++)
+        assert(!(fm1_led[i] | fm1_led_dim[i] | fm1_led_breath[i] | fm1_led_mid[i] | fm1_led_hi[i]));
+    song.playing=0;fm1_in.notes=0;
     turn(EN_ALGO,4);assert(travel.wanted==4);
     press(B_SCL);assert(ambr.zen_train && ambr.zen);
     amb_prepare();trk[0].engine=trk[0].eng_req;trk[0].xf_on=0;
@@ -45,6 +49,8 @@ int main(void)
         assert(changed<240*240/4);
     }
     press(B_HOME);assert(!ambr.zen && !ambr.view);
-    puts("Zen HOME controls, actual onset, decay, muted voice and exit PASS");
+    amb_leds();
+    assert(fm1_led[panel.btn[B_PLAY]>>3] & (1u<<(panel.btn[B_PLAY]&7)));
+    puts("Zen LED blackout and restore, HOME controls, actual onset, decay, muted voice and exit PASS");
     return 0;
 }

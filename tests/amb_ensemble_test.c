@@ -98,7 +98,7 @@ int main(void)
     press(B_HOME);assert(!ambr.help && ambr.view==1 && ambr.page==1);
     shortcut(B_SEQ);assert(ambr.view==4 && song.grid==2);
     for(k=0;k<4;k++){turn(EN_K1+k,-1);assert(amb.layer[k].level<saved.layer[k].level);}
-    assert(ambr.target==1 && !ambr.pickup.picked);press(B_HOME);assert(ambr.view==0);
+    assert(ambr.target==1);press(B_HOME);assert(ambr.view==0);
     audit_controls();
     puts("Factory scenes, expanded recipe bounds, vocal save/recall, modal help and ensemble controls PASS");
     return 0;

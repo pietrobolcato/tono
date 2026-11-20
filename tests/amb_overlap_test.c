@@ -26,12 +26,13 @@ int main(void)
     for(unsigned i=0;i<FS/2/CTL;i++)mix_block(out,CTL);
     assert(trk[0].eng_req==next.layer[0].engine && (ambr.handoff[4] || ambr.handoff[5]));
     song.playing=0;
-    /* Pot uses the edited layer and restores HOME pickup on exit. */
-    ambr.view=0;amb_target(0);unsigned master=amb.master;
+    /* Pot uses the edited layer and returns to the HOME target on exit. */
+    ambr.view=0;amb_target(0);amb_master(500,1);unsigned master=amb.master;
     ambr.view=1;ambr.page=1;ambr.edit_layer=3;
     amb_master(0,0);amb_master(1023,0);
     assert(amb.layer[3].level==127 && amb.master==master && ambr.target==0);
     ambr.view=0;amb_master(1023,0);assert(amb.master==master);
+    amb_master(400,0);assert(amb.master==400 && amb.layer[3].level==127);
     /* A captured impulse is re-emitted through the windowed grain heads. */
     memset(&amb_grain[0],0,sizeof amb_grain[0]);amb_grain_controls[0][0]=100;
     amb_grain_controls[0][1]=58;amb_grain_controls[0][2]=7;amb_grain_controls[0][3]=40;
@@ -57,5 +58,5 @@ int main(void)
     assert(amb_fade_level(0,65536)==32768);
     assert(voice_victim(&trk[0],0,&victim)==NVOICE && quiet_tail(&trk[0],&victim)==NVOICE);
     puts("Single-layer crossfade keeps sibling gains and voices PASS");
-    printf("Concurrent old and new synth voices for %u frames, song overlap, layer gain pickup and granular return PASS\n",overlap_frames);
+    printf("Concurrent old and new synth voices for %u frames, song overlap, absolute layer gain and granular return PASS\n",overlap_frames);
 }

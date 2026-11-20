@@ -25,7 +25,7 @@ int main(void)
     assert(ambr.view==2 && ambr.page==7 && !amb_page_bank());
     assert(!amb_vary_patterns());turn(EN_SELECT,1);turn(EN_K1,1);assert(amb_vary_patterns());
     turn(EN_K1,-1);turn(EN_SELECT,-1);assert(!amb_vary_patterns());
-    turn(EN_K1,2);turn(EN_K2,-3);turn(EN_K3,-3);
+    turn(EN_K2,-3);turn(EN_K3,-3);
     assert(amb_walk_value(0)==WALK_SECONDS && amb_walk_value(1)==1 && amb_walk_value(2)==1);
     uint8_t pref[5];memcpy(pref,amb_walk_config(),sizeof pref);
     amb_fixture_scene(3);assert(!memcmp(amb_walk_config(),pref,sizeof pref));
@@ -59,12 +59,23 @@ int main(void)
     song.playing=0;amb_walk_config()[4]=0;amb_journey_recentre();
     amb.policy.active[0]=8;memset(amb.policy.pending,255,3);
     amb_landscape_turn(4);assert(amb.policy.active[0]==8);
-    favorites.factory[14][24]=0; /* Active 0.35 preference with no lane-clock bytes. */
-    favorites.factory[15][13]|=4;amb_anchor_patterns();
-    song.playing=1;amb_landscape_turn(4);assert(amb.policy.active[0]==8);
-    amb_travel_patterns(1);amb_policy_boundary(&amb.policy,64);assert(amb.policy.active[0]==0);
-    amb_landscape_turn(-4);amb_travel_patterns(1);amb_policy_boundary(&amb.policy,128);
-    assert(amb.policy.active[0]==8);
+    favorites.factory[14][24]=4; /* Old Journey clock. */
+    favorites.factory[14][27]=1; /* Old Move tick clock. */
+    favorites.factory[15][13]|=4|8;
+    assert(amb_lane_value(0,1)==LANE_FOLLOW && amb_lane_value(1,1)==LANE_FOLLOW);
+    amb_walk_clock(WALK_MINUTES,0);
+    assert(amb_walk_unit()==WALK_MINUTES && !amb_walk_value(0));
+    amb_walk_adjust(0,1);
+    assert(amb_walk_unit()==WALK_HOURS && !amb_walk_value(0));
+    amb_walk_adjust(2,-120);amb_walk_clock(WALK_HOURS,1);
+    song.playing=1;start=fm1_ms=0xffff0000u;amb_auto_tick();
+    assert(auto_walk.due==start+3600000u);
+    fm1_ms=auto_walk.due-1;amb_auto_tick();assert(!pattern_pending && !role_pending);
+    amb_landscape_turn(1);assert(!pattern_pending && !role_pending);
+    fm1_ms++;amb_auto_tick();assert(pattern_pending && role_pending);
+    amb_ensemble_downbeat();assert(!pattern_pending && !role_pending && amb.policy.active[0]==0);
+    amb_walk_clock(WALK_MINUTES,1);amb_auto_tick();
+    assert(auto_walk.due==fm1_ms+60000u);
     puts("Automatic travel: clock wrap, fixed/random intervals, bounds, all three routes, manual priority, persistent settings and STOP PASS");
     return 0;
 }

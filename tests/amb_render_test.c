@@ -23,7 +23,7 @@ static void ar_cover(int a,int b,int c,int d)
 static void ar_text(int a,int b,int c,int d,const char *s,unsigned f)
 {
     if(!strcmp(s,"SELECT TARGET / EDIT / SCL ENSEMBLE") ||
-       !strcmp(s,"MASTER picks up the saved level."))assert(ambr.help);
+       !strcmp(s,"MASTER controls the selected level."))assert(ambr.help);
     if(!strcmp(s,"EDIT  Timing and reach") || !strcmp(s,"EDIT  Back to Travel") ||
        !strcmp(s,"REC apply / HOME cancel"))assert(b<93);
     if(f&2u){printf("CLIPPED %s %s\n",ar_name,s);ar_bad++;}

@@ -87,7 +87,9 @@ int AMB_MAIN(int argc,char **argv)
         for(k=0;k<4;k++) for(i=0;i<P_COUNT;i++) {const param_desc_t *d=param_desc_of(amb.layer[k].engine,i);if(amb.layer[k].base[i]<d->min || amb.layer[k].base[i]>d->max) printf("bad k%u %s %d expected %d..%d\n",k,d->label,amb.layer[k].base[i],d->min,d->max);}
     }
     assert(amb_valid(&amb));
-    amb_target(1);amb_master(0,0);assert(amb.layer[0].level==92);
+    amb_master(512,1);amb_target(1);
+    amb_master(512,0);amb_master(514,0);assert(amb.layer[0].level==92);
+    amb_master(400,0);assert(amb.layer[0].level==400u*127u/1023u);
     amb_master(1023,0);assert(amb.layer[0].level==127);
     amb_target(0);before=amb;amb_master(1023,0);assert(amb.master==before.master);
     ambr.view=2;ambr.page=2;before=amb;

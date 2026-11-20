@@ -5,8 +5,8 @@ int main(void){
     memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();
     press(B_GLO);press(B_SCL);press(B_EDIT);
     turn(EN_SELECT,1);assert(timing_tab==1);
-    assert(amb_lane_value(0,1)==LANE_MOVE);
-    turn(EN_K1,1);assert(amb_vary_patterns() && amb_lane_value(0,1)==LANE_MOVE);
+    assert(amb_lane_value(0,1)==LANE_FOLLOW);
+    turn(EN_K1,1);assert(amb_vary_patterns() && amb_lane_value(0,1)==LANE_FOLLOW);
     turn(EN_K2,1);assert(amb_lane_value(0,1)==WALK_BARS);
     turn(EN_SELECT,1);turn(EN_K1,1);turn(EN_K2,1);
     assert(amb_lane_value(1,0) && amb_lane_value(1,1)==WALK_BARS);
@@ -33,8 +33,9 @@ int main(void){
     amb_layer_t locked[4];memcpy(locked,amb.layer,sizeof locked);amb_change_role();
     assert(!memcmp(locked,amb.layer,sizeof locked));
     amb_lane_adjust(0,1,-2);unsigned serial=lane_clock[0].serial;
-    amb_landscape_turn(1);assert(pattern_pending && lane_clock[0].serial==serial+1);
-    amb_landscape_turn(1);assert(lane_clock[0].serial==serial+1);
+    amb_landscape_turn(1);assert(!pattern_pending && lane_clock[0].serial==serial);
+    amb_follow_travel_tick();assert(pattern_pending && lane_clock[0].serial==serial+1);
+    amb_follow_travel_tick();assert(lane_clock[0].serial==serial+1);
     amb_ensemble_downbeat();assert(!pattern_pending);
     puts("Independent one-bar clocks, role diversity, manual track protection and valid snapshots PASS");
 }

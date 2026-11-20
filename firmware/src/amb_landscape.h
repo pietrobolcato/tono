@@ -14,18 +14,13 @@ static struct {
     uint8_t indicator;
     uint8_t distance, pending_layers, anchor, previous_sound[4];
     int8_t direction;
-    int32_t pattern_origin;
-    uint8_t pattern_base[3];
     uint32_t chapter;
     amb_walk_t walk;
 } travel;
 
-/* Unconfigured lanes follow movement. Active 0.35 pattern travel retains
- * its original journey milestones until the player chooses another clock. */
-enum { LANE_MOVE, LANE_BARS, LANE_SECONDS, LANE_JOURNEY };
+enum { LANE_FOLLOW = WALK_OFF };
 static uint8_t timing_tab;
 static const char *const timing_names[]={"Movement","Patterns","Layer types"};
-static const char *const lane_units[]={"Move tick","Bars","Seconds","Journey"};
 static struct {uint32_t due,serial;uint8_t armed;} lane_clock[2];
 static uint8_t role_pending,pattern_pending;
 static unsigned amb_lane_value(unsigned lane,unsigned knob)
@@ -33,8 +28,9 @@ static unsigned amb_lane_value(unsigned lane,unsigned knob)
     if(!knob)return !!(favorites.factory[15][13]&(4u<<lane));
     unsigned raw=favorites.factory[14][24+3*lane+knob-1];
     if(knob==1){
-        if(raw && raw<=4)return raw-1;
-        return !lane && (favorites.factory[15][13]&4)?LANE_JOURNEY:LANE_MOVE;
+        // Old Move tick and Journey records both follow the automatic clock.
+        if(raw==2 || raw==3 || raw==5 || raw==6)return raw-1;
+        return LANE_FOLLOW;
     }
     return raw && raw<=120?raw:4;
 }
@@ -44,22 +40,12 @@ static void amb_reset_lanes(void)
 }
 static int amb_endless(void){return (favorites.factory[15][13]&2)!=0;}
 static int amb_vary_patterns(void){return (favorites.factory[15][13]&4)!=0;}
-static int amb_pattern_position(void)
-{
-    return amb_journey_style()?(int)travel.chapter:travel.wanted;
-}
-static void amb_anchor_patterns(void)
-{
-    travel.pattern_origin=amb_pattern_position();
-    for(unsigned f=0;f<3;f++)
-        travel.pattern_base[f]=amb.policy.pending[f]==255?amb.policy.active[f]:amb.policy.pending[f];
-}
 static void amb_lane_adjust(unsigned lane,unsigned knob,int delta)
 {
     unsigned old=amb_lane_value(lane,knob);
     unsigned unit=amb_lane_value(lane,1);
-    if(knob>=2 && (unit==LANE_MOVE || unit==LANE_JOURNEY))return;
-    unsigned v=knob?(unsigned)clamp((int)old+delta,knob==1?0:1,knob==1?3:120):(unsigned)(delta>0);
+    if(knob>=2 && unit==LANE_FOLLOW)return;
+    unsigned v=knob==1?amb_clock_turn(old,delta,LANE_FOLLOW):knob?(unsigned)clamp((int)old+delta,1,120):(unsigned)(delta>0);
     if(v==old)return;
     uint8_t *cfg=&favorites.factory[14][24+3*lane];
     ambr.loading=1;
@@ -70,38 +56,23 @@ static void amb_lane_adjust(unsigned lane,unsigned knob,int delta)
     if(knob==2 && amb_lane_value(lane,3)<v)cfg[2]=v;
     if(knob==3 && amb_lane_value(lane,2)>v)cfg[1]=v;
     lane_clock[lane].armed=0;
-    if(lane)role_pending=0;else {pattern_pending=0;amb_anchor_patterns();}
+    if(lane)role_pending=0;else pattern_pending=0;
     ambr.loading=0;settings_save();ambr.dirty=1;
 }
 static int amb_lane_due(unsigned lane)
 {
     unsigned unit=amb_lane_value(lane,1);
-    if(unit==LANE_MOVE || unit==LANE_JOURNEY || !amb_lane_value(lane,0))return 0;
+    if(unit==LANE_FOLLOW || !amb_lane_value(lane,0))return 0;
     uint32_t now=unit==WALK_BARS?ambr.step:fm1_ms;
     int fire=lane_clock[lane].armed;
     if(fire && (int32_t)(now-lane_clock[lane].due)<0)return 0;
     unsigned lo=amb_lane_value(lane,2),hi=amb_lane_value(lane,3);
     unsigned dice=amb_hash(amb.policy.seed+lane*937u+lane_clock[lane].serial);
     unsigned wait=lo+dice%(hi>=lo?hi-lo+1:1);
-    lane_clock[lane].due=now+wait*(unit==WALK_BARS?16:1000);
+    lane_clock[lane].due=now+wait*amb_clock_interval(unit);
     lane_clock[lane].armed=1;
     if(fire)lane_clock[lane].serial++;
     return fire;
-}
-static void amb_travel_patterns(int playing)
-{
-    if(!travel.ready || !amb_vary_patterns() || amb_lane_value(0,1)!=LANE_JOURNEY)return;
-    int stage=amb_pattern_position()-travel.pattern_origin;
-    if(!amb_journey_style())stage/=4;
-    int distance=stage<0?-stage:stage;
-    for(unsigned f=0;f<3;f++){
-        int advances=(distance+2-(int)f)/3;
-        int count=(int)amb_style_count(f);
-        int target=(travel.pattern_base[f]+(stage<0?-advances:advances)%count+count)%count;
-        if(target==amb.policy.active[f] || amb.policy.pending[f]!=255)continue;
-        amb_policy_choose(&amb.policy,f,(unsigned)target,playing);
-        if(playing)break;
-    }
 }
 static const char *amb_landscape_name(int position)
 {
@@ -126,7 +97,6 @@ static void amb_landscape_start(void)
     for(unsigned k=0;k<4;k++)for(unsigned j=0;j<4;j++)
         travel.origin_macro[k][j]=amb.layer[k].macro[j];
     travel.origin_clip=amb.global[G_CLIP];travel.origin_echo_colour=amb.global[G_DCOLOR];
-    amb_anchor_patterns();
     travel.ready=1;
 }
 static int amb_colour_offset(unsigned role,unsigned knob,int colour)
@@ -328,25 +298,24 @@ static void amb_landscape_turn(int delta)
 {
     ambr.loading=1;
     if(!travel.ready)amb_landscape_start();
-    int previous=travel.wanted;unsigned chapter=travel.chapter;
+    int previous=travel.wanted;
     int next=previous+delta;
     /* Wrap the distant numeric readout while staying on the same side. */
     if(amb_endless())travel.wanted=next>999999?20+(next-1000000)%16:next< -999999?-20-(-next-1000000)%16:next;
     else travel.wanted=clamp(next,-AMB_TRAVEL_RANGE,AMB_TRAVEL_RANGE);
     if(amb_journey_style() && delta && travel.wanted!=previous)
         amb_journey_phrase(amb_journey_style(),amb_endless()?delta:travel.wanted-previous);
-    int moved=previous!=travel.wanted;
-    if(moved && amb_vary_patterns() && amb_lane_value(0,1)==LANE_MOVE && !pattern_pending){
-        lane_clock[0].serial++;pattern_pending=1;
-        if(!song.playing)amb_pattern_tick();
-    }
-    unsigned role_unit=amb_lane_value(1,1);
-    if(amb_lane_value(1,0) && ((role_unit==LANE_MOVE && moved) || (role_unit==LANE_JOURNEY &&
-       (amb_journey_style()?chapter!=travel.chapter:previous/4!=travel.wanted/4)))){
-        lane_clock[1].serial++;
-        if(song.playing)role_pending=1;else amb_change_role();
-    }
-    if(!song.playing){amb_travel_patterns(0);amb_landscape_colour(1);amb_landscape_bar();}
+    if(!song.playing){amb_landscape_colour(1);amb_landscape_bar();}
     ambr.dirty=1;
     ambr.loading=0;
+}
+
+static void amb_follow_travel_tick(void)
+{
+    if(amb_vary_patterns() && amb_lane_value(0,1)==LANE_FOLLOW && !pattern_pending){
+        lane_clock[0].serial++;pattern_pending=1;
+    }
+    if(amb_lane_value(1,0) && amb_lane_value(1,1)==LANE_FOLLOW && !role_pending){
+        lane_clock[1].serial++;role_pending=1;
+    }
 }
