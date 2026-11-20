@@ -369,11 +369,11 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
         /* Pear Orchard: two independent tine voices over a sustained Skylight drone. */
         {5,3,66,4,{8,0,0},87,33,{{0,17,1,87},{2,12,2,81},{1,12,2,48},{2,13,3,59}}},
         /* Tide Atlas: bowed bass register, nylon and linen against an ocean drum. */
-        {4,2,57,5,{5,1,0},99,25,{{0,18,2,78},{2,9,1,85},{1,13,2,71},{5,12,2,37}}},
+        {4,2,57,5,{5,3,0},99,25,{{0,18,1,82},{2,9,1,85},{1,13,2,71},{5,12,2,29}}},
         /* Pocket Orrery: crossing short pulses, with the shaker as quiet clockwork. */
         {7,1,91,3,{3,2,1},64,39,{{2,12,0,87},{0,14,2,68},{3,10,1,73},{5,15,1,29}}},
         /* Last Tram: nocturnal sax, piano and pedal with the air of a tape machine. */
-        {9,0,63,4,{2,4,0},78,19,{{0,21,2,74},{2,14,1,87},{3,9,2,65},{5,1,1,25}}}
+        {9,0,63,4,{2,4,0},78,19,{{0,21,0,108},{2,14,0,108},{3,9,1,83},{5,1,1,25}}}
     };
     _Static_assert(NELEM(AMB_SCENE)==7+NELEM(arrangements),"factory catalog");
     scene%=NELEM(AMB_SCENE);
