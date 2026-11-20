@@ -2,6 +2,7 @@
 enum { AMB_PIANO_PHRASING = 0x71 };
 static void amb_finish_new_song(amb_piece_t *p,unsigned scene)
 {
+    if(scene>AMB_SCENE_WINDOW_LIGHT)return;
     amb_layer_t *lead=&p->layer[0], *answer=&p->layer[1],
         *third=&p->layer[2], *fourth=&p->layer[3];
     p->global[G_RTYPE]=5;
