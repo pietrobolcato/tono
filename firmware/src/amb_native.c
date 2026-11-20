@@ -421,6 +421,7 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
         p->layer[0].mode=AMB_CHANT;
         p->layer[0].density=45;
         p->layer[0].base[P_SUS]=108;p->layer[0].base[P_REL]=60;
+        p->layer[0].base[P_REV]=52;
         p->layer[1].density=24;p->layer[1].base[P_TRANS]=-12;
         p->layer[2].mode=4;
     }
