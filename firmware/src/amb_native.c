@@ -102,7 +102,7 @@ static unsigned amb_global_index(unsigned page)
 static const char *const AMB_MOOD[7] = {"homeward","warmer","brighter","suspended","deeper","open","darker"};
 #include "amb_nostalgic.h"
 _Static_assert(sizeof(amb_piece_t)==1440 && AMB_VERSION==5, "upgrade embedded song before changing format");
-enum { AMB_SCENE_GARDEN = 11, AMB_SCENE_INN = 12 };
+enum { AMB_SCENE_GARDEN = 11, AMB_SCENE_INN = 12, AMB_SCENE_LAST_TRAM = 16 };
 static const char *const AMB_SCENE[] = {"Morning Air","Rain Study","Dark Water","Low Sun","Glass Room","Night Garden","Window Seats","Stone Cloister","Tidal Loom","Kite Strings","Departure Hall","Garden","Nostalgic New Inn","Pear Orchard","Tide Atlas","Pocket Orrery","Last Tram"};
 static const char *const AMB_MACRO[7][4] = {
     {"WARMTH","MOTION","SUSTAIN","SPACE"},{"WARMTH","DRIFT","SUSTAIN","SPACE"},
@@ -373,7 +373,7 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
         /* Pocket Orrery: crossing short pulses, with the shaker as quiet clockwork. */
         {7,1,91,3,{3,2,1},64,39,{{2,12,0,87},{0,14,2,68},{3,10,1,73},{5,15,1,29}}},
         /* Last Tram: nocturnal sax, piano and pedal with the air of a tape machine. */
-        {9,0,63,4,{2,4,0},78,19,{{0,21,0,108},{2,14,0,108},{3,9,1,83},{5,1,1,25}}}
+        {9,0,63,4,{2,4,1},96,19,{{0,21,1,100},{2,14,0,91},{3,9,1,53},{5,1,1,16}}}
     };
     _Static_assert(NELEM(AMB_SCENE)==7+NELEM(arrangements),"factory catalog");
     scene%=NELEM(AMB_SCENE);
@@ -417,6 +417,13 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
     }
     for(i=0;i<4;i++){p->grain[i][1]=50;p->grain[i][3]=20;}
     amb_anchor_master(p);
+    if(scene==AMB_SCENE_LAST_TRAM){
+        p->layer[0].mode=AMB_CHANT;
+        p->layer[0].density=45;
+        p->layer[0].base[P_SUS]=108;p->layer[0].base[P_REL]=60;
+        p->layer[1].density=24;p->layer[1].base[P_TRANS]=-12;
+        p->layer[2].mode=4;
+    }
     if(scene==6)p->layer[0].density=46;
     if(scene==7)p->layer[0].mode=AMB_CHANT;
     if(scene==10){

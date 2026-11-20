@@ -20,7 +20,7 @@ static const amb_recipe_t amb_pad_patches[] = {
   AR("Sunroom Keys",ENGI_SINEFM,3,22,101,88,49,15,85),
   AR("Linen Pad",ENGI_SINEFM,4,91,116,85,69,19,75),
   AR("Solo Violin",15,1,20,76,89,46,9,97),AR("Chamber Cello",15,2,24,79,88,42,6,95),
-  AR("Tenor Sax",15,4,8,60,83,38,11,96),AR("Concert Flute",15,5,15,63,90,50,14,99)
+  AR("Tenor Sax",15,4,1,56,83,27,0,102),AR("Concert Flute",15,5,15,63,90,50,14,99)
 };
 static const amb_recipe_t amb_drone_patches[] = {
   AR("Deep Current",0,22,110,120,90,75,35,28),AR("Hollow Earth",2,8,103,116,86,80,42,43),
@@ -42,7 +42,7 @@ static const amb_recipe_t amb_bells_patches[] = {
   AR("Garden Bell",ENGI_SINEFM,1,22,102,86,80,94,90),
   AR("Willow Tine",ENGI_SINEFM,6,3,91,86,58,24,76),
   AR("Dew Bell",ENGI_SINEFM,7,13,103,81,82,44,94),
-  AR("Kawai Grand",15,3,0,78,98,42,7,99)
+  AR("Kawai Grand",15,3,0,70,106,33,0,94)
 };
 static const amb_recipe_t amb_bass_patches[] = {
   AR("Round Sub",0,7,8,65,101,20,14,32),AR("Soft Pulse",0,2,14,72,96,28,23,39),

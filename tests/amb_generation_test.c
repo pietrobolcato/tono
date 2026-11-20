@@ -72,7 +72,7 @@ static void catalog(void)
 
 /* Count changes in the actual gated lead oscillator during real playback.
  * Rests, note length and reverb alone cannot make two pitch lines distinct. */
-static void sounding_lead(unsigned scene)
+static void sounding_lead(unsigned scene, unsigned min_changes, unsigned min_lines)
 {
     amb_fixture_scene(scene);seq_start();
     uint32_t lines[12]={0};unsigned last=255,changes=0,distinct=0;
@@ -96,12 +96,21 @@ static void sounding_lead(unsigned scene)
     }
     printf("%s: %u sounding pitch changes, %u distinct nonempty four-bar pitch lines in 48 bars\n",
         AMB_SCENE[scene],changes,distinct);
-    assert(changes>=30 && distinct>=8);
+    assert(changes>=min_changes && distinct>=min_lines);
 }
 int main(void)
 {
     memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();catalog();
-    sounding_lead(6);sounding_lead(7);sounding_lead(10);
+    sounding_lead(6,30,8);sounding_lead(7,30,8);sounding_lead(10,30,8);
+    amb_fixture_scene(AMB_SCENE_LAST_TRAM);
+    /* The real strikes and reeds must use their recorded decay and attack
+     * while the sequencer still supplies both parts. */
+    for(unsigned k=0;k<2;k++){
+        assert(amb.layer[k].engine==ENGI_AMB_SAMPLE && amb.layer[k].generated);
+        assert(!amb.layer[k].base[P_E3]);
+    }
+    /* Leave room for the piano answers and the rests between calls. */
+    sounding_lead(AMB_SCENE_LAST_TRAM,20,6);
     amb_fixture_scene(7);
     uint8_t notes[2];unsigned gate;
     for(unsigned key=0;key<12;key++)for(unsigned chord=0;chord<7;chord++){

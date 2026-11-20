@@ -18,7 +18,7 @@ SOURCES = [
     ("violin", VSCO, "Strings/Solo Violin/Arco Vib/LLVln_ArcoVib_C4_p.wav", 26928, 10000),
     ("cello", VSCO, "Strings/Cello Section/susvib/susvib_C3_v1_1.wav", 39970, 12000),
     ("piano", VCSL, "Chordophones/Zithers/Grand Piano, Kawai/Sustains/GPiano_sus_C4_v2_rr1_Player.wav", 34192, 12000),
-    ("tenor", VCSL, "Aerophones/Reed Aerophones/Tenor Saxophone/Non-Vibrato/BrettTenor_NV_Main_C4_vl2_rr1.wav", 27428, 10000),
+    ("tenor", VCSL, "Aerophones/Reed Aerophones/Tenor Saxophone/Vibrato/BrettTenor_Vib_Main_C4_var2.wav", 27428, 10000),
     ("flute", VSCO, "Woodwinds/Flute/susNV/LDFlute_susNV_C4_v1_1.wav", 22372, 10000),
 ]
 def steady_cello_sustain(values):
