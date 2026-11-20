@@ -102,8 +102,8 @@ static unsigned amb_global_index(unsigned page)
 static const char *const AMB_MOOD[7] = {"homeward","warmer","brighter","suspended","deeper","open","darker"};
 #include "amb_nostalgic.h"
 _Static_assert(sizeof(amb_piece_t)==1440 && AMB_VERSION==5, "upgrade embedded song before changing format");
-enum { AMB_SCENE_GARDEN = 11, AMB_SCENE_INN = 12, AMB_SCENE_TIDE_ATLAS = 14, AMB_SCENE_LAST_TRAM = 16, AMB_SCENE_FIRST_FERRY = 17 };
-static const char *const AMB_SCENE[] = {"Morning Air","Rain Study","Dark Water","Low Sun","Glass Room","Night Garden","Window Seats","Stone Cloister","Tidal Loom","Kite Strings","Departure Hall","Garden","Nostalgic New Inn","Pear Orchard","Tide Atlas","Pocket Orrery","Last Tram","First Ferry"};
+enum { AMB_SCENE_GARDEN = 11, AMB_SCENE_INN = 12, AMB_SCENE_TIDE_ATLAS = 14, AMB_SCENE_LAST_TRAM = 16, AMB_SCENE_FIRST_FERRY = 17, AMB_SCENE_EVENING_ARRAY, AMB_SCENE_FUMAROLE, AMB_SCENE_WINDOW_LIGHT };
+static const char *const AMB_SCENE[] = {"Morning Air","Rain Study","Dark Water","Low Sun","Glass Room","Night Garden","Window Seats","Stone Cloister","Tidal Loom","Kite Strings","Departure Hall","Garden","Nostalgic New Inn","Pear Orchard","Tide Atlas","Pocket Orrery","Last Tram","First Ferry","Evening Array","Fumarole","Window Light"};
 static const char *const AMB_MACRO[7][4] = {
     {"WARMTH","MOTION","SUSTAIN","SPACE"},{"WARMTH","DRIFT","SUSTAIN","SPACE"},
     {"SOFT","MOTION","SHIMMER","SPACE"},{"ROUND","PULSE","GLIDE","SPACE"},
@@ -360,6 +360,7 @@ static void amb_auto_tick(void)
 }
 
 #include "amb_first_ferry.h"
+#include "amb_three_songs.h"
 static void amb_make_scene(amb_piece_t *p,unsigned scene)
 {
     static const uint8_t roles[6][4]={{0,1,2,4},{0,5,2,4},{1,0,3,5},{0,3,2,5},{2,0,3,4},{5,1,2,4}};
@@ -382,7 +383,10 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
         /* Pocket Orrery: crossing short pulses, with the shaker as quiet clockwork. */
         {7,1,91,3,{3,2,1},64,39,{{2,12,0,87},{0,14,2,68},{3,10,1,73},{5,15,1,29}}},
         /* Last Tram: nocturnal sax, piano and pedal with the air of a tape machine. */
-        {9,0,63,4,{2,4,1},96,19,{{0,21,1,100},{2,14,0,91},{3,9,1,53},{5,1,1,16}}}
+        {9,0,63,4,{2,4,1},96,19,{{0,21,1,100},{2,14,0,91},{3,9,1,53},{5,1,1,16}}},
+        {2,0,88,5,{3,2,0},110,42,{{3,1,0,83},{0,4,1,81},{2,12,1,58},{1,7,2,49}}},
+        {5,2,70,4,{2,2,1},105,43,{{3,5,1,78},{0,6,2,67},{1,4,2,53},{5,12,2,23}}},
+        {3,1,67,3,{1,2,3},72,0,{{2,14,0,90},{2,14,1,67},{2,14,1,67},{2,14,2,37}}}
     };
     _Static_assert(NELEM(AMB_SCENE)==8+NELEM(arrangements),"factory catalog");
     scene%=NELEM(AMB_SCENE);
@@ -397,7 +401,7 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
         return;
     }
     unsigned arrangement_scene=scene==AMB_SCENE_FIRST_FERRY?AMB_SCENE_TIDE_ATLAS:scene;
-    const arrangement_t *arr=scene<6?0:&arrangements[arrangement_scene-6-(arrangement_scene>AMB_SCENE_INN)];
+    const arrangement_t *arr=scene<6?0:&arrangements[arrangement_scene-6-(arrangement_scene>AMB_SCENE_INN)-(arrangement_scene>AMB_SCENE_FIRST_FERRY)];
     unsigned i,j;
     memset(p,0,sizeof *p);p->magic=AMB_MAGIC;p->version=AMB_VERSION;
     amb_policy_init(&p->policy,0x414d4200u+scene);p->release_ms=6000;p->master=760;
@@ -448,6 +452,7 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
         p->policy.variation=18;p->evolve[1]=15;p->evolve[2]=12;
     }
     if(scene==AMB_SCENE_FIRST_FERRY)amb_first_ferry(p);
+    else if(scene>=AMB_SCENE_EVENING_ARRAY)amb_finish_new_song(p,scene);
 }
 typedef struct {amb_piece_t piece;amb_take_t take;} amb_take_song_t;
 _Static_assert(sizeof(amb_take_song_t)<=ST_PAYLOAD_MAX,"voice take fits an existing song");
@@ -828,6 +833,15 @@ static unsigned amb_generated_notes(unsigned k,unsigned step,unsigned mask,uint8
         if(mode==1)ix=3-ix;
         note=l->role==3?36+ambr.voicing[ix]%12:ambr.voicing[ix];
     }
+    if(amb.layer[2].reserved==AMB_PIANO_PHRASING && l->role==2){
+        // The piano's upper voice makes a different small arc each phrase.
+        unsigned phrase=(bar+2u*k)/4u,phase=(step/8u)%8u;
+        uint32_t gesture=amb_hash(amb.policy.seed+phrase*173u+k*29u);
+        if(k==0 || k==3){
+            if(phase==1 || phase==2)note+=((gesture>>4)&1u)?12:0;
+            if(phase==6 && (gesture&3u)==1u)note-=12;
+        }
+    }
     if(amb_hash(amb.policy.seed+k*37+step/64)%100>=amb_routed(k,ROUTE_FOLLOW,l->follow,0,100))note=(int)amb_pool_nearest(48+k*5);
     notes[0]=(uint8_t)clamp(note,24,96);return 1;
 }
@@ -900,7 +914,12 @@ static void amb_layer_step(unsigned k,unsigned step,unsigned mask)
     if(!n)return;
     if(n==1 && (l->role==0 || l->role==1 || l->role==5) && amb_carry_note(k,notes[0],gate))return;
     if(l->role==0 && amb_keep_pad(k,notes,n,gate))return;
-    amb_release(k);for(i=0;i<n;i++)amb_note(k,notes[i],i?55:65,gate);
+    unsigned velocity=65;
+    if(amb.layer[2].reserved==AMB_PIANO_PHRASING && l->role==2){
+        unsigned touch=amb_hash(amb.policy.seed+step*59u+k*71u);
+        velocity=54u+touch%20u+(step%16u==0?8u:0u);
+    }
+    amb_release(k);for(i=0;i<n;i++)amb_note(k,notes[i],i?55:velocity,gate);
 }
 static int amb_octave_delta(unsigned target)
 {
@@ -946,6 +965,10 @@ static void amb_step(void)
     mask=amb_policy_events(&amb.policy,ambr.step,part);
     for(k=0;k<4;k++) {
         unsigned delay=(ambr.step&1u)?(FS*60u/(unsigned)(amb.global[G_BPM]*4))*amb_routed(k,ROUTE_SWING,amb.layer[k].swing,0,100)/200u:0;
+        if(amb.layer[2].reserved==AMB_PIANO_PHRASING && amb.layer[k].generated && amb.layer[k].role==2){
+            unsigned touch=amb_hash(amb.policy.seed+ambr.step*151u+k*983u);
+            delay+=(FS/1000u)*(3u+touch%22u);
+        }
         if(delay) {ambr.due[k]=delay;ambr.due_step[k]=ambr.step;ambr.due_mask[k]=mask;}
         else amb_layer_step(k,ambr.step,mask);
     }
@@ -1249,7 +1272,7 @@ static int amb_stage_slot(unsigned slot)
     if(amb_pending.version<3){amb_pending.layer[0].reserved=amb_pending.layer[1].reserved=0;}
     if(amb_pending.version<4){memset(amb_pending.layer_eq,0,sizeof amb_pending.layer_eq);amb_pending.release_ms=3000;}
     if(amb_pending.version<5){
-        amb_pending.layer[3].reserved=0;
+        amb_pending.layer[2].reserved=amb_pending.layer[3].reserved=0;
         amb_anchor_master(&amb_pending);
         for(unsigned k=0;k<4;k++){amb_pending.grain[k][1]=50;amb_pending.grain[k][3]=20;}
     }
