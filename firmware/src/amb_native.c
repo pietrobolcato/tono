@@ -153,7 +153,7 @@ static void amb_fill_patch(amb_layer_t *l,unsigned key,unsigned k,unsigned role,
     if(role==0 || role==1 || role==5){l->base[P_SUS]=118;l->base[P_REL]=116;l->density=(uint8_t)(role==5?100:84);}
     if(role==5)l->mode=0;
     if(role!=0 && l->mode==AMB_CHANT)l->mode=2;
-    l->base[P_FCUT]=r->color+25;l->base[P_FRES]=12;
+    l->base[P_FCUT]=clamp(r->color+25,0,127);l->base[P_FRES]=12;
     if(r->engine==0 && role!=6)l->base[P_E4]=r->color;
     if(role==0 && patch>=13 && patch<=15){
         /* The stock brass, triangle lead and organ provide the oscillator
@@ -178,7 +178,9 @@ static void amb_fill_patch(amb_layer_t *l,unsigned key,unsigned k,unsigned role,
         const uint8_t *v=texture[patch-8];
         l->base[P_E1]=v[0];l->base[P_E2]=v[1];l->base[P_E3]=v[2];l->base[P_E4]=0;l->base[P_E5]=v[3];l->base[P_E6]=v[4];
     }
-    if(role==5 && patch>=12){
+    if(role==5 && patch>=22){
+        l->base[P_E0]=13+(patch-22);l->base[P_E1]=4;l->base[P_E6]=4;
+    }else if(role==5 && patch>=12){
         static const int8_t texture[][3]={
             {0,-2,39},{1,0,46},{2,-5,25},{3,3,52},{4,-4,26},
             {5,-3,55},{0,-14,65},{1,8,58},{2,-13,36},{4,-16,60}
@@ -420,11 +422,24 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
         p->policy.variation=18;p->evolve[1]=15;p->evolve[2]=12;
     }
 }
-static amb_piece_t amb_pending;
+typedef struct {amb_piece_t piece;amb_take_t take;} amb_take_song_t;
+_Static_assert(sizeof(amb_take_song_t)<=ST_PAYLOAD_MAX,"voice take fits an existing song");
+static amb_take_song_t amb_pending_song __attribute__((section(".pool")));
+#define amb_pending amb_pending_song.piece
+static uint8_t amb_load_take,amb_capture_page,amb_replace_take;
+static uint32_t amb_input_seen,amb_input_ms;
+
 static volatile uint8_t amb_pending_ready;
 static void amb_release(unsigned k);
 static void amb_install(const amb_piece_t *p)
 {
+    if(amb_load_take){
+        take_rec.running=amb_capture_page=amb_replace_take=0;
+        take_generation[take_active^1]++;
+        take_banks[take_active^1]=amb_pending_song.take;RING_PUBLISH();take_active^=1;
+        amb_load_take=0;
+    }
+
     unsigned k;
     ambr.loading=1;
     for(k=0;k<4;k++)amb_sound_change(k);
@@ -454,11 +469,14 @@ static void amb_start_factory(unsigned scene)
 }
 static void amb_factory(unsigned scene)
 {
-    amb_make_scene(&amb_pending,scene);amb_start_factory(scene);
+    amb_load_take=0;amb_make_scene(&amb_pending,scene);amb_start_factory(scene);
 }
 static void amb_scan_slots(void);
 static void amb_init(void)
 {
+#if defined(USB_DUPLEX) && FELUCCA_UAC
+    usb_duplex_switch(1);
+#endif
     tono_init_tables();
     memset(&ambr,0,sizeof ambr);amb_factory(AMB_SCENE_GARDEN);amb_scan_slots();
     ambr.dirty=1; kb_mask=0;perf_mask=0;song.grid=2;
@@ -1125,17 +1143,25 @@ static int amb_valid(const amb_piece_t *p)
 }
 enum { AMB_EMPTY, AMB_SAVED, AMB_UNREADABLE };
 static uint8_t amb_slot_state[AMB_SLOTS],amb_save_slot;
-static amb_piece_t amb_snapshot;
+static amb_take_song_t amb_saved_song;
+#define amb_snapshot amb_saved_song.piece
+static unsigned amb_save_bytes;
 static int amb_loadable(const amb_piece_t *p,int n)
 {
     return ((n==1400 && p->version<=3) || (n==1420 && p->version==4) ||
         (n==(int)sizeof *p && p->version==AMB_VERSION)) && amb_valid(p);
 }
+static int amb_read_slot(unsigned slot)
+{
+    int n=st_load(amb_object(slot),&amb_pending_song,sizeof amb_pending_song);
+    amb_load_take=n==(int)sizeof amb_pending_song && amb_take_valid(&amb_pending_song.take);
+    return amb_load_take?(int)sizeof amb_pending:n;
+}
 static void amb_scan_slots(void)
 {
     /* Boot scan uses the recall buffer before either transport or input is active. */
     for(unsigned i=0;i<AMB_SLOTS;i++){
-        int n=st_load(amb_object(i),&amb_pending,sizeof amb_pending);
+        int n=amb_read_slot(i);
         amb_slot_state[i]=amb_loadable(&amb_pending,n)?AMB_SAVED:
             amb_occupied(i)?AMB_UNREADABLE:AMB_EMPTY;
     }
@@ -1153,7 +1179,7 @@ static unsigned amb_next_piece(unsigned p,int clicks)
 static void amb_commit_snapshot(void)
 {
     unsigned slot=amb_save_slot-1;
-    if(st_save(amb_object(slot),&amb_snapshot,sizeof amb_snapshot))
+    if(st_save(amb_object(slot),&amb_saved_song,amb_save_bytes))
         amb_say("SAVE FAILED - OLD COPY KEPT");
     else {amb_slot_state[slot]=AMB_SAVED;amb_say("SONG SAVED");}
     amb_save_slot=0;
@@ -1164,11 +1190,18 @@ static void amb_save(void)
     if(!flash_ok){amb_say("UNSUPPORTED FLASH - SAVE REFUSED");return;}
 #endif
     if(amb_save_slot){amb_say("SAVE QUEUED UNTIL STOP");return;}
+    for(unsigned k=0;k<4;k++)if(amb.layer[k].engine==ENGI_AMB_SAMPLE && amb.layer[k].base[P_E0]==AMB_MIC_SOURCE && !amb_current_take()->length){
+        amb_say("RECORD A TAKE BEFORE SAVING");return;
+    }
     if(amb_occupied(ambr.slot) && !ambr.overwrite){ambr.overwrite=1;amb_say("OCCUPIED - REC AGAIN");return;}
 #if FELUCCA_FLASH
     uint32_t flags=irq_save();
 #endif
     amb_snapshot=amb;
+    amb_save_bytes=sizeof amb_snapshot;
+    for(unsigned k=0;k<4;k++)if(amb.layer[k].engine==ENGI_AMB_SAMPLE && amb.layer[k].base[P_E0]==AMB_MIC_SOURCE && amb_current_take()->length){
+        amb_saved_song.take=*amb_current_take();amb_save_bytes=sizeof amb_saved_song;break;
+    }
 #if FELUCCA_FLASH
     irq_restore(flags);
 #endif
@@ -1181,7 +1214,7 @@ static int amb_stage_slot(unsigned slot)
 {
     amb_pending_ready=0;
     memset(&amb_pending,0,sizeof amb_pending);
-    int n=st_load(amb_object(slot),&amb_pending,sizeof amb_pending);
+    int n=amb_read_slot(slot);
     if(!amb_loadable(&amb_pending,n)){amb_say("SLOT UNAVAILABLE");return 0;}
     if(amb_pending.version==1)amb_policy_init(&amb_pending.policy,0x414d4200u);
     if(amb_pending.version<3){amb_pending.layer[0].reserved=amb_pending.layer[1].reserved=0;}
@@ -1490,6 +1523,15 @@ static int amb_sound_picker(void)
     return ambr.view==1 && ambr.page==1 && ambr.bank==0;
 }
 #include "amb_page_presets.h"
+static int amb_mic_page(void)
+{
+    return amb_sound_picker() && amb.layer[ambr.edit_layer].role==6 && amb.layer[ambr.edit_layer].base[P_E0]==AMB_MIC_SOURCE;
+}
+static void amb_end_capture(void)
+{
+    int ok=amb_take_finish();amb_capture_page=amb_replace_take=0;
+    amb_say(ok?(amb_current_take()->period_q8?"TAKE READY - PITCH MATCHED":"TAKE READY - ROOT C4"):"NO INPUT - TAKE KEPT");
+}
 static void amb_rec(void)
 {
     if(ambr.local_preset){amb_apply_page_preset();return;}
@@ -1513,7 +1555,7 @@ static void amb_rec(void)
     if(ambr.piece_preview!=255) {
         unsigned p=ambr.piece_preview;ambr.preset_position=(uint8_t)p;
         if(p<NELEM(AMB_SCENE)){
-            amb_pending_ready=0;amb_make_scene(&amb_pending,p);
+            amb_load_take=0;amb_pending_ready=0;amb_make_scene(&amb_pending,p);
             /* A confirmed factory recall is a new take. A slot recall keeps
              * its stored seed. The default at power-on remains reproducible. */
             if(p!=AMB_SCENE_INN)amb_pending.policy.seed=amb_hash(amb_pending.policy.seed+fm1_ms+0x9e3779b9u*(++ambr.factory_take));
@@ -1521,6 +1563,14 @@ static void amb_rec(void)
             else amb_start_factory(p);
         }else amb_recall(p-NELEM(AMB_SCENE));
         ambr.piece_preview=255;return;
+    }
+    if(amb_mic_page() && ambr.proposal==255 && !amb_pending_ready){
+        if(amb_capture_page){amb_end_capture();return;}
+        if(amb_current_take()->length && !amb_replace_take){
+            amb_replace_take=1;amb_say("REPLACE TAKE? REC AGAIN");return;
+        }
+        amb_replace_take=0;amb_take_start();amb_input_seen=0;amb_input_ms=fm1_ms;amb_capture_page=1;
+        amb_say("SING NOW / REC TO FINISH");return;
     }
     if(ambr.proposal==255) {if(amb_pending_ready){amb_pending_ready=0;amb_say("QUEUED RECALL CANCELLED");}else if(ambr.chord_q!=255){ambr.chord_q=255;amb_say("QUEUED CHORD CANCELLED");}return;}
 
@@ -1560,6 +1610,10 @@ static void amb_browse_proposal(int delta)
 }
 static void amb_input(void)
 {
+    if(amb_capture_page){
+        if(take_rec.frames!=amb_input_seen){amb_input_seen=take_rec.frames;amb_input_ms=fm1_ms;}
+        if(!take_rec.running || fm1_ms-amb_input_ms>(amb_input_seen?750u:10000u))amb_end_capture();
+    }
     if(amb_save_slot && !song.playing)amb_commit_snapshot();
     uint32_t pressed=fm1_input_edges(0),notes=fm1_input_note_edges();
     unsigned b,k; int s,sel=panel_enc(EN_SELECT),algo=panel_enc(EN_ALGO),pre=panel_enc(EN_PRESET);
@@ -1722,11 +1776,14 @@ static void amb_input(void)
         /* Step entry is silent on pitched and drum layers, even during PLAY. */
     }
     song.grid=(ambr.view==0 || ambr.view==4 || (ambr.view==1 && ambr.page==4) || amb_tail_releasing(ambr.edit_layer))?2:0;
+    if(!amb_mic_page() || ambr.proposal!=255 || ambr.help){
+        take_rec.running=amb_capture_page=amb_replace_take=0;
+    }
     song.rec=0;
 }
 static int amb_rec_action(void)
 {
-    if(ambr.local_preset || ambr.reset_pending)return 1;
+    if(ambr.local_preset || ambr.reset_pending || amb_mic_page())return 1;
     if(ambr.view==2 && ambr.page==2)return 0;
     return amb_pending_ready || ambr.proposal!=255 || ambr.chord_q!=255 || ambr.piece_preview!=255 || ambr.view==3 || (ambr.view==1 && ambr.page==4);
 }
@@ -1924,7 +1981,7 @@ static void amb_sound_preview(const amb_layer_t *current,unsigned next)
     if(sample){
         static const char *const character[]={"Soft struck harmonic","Taped vowel sustain","Bowed string and vibrato","Low bowed string section","Hammer attack, long decay","Breathy reed sustain","Airy flute sustain",
             "Rolling beads and surf","Soft metallic brushing","Ridged wooden scrape",
-            "Dry shifting seeds","A ticking wooden rattle","Bowed metal shimmer"};
+            "Dry shifting seeds","A ticking wooden rattle","Bowed metal shimmer","Apollo landing radio","Orbiter radio check","Kennedy at Rice University","Your voice or instrument"};
         _Static_assert(NELEM(character)==NELEM(N_AS_SOURCE),"Describe every sample source");
         amb_text(12,96,character[current->base[P_E0]],ADIM,34);
         amb_text(12,112,character[next],AINK,34);
@@ -2307,7 +2364,17 @@ static void amb_draw(void)
                 
                 amb_text(12,60,l->role==6?(ambr.bank==0?"SOURCE":ambr.bank==1?"PLAYBACK":"CHARACTER"):"PATCH",ADIM,12);
                 cv_text(12,76,&AF_M,l->role==6?N_AS_SOURCE[l->base[P_E0]]:amb_patch_name(l),AINK);
-                amb_text(12,102,ENGINES[l->engine]->name,ADIM,12);amb_number(188,113,l->patch+1,AINK);
+                if(amb_mic_page()){
+                    const amb_take_t *t=amb_current_take();
+                    amb_text(12,103,amb_capture_page?(take_rec.frames?"Recording":"Waiting for USB audio"):t->length?"REC  Replace take":"REC  Record USB audio",AINK,32);
+                    if(amb_capture_page)cv_rect(12,123,210*take_rec.frames/AMB_TAKE_FRAMES,3,TONO_ORANGE);
+                    else if(t->length){
+                        char note[8];str_cpy(note,N_NOTE[t->root%12],6);
+                        unsigned len=0;while(note[len])len++;
+                        note[len]=(char)('0'+t->root/12-1);note[len+1]=0;
+                        amb_text(12,121,t->period_q8?"Matched root":"Reference root",ADIM,20);amb_text(99,121,note,AINK,5);
+                    }
+                }else{amb_text(12,102,ENGINES[l->engine]->name,ADIM,12);amb_number(188,113,l->patch+1,AINK);}
             }
         } else if(ambr.view==1 && ambr.page==2) {
             amb_scope(106);

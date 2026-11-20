@@ -71,7 +71,9 @@ static const amb_recipe_t amb_texture_patches[] = {
   AR("Wood Rasp",15,0,61,101,78,43,23,101),AR("Seed Rain",15,0,72,110,82,72,26,102),
   AR("Clockwork",15,0,64,106,76,38,20,87),AR("Bowed Sheet",15,0,99,119,78,87,37,98),
   AR("Undertow",15,0,108,120,86,88,24,62),AR("Wire Brush",15,0,80,117,74,81,32,102),
-  AR("Dry Timber",15,0,57,102,78,31,11,75),AR("Distant Cogs",15,0,99,118,78,88,39,66)
+  AR("Dry Timber",15,0,57,102,78,31,11,75),AR("Distant Cogs",15,0,99,118,78,88,39,66),
+  AR("Eagle Landed",15,0,8,88,96,50,21,103),AR("Radio Check",15,0,7,85,94,65,35,108),
+  AR("Moon Address",15,0,9,94,89,54,16,101)
 };
 #undef AR
 static const struct { const amb_recipe_t *patches; unsigned count; } amb_bank[] = {

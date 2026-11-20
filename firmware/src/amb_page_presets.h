@@ -58,7 +58,7 @@ static void amb_apply_page_preset(void)
             /* Keep the articulation of each recording when changing its space. */
             static const uint8_t sources[][4]={{3,108,50,20},{42,90,55,16},{20,115,46,9},
                 {24,111,42,6},{0,120,42,7},{8,116,38,11},{15,123,50,14},
-                {90,104,75,18},{78,105,54,14},{61,113,43,23},{72,116,72,26},{64,99,38,20},{99,111,87,37}};
+                {90,104,75,18},{78,105,54,14},{61,113,43,23},{72,116,72,26},{64,99,38,20},{99,111,87,37},{7,110,50,21},{5,115,65,35},{8,112,54,16},{5,112,48,20}};
             _Static_assert(NELEM(sources)==NELEM(N_AS_SOURCE),"one variation baseline per source");
             const uint8_t *source=sources[l->base[P_E0]];
             attack=source[0];tone=source[1];room=source[2];echo=source[3];

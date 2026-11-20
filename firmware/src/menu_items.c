@@ -149,7 +149,13 @@ static void usb_serial_apply(void)
 #endif
 #if FELUCCA_UAC
     usb_stems_switch(usb_out == 1u || usb_out == 3u);  /* (0.7.1) MENU > USB STEMS: the 8-channel device */
-    usb_duplex_switch(usb_out == 2u || usb_out == 3u); /* (0.7.5) MENU > USB IN+OUT: the audio output too */
+    usb_duplex_switch(
+#if AMBPLUS
+        1
+#else
+        usb_out == 2u || usb_out == 3u
+#endif
+    ); /* (0.7.5) MENU > USB IN+OUT: the audio output too */
 #endif                                                 /* ((0.8.0) STEMS+IN: both, the 10-channel device) */
     fx_stems = (uint8_t)(usb_out == 1u ? 1u : usb_out == 3u ? 2u : 0u);   /* (the parts write their stems from the next block) */
 }

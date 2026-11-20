@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tono · Voice sampler</title>
+<style>
+*{box-sizing:border-box}body{max-width:42rem;margin:6vh auto;padding:0 1.5rem;background:#edeae3;color:#242521;font:1rem/1.5 Helvetica,Arial,sans-serif}
+h1{font-size:2.4rem;letter-spacing:-.06em;margin:0}h2{font-size:1.2rem;margin:.3rem 0}section{border-top:1px solid #999;padding:1.25rem 0}
+button,select,input{font:inherit}button,select{padding:.55rem .8rem;border:1px solid #888;border-radius:.25rem;background:#faf9f5;color:inherit}button.primary{background:#e95d24;color:#151510;border-color:transparent}button:disabled{opacity:.45}
+p{margin:.5rem 0 .9rem}label{display:block}audio,select,input[type=range]{width:100%;margin:.5rem 0}button{margin:.2rem .25rem .2rem 0}output{display:block;min-height:1.6rem}
+</style>
+<h1>Tono</h1><p>Voice sampler</p>
+<section><h2>Record a take</h2><p>Sing a steady vowel, speak, or import a recording. Choose up to 1.43 seconds for the instrument. You can also keep the full recording.</p>
+<button id="rec" class="primary">Record microphone</button><label>Import audio <input id="file" type="file" accept="audio/*"></label>
+<audio id="player" controls></audio><label>Take starts at <span id="time">0.00 s</span><input id="start" type="range" min="0" max="0" step=".01" value="0" disabled></label>
+<button id="preview" disabled>Hear selection</button><button id="save" disabled>Download take WAV</button><button id="full" disabled>Download full WAV</button>
+<p>For the emulator, open “Play a recording.command” and select the take WAV.</p></section>
+<section><h2>FM-1 microphone bridge</h2><p>Choose the FM-1 audio output. On a Sample layer select MIC TAKE, then press REC to capture. REC again ends the take early.</p>
+<button id="detect">Find audio outputs</button><select id="sink" aria-label="Audio output"><option value="">Choose output</option></select><button id="bridge" disabled>Start microphone bridge</button></section>
+<output id="msg" role="status"></output>
+<script>
+const el=id=>document.getElementById(id), msg=text=>el('msg').textContent=text;
+const MAX=7040/4900;
+let ctx, buffer, recorder, mic, chunks, route, routeMic, audition, url;
+function context(){return ctx ||=new AudioContext()}
+function stopTracks(s){if(s)s.getTracks().forEach(t=>t.stop())}
+function wav(buf,begin,duration){
+ const first=Math.round(begin*buf.sampleRate), count=Math.min(buf.length-first,Math.round(duration*buf.sampleRate));
+ const ab=new ArrayBuffer(44+2*count),d=new DataView(ab);
+ const tag=(i,s)=>[...s].forEach((c,j)=>d.setUint8(i+j,c.charCodeAt(0)));
+ tag(0,'RIFF');d.setUint32(4,36+2*count,true);tag(8,'WAVE');tag(12,'fmt ');d.setUint32(16,16,true);d.setUint16(20,1,true);d.setUint16(22,1,true);d.setUint32(24,buf.sampleRate,true);d.setUint32(28,buf.sampleRate*2,true);d.setUint16(32,2,true);d.setUint16(34,16,true);tag(36,'data');d.setUint32(40,count*2,true);
+ const channels=Array.from({length:buf.numberOfChannels},(_,i)=>buf.getChannelData(i));
+ for(let i=0;i<count;i++){let x=0;for(const c of channels)x+=c[first+i];d.setInt16(44+2*i,Math.max(-32768,Math.min(32767,Math.round(x*32767/channels.length))),true)}
+ return new Blob([ab],{type:'audio/wav'});
+}
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000)}
+async function load(blob){
+ const b=await context().decodeAudioData(await blob.arrayBuffer());
+ buffer=b;el('start').max=Math.max(0,b.duration-.06);el('start').value=0;el('time').textContent='0.00 s';
+ for(const id of ['save','full','start','preview'])el(id).disabled=false;
+ if(url)URL.revokeObjectURL(url);url=URL.createObjectURL(blob);el('player').src=url;msg('Recording ready.');
+}
+el('rec').onclick=async()=>{
+ if(recorder?.state==='recording'){recorder.stop();return}
+ try{el('rec').disabled=true;mic=await navigator.mediaDevices.getUserMedia({audio:true});chunks=[];recorder=new MediaRecorder(mic);
+ recorder.ondataavailable=e=>chunks.push(e.data);recorder.onstop=async()=>{stopTracks(mic);el('rec').textContent='Record microphone';try{await load(new Blob(chunks,{type:recorder.mimeType}))}catch(e){msg(e.message)}};
+ recorder.start();el('rec').textContent='Stop recording';msg('Recording microphone…')}
+ catch(e){stopTracks(mic);msg(e.message)}finally{el('rec').disabled=false}
+};
+el('file').onchange=async e=>{try{if(e.target.files[0])await load(e.target.files[0])}catch(err){msg(err.message)}};
+el('start').oninput=e=>el('time').textContent=Number(e.target.value).toFixed(2)+' s';
+el('preview').onclick=async()=>{await context().resume();if(audition)audition.stop();audition=ctx.createBufferSource();audition.buffer=buffer;audition.connect(ctx.destination);audition.start(0,+el('start').value,MAX)};
+el('save').onclick=()=>download(wav(buffer,+el('start').value,MAX),'Tono take.wav');
+el('full').onclick=()=>download(wav(buffer,0,buffer.duration),'Tono recording.wav');
+el('detect').onclick=async()=>{let s;try{s=await navigator.mediaDevices.getUserMedia({audio:true});const devices=await navigator.mediaDevices.enumerateDevices();el('sink').length=1;
+ for(const d of devices.filter(d=>d.kind==='audiooutput' && d.deviceId!=='default' && d.deviceId!=='communications'))el('sink').add(new Option(d.label,d.deviceId));
+ msg(el('sink').length>1?'Choose the FM-1 output.':'No selectable audio outputs. Try desktop Chrome with the FM-1 connected.')}catch(e){msg(e.message)}finally{stopTracks(s)}};
+el('sink').onchange=()=>el('bridge').disabled=!el('sink').value;
+async function disconnect(){stopTracks(routeMic);routeMic=null;if(route)await route.close();route=null;el('bridge').textContent='Start microphone bridge';el('sink').disabled=false}
+el('bridge').onclick=async()=>{if(route){await disconnect();msg('Bridge stopped.');return}
+ try{route=new AudioContext();if(!route.setSinkId)throw Error('Use desktop Chrome to choose a bridge output.');
+ await route.setSinkId(el('sink').value);routeMic=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+ route.createMediaStreamSource(routeMic).connect(route.destination);await route.resume();el('bridge').textContent='Stop bridge';el('sink').disabled=true;msg('Microphone routed to '+el('sink').selectedOptions[0].text)}
+ catch(e){await disconnect();msg(e.message)}};
+</script></html>

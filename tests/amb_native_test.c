@@ -153,7 +153,8 @@ int AMB_MAIN(int argc,char **argv)
     }
     for(scene=0;scene<7;scene++) {
         uint64_t hashes[NELEM(amb_pad_patches)]={0};unsigned patch;
-        for(patch=0;patch<(scene==6?NELEM(N_AS_SOURCE):amb_patch_count(scene));patch++) {
+        /* The personal source is empty on boot and exercised with input in amb_take_test. */
+        for(patch=0;patch<(scene==6?AMB_MIC_SOURCE:amb_patch_count(scene));patch++) {
             int32_t mono[CTL];uint64_t hash=1469598103934665603ull;
             amb_fixture_scene(0);song.playing=0;
             for(k=0;k<NTRK;k++)memset(&trk[k],0,sizeof trk[k]);
