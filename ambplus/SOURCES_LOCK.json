@@ -1,8 +1,8 @@
 {
   "status": "DEVELOPMENT CANDIDATE; VALIDATION INCOMPLETE; NOT HARDWARE-VALIDATED",
   "flash_status": "NOT AUTHORISED",
-  "source_sha": "1d1544722270a14dddd92a8ad5926627a94a9ce5",
-  "artifact_sha256": "6644bf01536630183e713be4864963cdc02bd27ad48f5e93be35bddbeb69d359",
+  "source_sha": "409df02b60bd42bb4fca6be2e3cd1ed527f4aba2",
+  "artifact_sha256": "00dea1fdd4c83af8783c3067545c1a913a0bbfb83c90db6a8139385c0a67f631",
   "jiant": {
     "url": "https://github.com/juanjiant-bit/JIANT",
     "commit": "beffdd0b32ffebce1d62fd608ffc653fc7feec82",
@@ -53,7 +53,7 @@
   "excluded_sources": [
     "Shrub"
   ],
-  "previous_implementation_sha": "83f942125efa450ab0b3434c0e20410478ca4f32",
+  "previous_implementation_sha": "1d1544722270a14dddd92a8ad5926627a94a9ce5",
   "save_version": 5,
   "save_payload_bytes": 1440,
   "comparison_reference": {
@@ -94,5 +94,14 @@
     "name": "Nostalgic New Inn",
     "source": "Tono 0.26 USER 1",
     "payload_sha256": "16dd9961c3631a767d48a46e14fcde488aff559a39fba8f62e095aedbf08dd9a"
+  },
+  "microphone_bridge_reference": {
+    "repository": "https://github.com/beashoko/april-os",
+    "revision": "6b65734fad087a114773fae5f7e6c11410b00f6c",
+    "implementation": "Independent browser microphone routing and JIANT EP4 capture"
+  },
+  "speech_sources": {
+    "catalog": "https://www.nasa.gov/historical-sounds/",
+    "asset_hashes": "tools/gen_amb_speech.py in source archive"
   }
 }
