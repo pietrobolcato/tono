@@ -103,7 +103,7 @@ static const char *const AMB_MOOD[7] = {"homeward","warmer","brighter","suspende
 #include "amb_nostalgic.h"
 _Static_assert(sizeof(amb_piece_t)==1440 && AMB_VERSION==5, "upgrade embedded song before changing format");
 enum { AMB_SCENE_GARDEN = 11, AMB_SCENE_INN = 12 };
-static const char *const AMB_SCENE[] = {"Morning Air","Rain Study","Dark Water","Low Sun","Glass Room","Night Garden","Window Seats","Stone Cloister","Tidal Loom","Kite Strings","Departure Hall","Garden","Nostalgic New Inn"};
+static const char *const AMB_SCENE[] = {"Morning Air","Rain Study","Dark Water","Low Sun","Glass Room","Night Garden","Window Seats","Stone Cloister","Tidal Loom","Kite Strings","Departure Hall","Garden","Nostalgic New Inn","Pear Orchard","Tide Atlas","Pocket Orrery","Last Tram"};
 static const char *const AMB_MACRO[7][4] = {
     {"WARMTH","MOTION","SUSTAIN","SPACE"},{"WARMTH","DRIFT","SUSTAIN","SPACE"},
     {"SOFT","MOTION","SHIMMER","SPACE"},{"ROUND","PULSE","GLIDE","SPACE"},
@@ -365,7 +365,15 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
         {5,3,80,3,{5,5,3},82,58,{{0,12,1,67},{2,10,0,82},{3,8,2,77},{5,3,1,38}}},
         {9,1,92,2,{1,2,0},64,32,{{2,9,0,91},{0,11,2,75},{3,8,1,75},{4,2,0,50}}},
         {0,1,54,5,{2,5,0},97,22,{{2,8,0,85},{0,9,2,56},{2,8,0,62},{0,14,3,65}}},
-        {2,2,72,4,{8,0,0},102,57,{{0,16,1,89},{2,11,2,94},{3,9,1,67},{4,8,1,84}}}
+        {2,2,72,4,{8,0,0},102,57,{{0,16,1,89},{2,11,2,94},{3,9,1,67},{4,8,1,84}}},
+        /* Pear Orchard: two independent tine voices over a sustained Skylight drone. */
+        {5,3,66,4,{8,0,0},87,33,{{0,17,1,87},{2,12,2,81},{1,12,2,48},{2,13,3,59}}},
+        /* Tide Atlas: bowed bass register, nylon and linen against an ocean drum. */
+        {4,2,57,5,{5,1,0},99,25,{{0,18,2,78},{2,9,1,85},{1,13,2,71},{5,12,2,37}}},
+        /* Pocket Orrery: crossing short pulses, with the shaker as quiet clockwork. */
+        {7,1,91,3,{3,2,1},64,39,{{2,12,0,87},{0,14,2,68},{3,10,1,73},{5,15,1,29}}},
+        /* Last Tram: nocturnal sax, piano and pedal with the air of a tape machine. */
+        {9,0,63,4,{2,4,0},78,19,{{0,21,2,74},{2,14,1,87},{3,9,2,65},{5,1,1,25}}}
     };
     _Static_assert(NELEM(AMB_SCENE)==7+NELEM(arrangements),"factory catalog");
     scene%=NELEM(AMB_SCENE);
@@ -379,7 +387,7 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
         }
         return;
     }
-    const arrangement_t *arr=scene<6?0:&arrangements[scene-6];
+    const arrangement_t *arr=scene<6?0:&arrangements[scene-6-(scene>AMB_SCENE_INN)];
     unsigned i,j;
     memset(p,0,sizeof *p);p->magic=AMB_MAGIC;p->version=AMB_VERSION;
     amb_policy_init(&p->policy,0x414d4200u+scene);p->release_ms=6000;p->master=760;

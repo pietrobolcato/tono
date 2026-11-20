@@ -10,7 +10,7 @@ static int in_pool(unsigned note)
 /* Garden schedules free-running breaths and delayed strikes in audio frames.
  * A sixteenth-only dry run cannot count them. Observe actual native voice
  * starts after each mixer block, including short drum hits between beats. */
-static void garden_catalog(void)
+static void garden_catalog(unsigned scene)
 {
     uint32_t age[4][NVOICE]={{0}};
     unsigned events[4]={0};
@@ -24,14 +24,16 @@ static void garden_catalog(void)
         }
     }
     seq_stop();amb_render(CTL);
-    printf("Garden: actual voice starts in 64 bars: Pad %u, Bells %u, Bass %u, Pulse %u\n",
+    printf("%s: actual layer starts in 64 bars: %u %u %u %u\n",AMB_SCENE[scene],
            events[0],events[1],events[2],events[3]);
     /* The pedal changes with the 28–51 second drift or its optional fifth. */
-    assert(events[0]>20 && events[1]>20 && events[2]>=2 && events[2]<24 && events[3]>100);
+    for(unsigned k=0;k<4;k++)assert(events[k]);
+    if(scene==AMB_SCENE_GARDEN)assert(events[0]>20 && events[1]>20 && events[2]>=2 && events[2]<24 && events[3]>100);
 }
 
 static void catalog(void)
 {
+    assert(NELEM(AMB_SCENE)>=17);
     for(unsigned scene=0;scene<NELEM(AMB_SCENE);scene++){
         amb_fixture_scene(scene);
         unsigned events[4]={0},distinct=0,early=0;
@@ -40,7 +42,7 @@ static void catalog(void)
             assert(amb.layer[k].generated);
             trk[k].engine=amb.layer[k].engine;
         }
-        if(amb.policy.active[0]==8){garden_catalog();continue;}
+        if(amb.policy.active[0]==8){garden_catalog(scene);continue;}
         /* The actual sequencer writes its emitted pitched notes to PATTERN. */
         for(unsigned step=0;step<1024;step++){
             amb_participation_t parts[4];amb_participation(parts,step);
