@@ -204,12 +204,12 @@ int main(int argc,char **argv)
         for(unsigned layer=0;layer<4;layer++)amb_bar_octave[layer]=-3;
         snprintf(name,sizeof name,"home_status_%u",theme);ar_frame(name,dir,1);
         memset(amb_bar_octave,0,sizeof amb_bar_octave);
-        assert(swap16(host_screen[12*240+159])==AINK);
-        assert(swap16(host_screen[12*240+162])==AINK);
-        assert(swap16(host_screen[12*240+165])==ABG);
+        assert(swap16(host_screen[12*240+218])==AINK);
+        assert(swap16(host_screen[12*240+221])==AINK);
+        assert(swap16(host_screen[12*240+224])==ABG);
         song.batt_raw=0;
         ar_frame("home_battery_unread",dir,0);
-        assert(swap16(host_screen[12*240+159])==ABG);
+        assert(swap16(host_screen[12*240+218])==ABG);
         song.cpu_q8=0;
         amb.global[G_BPM]=72;
         ambr.view=2;ambr.page=7;
