@@ -11,9 +11,16 @@ int main(void)
     ambr.view=2;ambr.page=2;amb_leds();assert(!lamp(fm1_led,panel.btn[B_REC]));
     amb_fixture_scene(0);ambr.edit_layer=2;ambr.view=1;ambr.page=4;amb_rec();
     for(i=k=0;i<16;i++)k+=amb.layer[2].notes[i]!=0;assert(k>0);
-    saved=amb.layer[2];ambr.cursor=3;host_notes=1u<<8;amb_input();
-    assert(amb.layer[2].notes[3]==61);for(i=0;i<16;i++)if(i!=3)assert(amb.layer[2].notes[i]==saved.notes[i]);
-    amb_leds();assert(lamp(fm1_led_hi,14u+7));
+    unsigned whites=0;
+    for(unsigned key=0;key<27;key++){
+        saved=amb.layer[2];host_notes=1u<<key;amb_input();
+        if(key_black(key)){assert(!memcmp(&saved,&amb.layer[2],sizeof saved));continue;}
+        unsigned step=whites++;
+        assert(ambr.cursor==step && !!amb.layer[2].notes[step]!=!!saved.notes[step]);
+        for(i=0;i<16;i++)if(i!=step)assert(amb.layer[2].notes[i]==saved.notes[i]);
+        amb_leds();assert(lamp(fm1_led,14+key)==!!amb.layer[2].notes[step]);
+    }
+    assert(whites==16);
     amb_fixture_scene(0);ambr.view=0;pool=amb_pool();host_notes=1u<<8;amb_input();
     assert(amb_pool()==(pool^(1u<<1)));assert(amb_valid(&amb));
     for(i=0;i<4;i++)assert((amb_pool()>>((ambr.voicing[i]-amb.key+120)%12))&1u);
