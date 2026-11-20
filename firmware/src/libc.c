@@ -14,6 +14,19 @@ void *memcpy(void *d, const void *s, unsigned n)
 {
     unsigned char *p = d;
     const unsigned char *q = s;
+#if AMBPLUS
+    /* The audio thread copies voice states during a handoff. Keep arbitrary
+     * alignment legal, and use native words for aligned, nonoverlapping data. */
+    typedef unsigned int copy_word __attribute__((may_alias));
+    if (n >= sizeof(copy_word) && !(((uintptr_t)p | (uintptr_t)q) & (sizeof(copy_word)-1u))) {
+        while (n >= sizeof(copy_word)) {
+            *(copy_word *)p = *(const copy_word *)q;
+            p += sizeof(copy_word);
+            q += sizeof(copy_word);
+            n -= sizeof(copy_word);
+        }
+    }
+#endif
     while (n--)
         *p++ = *q++;
     return d;

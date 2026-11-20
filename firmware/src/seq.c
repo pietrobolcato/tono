@@ -584,7 +584,10 @@ static uint32_t step_samples(const track_t *t, uint32_t period, uint32_t idx)
  * wrapping inside LEN). Live recording writes there too, so a note recorded plays where it was heard */
 static uint32_t seq_src(const track_t *t, uint32_t idx)
 {
-    int32_t len = t->p[P_SLEN] > 0 ? t->p[P_SLEN] : 1, o = t->p[P_SOFS] % len;
+    int32_t len = t->p[P_SLEN] > 0 ? t->p[P_SLEN] : 1;
+    if (!t->p[P_SOFS] && idx < (uint32_t)len)
+        return idx;
+    int32_t o = t->p[P_SOFS] % len;
     return (uint32_t)(((int32_t)(idx % (uint32_t)len) - o + len) % len);
 }
 
@@ -1340,7 +1343,9 @@ static int trk_kit(const track_t *t)
  * held, a song's section about to change) */
 static uint32_t seq_early(const track_t *t, uint32_t period, uint32_t len)
 {
-    uint32_t ni = (t->seq_idx + 1u) % (len ? len : 1u);
+    uint32_t ni = t->seq_idx + 1u;
+    if (ni >= len)
+        ni = ni == len ? 0u : ni % (len ? len : 1u);
     const step_t *s;
     int32_t m;
     if (t->jump_to || t->rev || (!ni && (chain.running || chain.armed)))
@@ -1849,6 +1854,14 @@ static int32_t hum_pm(uint32_t r) { return (int32_t)(hum_rnd() % (2u * r + 1u)) 
 #define HUM_TMAX (FS * 40u / 1000u)                 /* at 100 %: up to 40 ms late (0.6.92: was 30) */
 static __attribute__((noinline)) void seq_step(track_t *t, const step_t *s, uint32_t period, uint32_t skip)
 {
+    /* An ordinary rest has no ratchet, component or pitch work. Chance and
+     * motion have already run in seq_tick; keep their ordering for other callers. */
+    if ((skip & (SEQ_ROLLED | SEQ_MISS)) && s->time != ST_TIE &&
+        (s->time == ST_REST || (!s->n && !s->hit)) &&
+        !s->comp && !s->comp2 && !t->pulse_from) {
+        seq_release(t);
+        return;
+    }
     uint32_t i, j, gate = period * (uint32_t)t->p[P_SGATE] / 128u;
     uint32_t vel = (s->flags & SF_ACCENT) ? 127u : (s->vel ? s->vel : 96u);
     uint32_t slide_in = t->seq_hold && t->seq_n;

@@ -13,29 +13,30 @@
 enum { PL_LINES(PL_ENUM) PL_COUNT };
 #define PL_SIZE(id, n, prev) n,
 static const uint16_t pl_len[] = {PL_LINES(PL_SIZE)};
-#define PL_END(id, n, prev) PL_END_##id = PL_END_##prev + n,
+#define PL_END(id, n, prev) PL_END_##id = PL_END_##prev + n + 1,
 enum { PL_END_0 = 0, PL_LINES(PL_END) };
-_Static_assert(PL_END_BR <= CL_LEN && PL_END_ER - PL_END_BR <= NELEM(rev_comb), "plate fits shared reverb line");
+_Static_assert(PL_END_BR <= CL_LEN && 4096u <= NELEM(rev_comb) && PL_END_ER - PL_END_BR <= 4096u, "plate fits shared reverb line");
 #define PL_BASE(id, n, prev) PL_END_##prev,
 static const uint16_t pl_base[] = {PL_LINES(PL_BASE)};
 static struct {
-    uint16_t pos[PL_COUNT];
+    uint32_t cursor;
     uint32_t phase;
     int32_t bw, damp[2], left, right, input;
     unsigned half;
 } plate;
 static inline int pl_read(unsigned id, int lag)
 {
-    int at = (int)plate.pos[id] - lag;
-    const int16_t *line = id == PL_ER ? rev_comb : &rev_x.cl[pl_base[id]];
-    return line[at < 0 ? at + pl_len[id] : at];
+    /* A shared descending cursor moves all delay lines one tick together.
+     * Each virtual line owns length + 1 addresses relative to that cursor,
+     * including its oldest still-readable sample. ER uses the second ring. */
+    unsigned at = plate.cursor + (unsigned)lag;
+    return id == PL_ER ? rev_comb[at & 4095u] : rev_x.cl[(at + pl_base[id]) & (CL_LEN - 1u)];
 }
 static inline void pl_write(unsigned id, int x)
 {
-    int16_t *line = id == PL_ER ? rev_comb : &rev_x.cl[pl_base[id]];
-    unsigned pos = plate.pos[id];
-    line[pos] = (int16_t)clamp(x, -32767, 32767);
-    plate.pos[id] = pos + 1u == pl_len[id] ? 0 : pos + 1u;
+    int16_t value = (int16_t)clamp(x, -32767, 32767);
+    if (id == PL_ER) rev_comb[plate.cursor & 4095u] = value;
+    else rev_x.cl[(plate.cursor + pl_base[id]) & (CL_LEN - 1u)] = value;
 }
 static inline int pl_pass(unsigned id, int x, int gain, int delayed)
 {
@@ -76,6 +77,8 @@ static __attribute__((noinline)) void pl_render(const int32_t *in, int32_t *out,
                 b = pl_pass(ap + 2, mulq15(plate.damp[side], decay), diffusion, pl_read(ap + 2, pl_len[ap + 2]));
                 pl_write(ap + 3, b);
             }
+            /* Observation taps see the newly written tick. */
+            plate.cursor--;
             plate.left = pl_read(PL_DR, PL(266)) + pl_read(PL_DR, PL(2974)) - pl_read(PL_BR, PL(1913)) +
                          pl_read(PL_ER, PL(1996)) - pl_read(PL_DL, PL(1990)) - pl_read(PL_BL, PL(187)) -
                          pl_read(PL_EL, PL(1066));
@@ -112,9 +115,7 @@ static uint8_t tape_pack(int v)
     unsigned a = (v < 0 ? -v : v) + 132u;
     if (a > 32767)
         a = 32767;
-    unsigned exponent = 0;
-    for (unsigned bits = a >> 8; bits; bits >>= 1)
-        exponent++;
+    unsigned exponent = a < 256 ? 0u : 24u - (unsigned)__builtin_clz(a);
     return (v < 0 ? 128 : 0) | (exponent << 4) | ((a >> (exponent + 3)) & 15);
 }
 static int tape_unpack(uint8_t b)
@@ -127,7 +128,7 @@ static int tape_read_head(unsigned distance)
     unsigned d = distance >> 8;
     if (d + 1 >= tape_fx.fill)
         return 0;
-    unsigned at = (tape_fx.w + TAPE_LENGTH - d) % TAPE_LENGTH;
+    unsigned at = tape_fx.w >= d ? tape_fx.w - d : tape_fx.w + TAPE_LENGTH - d;
     const uint8_t *buf = (const uint8_t *)&dly_u;
     int a = tape_unpack(buf[at]), b = tape_unpack(buf[at ? at - 1 : TAPE_LENGTH - 1]);
     return a + ((b - a) * (int)(distance & 255) >> 8);
@@ -147,13 +148,13 @@ static __attribute__((noinline)) void tape_run(unsigned kind, const int32_t *in,
         if (!(tape_fx.phase & 1))
             tape_fx.shortinput = in[i];
         if ((tape_fx.phase & 1) && kind != 3) {
-            unsigned at = tape_fx.shortpos, other = (at + 3550 - short_right) % 3550;
-            int a = tape_fx.shortfill >= shortlen ? plex_line[(at + 3550 - shortlen) % 3550] : 0,
+            unsigned at = tape_fx.shortpos, other = at >= short_right ? at - short_right : at + 3550 - short_right;
+            int a = tape_fx.shortfill >= shortlen ? plex_line[at >= shortlen ? at - shortlen : at + 3550 - shortlen] : 0,
                 b = tape_fx.shortfill >= short_right ? plex_line[other] : 0;
             tape_fx.lp += (a - tape_fx.lp) * 19 / 32;
             tape_fx.rp += (b - tape_fx.rp) * 19 / 32;
             plex_line[at] = clamp((in[i] + tape_fx.shortinput) / 4 + mulq15(tape_fx.lp, feedback), -32767, 32767);
-            tape_fx.shortpos = (at + 1) % 3550;
+            tape_fx.shortpos = at + 1 == 3550 ? 0 : at + 1;
             if (tape_fx.shortfill < 3550)
                 tape_fx.shortfill++;
         }
@@ -179,7 +180,7 @@ static __attribute__((noinline)) void tape_run(unsigned kind, const int32_t *in,
                 tape_fx.fb += (tape_fx.h1 + (tape_fx.h2 - tape_fx.h1) / 8 - tape_fx.fb) *
                               (35 + clamp(GFX(GF_DCOL), 0, 127) / 3) / 100;
                 tape_fx.hp += (tape_fx.fb - tape_fx.hp) * 3 / 100;
-                tape_fx.w = (tape_fx.w + 1) % TAPE_LENGTH;
+                tape_fx.w = tape_fx.w + 1 == TAPE_LENGTH ? 0 : tape_fx.w + 1;
                 ((uint8_t *)&dly_u)[tape_fx.w] =
                     tape_pack(clamp(tape_fx.acc / 4 + mulq15(clamp(tape_fx.fb - tape_fx.hp, -65535, 65535), feedback),
                                     -32767, 32767));

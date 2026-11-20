@@ -2293,7 +2293,13 @@ static int mc_two(void) { return !mc_off && (mc_live() || mc_host_v12); }
 static volatile int8_t mc_cur = -1;                      /* the part core 1 is in (a job given up: its matrix put back) */
 static uint8_t mc_mask_last;                             /* the parts core 1 had the last block (MENU > ABOUT, tests) */
 static uint32_t mc_jobs;                                 /* (0.6.72) blocks core 1 rendered parts in (console status) */
-static void mix_part_m(track_t *t, uint32_t n);         /* (below) */
+#if AMBPLUS && FELUCCA_HOTRAM
+static void mix_part_m0(track_t *t, uint32_t n);
+#define mix_worker_part mix_part_m0
+#else
+static void mix_part_m(track_t *t, uint32_t n);
+#define mix_worker_part mix_part_m
+#endif
 #define MC_FX 0x80u                                       /* (0.6.75) mc_job: the buses too */
 static void fx_run(uint32_t n);                          /* (below) */
 static __attribute__((noinline)) void mc_job(uint32_t a)  /* core 1: the buses (MC_FX), the parts of mask a & 0x3F, a >> 8
@@ -2307,7 +2313,7 @@ static __attribute__((noinline)) void mc_job(uint32_t a)  /* core 1: the buses (
     for (i = 0; i < NPART; i++)
         if ((a >> i) & 1u) {
             mc_cur = (int8_t)i;
-            mix_part_m(&trk[i], n);
+            mix_worker_part(&trk[i], n);
         }
     mc_cur = -1;
     prf_blk[PRF_C1] = PRF_T() - t0;                      /* (0.9.14) PROFILE: core 1 busy */
@@ -2352,7 +2358,15 @@ static __attribute__((noinline)) uint32_t mc_split(uint32_t c1)   /* c1: what co
     uint32_t i, j, c0 = 0, mask = 0, cost[NPART + 1], unit[NPART + 1], nu = 0, left = 0;
     cost[0] = unit[0] = 0;
     nu = 1;                                              /* (item 0: the DRUM parts) */
-    for (i = 0; i < NPART && i < trk_live; i++) {
+    for (i = 0; i < NPART; i++) {
+        if (i >= trk_live) {
+#if AMBPLUS
+            /* A crossfade's outgoing instrument is still a real mixer part. */
+            if (!amb_tail_releasing(i)) continue;
+#else
+            break;
+#endif
+        }
         uint32_t v = mc_cost(&trk[i]), c = v ? mc_tk[i] + v * MC_VW : 0u;
         if (!c)
             continue;
@@ -2512,13 +2526,15 @@ static __attribute__((noinline)) int master_rest(uint32_t n)
 {
     uint32_t i;
     int32_t a = 0;
-    for (i = 0; i < n; i++)
-        a |= mix_l[i] | mix_r[i] | wet[i];
-    if (a || dc_l || dc_r || (lev_env >> 11) || ((32768 - lev_g) >> 5) || lev_dg || lim_env > LIM_T || song.g[G_DJF] ||
+    if (dc_l || dc_r || (lev_env >> 11) || ((32768 - lev_g) >> 5) || lev_dg || lim_env > LIM_T || song.g[G_DJF] ||
         djf.mode)
         return 0;
     if (fx_lowcut)                                      /* (SPEAKER EQ LOWCUT / BASS+: their states can settle off 0, */
         return 0;                                       /* not checked: never at rest there) */
+    for (i = 0; i < n; i++)
+        a |= mix_l[i] | mix_r[i] | wet[i];
+    if (a)
+        return 0;
     lev_cur = lev_g;                                    /* (as lev_block leaves them in a silent block) */
     return 1;
 }

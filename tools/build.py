@@ -198,7 +198,10 @@ def build_loader():
 HOT_FNS = ("mix_block", "mix_part_m0", "fx_run0", "perf_begin", "perf_pre", "perf_block", "perf_master", "slicer_bus")
 
 if os.environ.get("AMBPLUS") == "1":
-    HOT_FNS += ("events_block", "fm6_render", "rev_spring", "rev_spring_side", "amb_output")
+    # The two-core Tono workload spends its render budget in the synth parts,
+    # performance controls and shared plate. Keep the one-core FX fallback in XIP.
+    HOT_FNS = ("mix_block", "mix_part_m0", "events_block", "fm6_render", "amb_output",
+               "pl_render", "amb_prepare", "dx_run")
 
 
 def hot_sections(ir):

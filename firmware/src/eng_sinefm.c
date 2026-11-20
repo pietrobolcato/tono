@@ -28,9 +28,11 @@ static void sf_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const vm
     int harm = p[P_E5] * 200, low = p[P_E6] * 230, feedback = p[P_E7] * 60;
     int last = v->s[1];
     for (unsigned i = 0; i < n; i++) {
-        int wave = sine_i(mod + (uint32_t)(last * feedback) * 4u);
+        int wave = index ? sine_i(mod + (uint32_t)(last * feedback) * 4u) : 0;
         last = sine_i(ph + (uint32_t)wave * (uint32_t)index * 4u);
-        int sample = last + mulq15(sine_i(ph * 2u), harm) + mulq15(sine_i(sub), low);
+        int sample = last;
+        if (harm) sample += mulq15(sine_i(ph * 2u), harm);
+        if (low) sample += mulq15(sine_i(sub), low);
         out[i] += voice_amp(clamp(sample, -60000, 60000), m, i);
         ph += inc;
         mod += mi;
