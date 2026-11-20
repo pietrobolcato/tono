@@ -1362,9 +1362,9 @@ static unsigned amb_pattern_param(const amb_layer_t *l,unsigned knob)
 }
 static const char *const amb_speeds[]={"1/16","1/8","1/4","1/2"};
 static const char *const amb_drum_lanes[]={"KICK","SNARE","HATS","PERC"};
-static void amb_remember_edit(unsigned route,int before,int after)
+static void amb_remember_edit(unsigned route)
 {
-    if(before!=after)ambr.last_edit_route[ambr.edit_layer]=(uint8_t)(route+1);
+    ambr.last_edit_route[ambr.edit_layer]=(uint8_t)(route+1);
 }
 static void amb_manual_knob(amb_layer_t *l,unsigned knob,int delta)
 {
@@ -1374,30 +1374,25 @@ static void amb_manual_knob(amb_layer_t *l,unsigned knob,int delta)
         if(knob==1)ambr.lane=(uint8_t)amb_wrap(ambr.lane+delta,4);
         if(knob==2){
             uint16_t bit=(uint16_t)(1u<<at);
-            unsigned before=l->drums[ambr.lane];
             if(delta>0)l->drums[ambr.lane]|=bit;else l->drums[ambr.lane]&=(uint16_t)~bit;
-            amb_remember_edit(ROUTE_COUNT,before,l->drums[ambr.lane]);
+            amb_remember_edit(ROUTE_COUNT);
         }
         if(knob==3){
-            unsigned before=l->swing;
             l->swing=(uint8_t)clamp(l->swing+delta*2,0,100);
-            amb_remember_edit(ROUTE_SWING,before,l->swing);
+            amb_remember_edit(ROUTE_SWING);
         }
     }else if(knob==1){
-        unsigned before=l->speed;
         l->speed=(uint8_t)clamp(l->speed+delta,0,3);
-        amb_remember_edit(ROUTE_SPEED,before,l->speed);
+        amb_remember_edit(ROUTE_SPEED);
     }
     else if(knob==2){
-        unsigned before=l->notes[at];
         if(!l->notes[at] && delta>0)l->notes[at]=(uint8_t)ambr.voicing[ambr.edit_layer];
         else l->notes[at]=(uint8_t)clamp(l->notes[at]+delta,0,127);
         if(l->notes[at] && !l->velocity[at])l->velocity[at]=76;
-        amb_remember_edit(ROUTE_NOTE,before,l->notes[at]);
+        amb_remember_edit(ROUTE_NOTE);
     }else {
-        unsigned before=l->velocity[at];
         l->velocity[at]=(uint8_t)clamp(l->velocity[at]+delta,1,127);
-        amb_remember_edit(ROUTE_VEL,before,l->velocity[at]);
+        amb_remember_edit(ROUTE_VEL);
     }
 }
 static unsigned amb_envelope_id(const amb_layer_t *l,unsigned knob)
@@ -1523,9 +1518,8 @@ static void amb_knob(unsigned knob,int delta)
             id=amb_master_macros[knob];amb.global[id]=(int16_t)clamp(amb.global[id]+(knob==3?-delta*2:delta*4),GP[id].min,GP[id].max);
         } else {
             if(ambr.view==0) l=&amb.layer[ambr.target-1];
-            unsigned before=l->macro[knob];
             l->macro[knob]=(uint8_t)clamp(l->macro[knob]+delta*2,0,127);
-            if(ambr.view==1)amb_remember_edit(ROUTE_MACRO+knob,before,l->macro[knob]);
+            if(ambr.view==1)amb_remember_edit(ROUTE_MACRO+knob);
         }
     } else if(ambr.view==1) {
         if(ambr.page==1) id=amb_sound_id(l,ambr.bank,knob);
@@ -1534,9 +1528,8 @@ static void amb_knob(unsigned knob,int delta)
             if(knob==0)id=P_LWAVE;
             else if(knob==1)id=P_LRATE;
             else if(knob==2){
-                unsigned before=l->lfo_depth;
                 l->lfo_depth=(uint8_t)clamp(l->lfo_depth+delta*2,0,100);
-                amb_remember_edit(ROUTE_COUNT,before,l->lfo_depth);
+                amb_remember_edit(ROUTE_COUNT);
             }
             else l->lfo_dest=amb_route_turn(l,delta);
         } else if(ambr.page==4) {
@@ -1545,42 +1538,39 @@ static void amb_knob(unsigned knob,int delta)
             else if(l->role==4) {
                 static const uint8_t routes[]={ROUTE_DENSITY,ROUTE_SWING,ROUTE_FILL,ROUTE_MUTATE};
                 uint8_t *v0=knob==0?&l->density:knob==1?&l->swing:knob==2?&l->fill:&l->mutation;
-                unsigned before=*v0;
                 *v0=(uint8_t)clamp(*v0+delta*2,0,100);
-                amb_remember_edit(routes[knob],before,*v0);
+                amb_remember_edit(routes[knob]);
             } else if(knob==0){
-                unsigned before=l->mode;
                 l->mode=(uint8_t)amb_wrap(l->mode+delta,l->role==0?AMB_CHANT+1:5);
-                amb_remember_edit(ROUTE_MODE,before,l->mode);
+                amb_remember_edit(ROUTE_MODE);
                 ambr.grid_cue[ambr.edit_layer]=(amb_grid_cue_t){0};
             } else if(!id){
                 static const uint8_t routes[]={ROUTE_MODE,ROUTE_SPEED,ROUTE_DENSITY,ROUTE_FOLLOW};
                 uint8_t *v0=knob==1?&l->speed:knob==2?&l->density:&l->follow;
-                unsigned before=*v0;
                 *v0=(uint8_t)clamp(*v0+delta*(knob==1?1:2),0,knob==1?3:100);
-                amb_remember_edit(routes[knob],before,*v0);
+                amb_remember_edit(routes[knob]);
             }
         } else if(ambr.page==6){
             int8_t *value=&amb.layer_eq[ambr.edit_layer][knob];
             int before=*value;
             *value=(int8_t)clamp(before+delta,-12,12);
-            amb_remember_edit(ROUTE_EQ+knob,before,*value);
+            amb_remember_edit(ROUTE_EQ+knob);
         } else if(ambr.page==5) {
             if(ambr.fx==5){
                 int8_t *value=&amb.grain[ambr.edit_layer][knob];
                 int before=*value;
                 *value=(int8_t)clamp(before+delta*(knob==2?1:2),knob==2?-12:0,knob==2?12:100);
-                amb_remember_edit(ROUTE_GRAIN+knob,before,*value);
+                amb_remember_edit(ROUTE_GRAIN+knob);
             }else if(ambr.fx==2 && knob==3){
                 int before=amb.global[G_DTYPE];
                 amb.global[G_DTYPE]=param_turn(&GP[G_DTYPE],before,delta);
-                amb_remember_edit(ROUTE_COUNT,before,amb.global[G_DTYPE]);
+                amb_remember_edit(ROUTE_COUNT);
             }else id=amb_fx_id(l,knob);
         }
         if(id){
             int before=l->base[id];
             l->base[id]=(int16_t)param_turn(amb_param_desc(l,id),before,delta);
-            if(before!=l->base[id])amb_remember_edit(amb_param_route(id),before,l->base[id]);
+            amb_remember_edit(amb_param_route(id));
         }
     } else if(ambr.view==2) {
         if(ambr.page==5)return;

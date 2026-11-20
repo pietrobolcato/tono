@@ -65,7 +65,8 @@ static void check_layer_shortcut(void)
     l->base[P_ATK]=0;
     turn(EN_K1,-1);
     link_last_edit();
-    assert(!strcmp(amb_route_name(l,l->lfo_dest),"REL"));
+    assert(l->base[P_ATK]==0);
+    assert(!strcmp(amb_route_name(l,l->lfo_dest),"ATK"));
     amb_patch(0,0,1);
     link_last_edit();
     assert(l->lfo_dest==0);
