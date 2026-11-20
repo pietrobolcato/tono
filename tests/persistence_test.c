@@ -52,7 +52,8 @@ static int st_prog(uint32_t off, const void *src, uint32_t n)
 }
 static uint32_t irq_save(void) { return 0; }
 static void irq_restore(uint32_t f) { (void)f; }
-static uint32_t fl_jedec_ram(void) { return 0; }
+static uint32_t simulated_jedec;
+static uint32_t fl_jedec_ram(void) { return simulated_jedec; }
 static void fl_plain_window_init(void) {}
 #define FL_FAR(fn) (fn)
 #include "../firmware/src/storage.c"
@@ -776,6 +777,17 @@ int main(void)
     settings_save();
     bad += check("PLAY consumed before the settings snapshot defers the write",
                   irq_races == 3u && song.playing && !transport_req && persist_pending && erases == before);
+    static const uint32_t known_ids[] = {0x856014u, 0xB36014u};
+    for (unsigned i = 0; i < sizeof known_ids / sizeof known_ids[0]; ++i) {
+        reset();
+        simulated_jedec = known_ids[i];
+        persist_boot();
+        bad += check("known 1 MiB flash enables persistence", flash_ok);
+    }
+    reset();
+    simulated_jedec = 0xB36015u;
+    persist_boot();
+    bad += check("unknown capacity stays RAM-only", !flash_ok && erases == 0);
     bad += mig_test();
     bad += autosave_test();
     bad += songs_test();
