@@ -11,14 +11,23 @@ int main(void)
     ambr.view=2;ambr.page=2;amb_leds();assert(!lamp(fm1_led,panel.btn[B_REC]));
     amb_fixture_scene(0);ambr.edit_layer=2;ambr.view=1;ambr.page=4;amb_rec();
     for(i=k=0;i<16;i++)k+=amb.layer[2].notes[i]!=0;assert(k>0);
-    unsigned whites=0;
+    turn(EN_SELECT,5);unsigned slot=ambr.cursor;
     for(unsigned key=0;key<27;key++){
         saved=amb.layer[2];host_notes=1u<<key;amb_input();
-        if(key_black(key)){assert(!memcmp(&saved,&amb.layer[2],sizeof saved));continue;}
+        assert(ambr.cursor==slot && amb.layer[2].notes[slot]==53+key);
+        for(i=0;i<16;i++)if(i!=slot)assert(amb.layer[2].notes[i]==saved.notes[i]);
+        amb_leds();assert(lamp(fm1_led,14+key));
+    }
+    press(B_ARP);assert(!amb.layer[2].notes[slot]);
+    amb_patch(2,4,0);amb_rec();amb_rec();
+    unsigned whites=0;
+    for(unsigned key=0;key<27;key++){
+        uint16_t old=amb.layer[2].drums[ambr.lane];
+        host_notes=1u<<key;amb_input();
+        if(key_black(key)){assert(amb.layer[2].drums[ambr.lane]==old);continue;}
         unsigned step=whites++;
-        assert(ambr.cursor==step && !!amb.layer[2].notes[step]!=!!saved.notes[step]);
-        for(i=0;i<16;i++)if(i!=step)assert(amb.layer[2].notes[i]==saved.notes[i]);
-        amb_leds();assert(lamp(fm1_led,14+key)==!!amb.layer[2].notes[step]);
+        assert(ambr.cursor==step && amb.layer[2].drums[ambr.lane]==(old^(1u<<step)));
+        amb_leds();assert(lamp(fm1_led,14+key)==!!(amb.layer[2].drums[ambr.lane]&(1u<<step)));
     }
     assert(whites==16);
     amb_fixture_scene(0);ambr.view=0;pool=amb_pool();host_notes=1u<<8;amb_input();

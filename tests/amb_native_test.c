@@ -109,7 +109,7 @@ int AMB_MAIN(int argc,char **argv)
     ambr.page=1;
     for(i=0;i<7;i++)press(B_SCL);assert(ambr.page==1);
     amb_fixture_scene(0);ambr.view=1;ambr.page=4;ambr.edit_layer=2;press(B_REC);assert(ambr.recording);
-    amb.layer[2].notes[2]=0;host_notes=1u<<4;amb_input();assert(amb.layer[2].notes[2] && ambr.cursor==2 && !amb.layer[2].generated);
+    ambr.cursor=2;amb.layer[2].notes[2]=0;host_notes=1u<<4;amb_input();assert(amb.layer[2].notes[2]==57 && ambr.cursor==2 && !amb.layer[2].generated);
     press(B_REC);assert(!ambr.recording);
     before=amb;
     for(i=0;i<1000;i++) {amb_policy_choose(&amb.policy,i%3,i%(i%3==2?6:8),1);amb_policy_boundary(&amb.policy,i);amb_step();}

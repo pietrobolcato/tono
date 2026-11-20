@@ -65,7 +65,7 @@ int main(void)
     /* Entry edits the selected slot silently; the sequencer remains the player. */
     song.playing=0;amb_fixture_scene(0);amb_target(1);ambr.view=1;ambr.page=4;press(B_REC);ambr.cursor=5;
     amb.layer[0].notes[2]=0;fm1_in.notes=host_notes=1u<<4;amb_input();keyboard_block();
-    assert(ambr.cursor==2 && amb.layer[0].notes[2] && kb_note[4]==KB_SILENT);
+    assert(ambr.cursor==5 && amb.layer[0].notes[5]==57 && !amb.layer[0].notes[2] && kb_note[4]==KB_SILENT);
     fm1_in.notes=host_notes=0;keyboard_block();
     /* The displayed step follows the layer's divider, including rests. */
     amb.layer[0].generated=0;amb.layer[0].speed=2;ambr.handoff[0]=0;trk[0].engine=amb.layer[0].engine;

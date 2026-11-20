@@ -1567,7 +1567,7 @@ static void amb_rec(void)
         amb_layer_t *l=&amb.layer[ambr.edit_layer];
         if(!ambr.recording && l->generated && l->role!=4)amb_capture_generated(ambr.edit_layer);
         ambr.recording=!ambr.recording;l->generated=0;ambr.dirty=1;
-        amb_say(ambr.recording?"WHITE KEYS TOGGLE STEPS":"RECORDING STOPPED");return;
+        amb_say(!ambr.recording?"RECORDING STOPPED":l->role==4?"WHITE KEYS TOGGLE STEPS":"SELECT STEP / KEYS SET PITCH");return;
     }
     if(ambr.piece_preview!=255) {
         unsigned p=ambr.piece_preview;ambr.preset_position=(uint8_t)p;
@@ -1775,13 +1775,14 @@ static void amb_input(void)
     if(ambr.view==1 && ambr.page==4 && ambr.recording) {
         amb_layer_t *l=&amb.layer[ambr.edit_layer];
         for(k=0;k<27;k++) if((notes>>k)&1) {
-            if(key_black(k))continue;
-            unsigned at=key_place(k);
-            ambr.cursor=(uint8_t)at;
-            if(l->role==4)l->drums[ambr.lane]^=(uint16_t)(1u<<at);
-            else if(l->notes[at])l->notes[at]=0;
-            else{
-                l->notes[at]=(uint8_t)clamp(ambr.voicing[ambr.edit_layer],1,127);
+            if(l->role==4){
+                if(key_black(k))continue;
+                unsigned at=key_place(k);
+                ambr.cursor=(uint8_t)at;
+                l->drums[ambr.lane]^=(uint16_t)(1u<<at);
+            }else{
+                unsigned at=ambr.cursor;
+                l->notes[at]=(uint8_t)(53+(int)k+12*song.octave);
                 if(!l->velocity[at])l->velocity[at]=88;
             }
             ambr.dirty=1;
@@ -1834,12 +1835,12 @@ static void amb_leds(void)
         unsigned pc=(53+k+12-amb.key)%12;
         int scale=(amb_pool()>>pc)&1u;
         if(ambr.view==1 && ambr.page==4 && ambr.recording){
-            if(!key_black(k)){
-                const amb_layer_t *l=&amb.layer[ambr.edit_layer];
-                unsigned at=key_place(k);
-                int on=l->role==4?((l->drums[ambr.lane]>>at)&1):l->notes[at];
-                led_put(on?lit:dim,14+k,1);
-            }
+            const amb_layer_t *l=&amb.layer[ambr.edit_layer];
+            if(l->role==4){
+                if(!key_black(k))led_put(l->drums[ambr.lane]&(1u<<key_place(k))?lit:dim,14+k,1);
+            }else if(l->notes[ambr.cursor]==53+(int)k+12*song.octave || ((fm1_in.notes>>k)&1u))
+                led_put(lit,14+k,1);
+            else if(scale)led_put(hi,14+k,1);
             continue;
         }
         if(ambr.view==0 && scale)led_put(hi,14+k,1);
@@ -2124,7 +2125,7 @@ static void amb_guidance(const amb_layer_t *l,const char **first,const char **se
         }else if(ambr.page==3){a="SELECT GROUP / K4 DESTINATION";b="PRESETS VARIATION / REC APPLY";
         }else if(ambr.page==4){
             a=l->role==4?"SCL PAGE / SELECT DRUM LANE":!l->generated && l->notes[ambr.cursor]?"SELECT STEP / ARP CLEAR / SCL PAGE":"SCL PAGE / SELECT EDIT STEP";
-            b=ambr.recording?"WHITE KEYS TOGGLE STEPS / REC END":l->generated?"EDIT OR SEQ MANUAL / REC CAPTURE":"EDIT OR SEQ AUTO / REC OVERDUB";
+            b=ambr.recording?(l->role==4?"WHITE KEYS TOGGLE STEPS / REC END":"KEYS SET PITCH / REC END"):l->generated?"EDIT OR SEQ MANUAL / REC CAPTURE":"EDIT OR SEQ AUTO / REC OVERDUB";
         }else if(ambr.page==5)a="SCL PAGE / SELECT FX MODULE";
     }else if(ambr.view==2){
         if(ambr.page==0){a="SELECT CHORD INTERVAL";b="ALGO CHORD / KNOBS EVOLVE";}
