@@ -303,7 +303,11 @@ static void fm1_main(void)
         fm1_irq_on();
     }
 #endif
-#if !AMBPLUS
+#if AMBPLUS
+    /* The scan and core-1 boot can mask interrupts longer than a DMA half.
+     * Start the audio clock only once its interrupt can be serviced. */
+    fm1_audio_start();
+#else
     autosave_boot(boot_clean);                /* (1.2) the last session's music, under the splash */
 #endif
     session_dice(fm1_ticks() ^ (uint32_t)fm1_adc_read(FM1_ADC_BATT) << 16);   /* (JIANT 0.4) this session's macros */

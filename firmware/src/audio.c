@@ -94,8 +94,10 @@ static void audio_block(int32_t *out, uint32_t n)       /* mix (fx.c), then Q15 
 #endif
     if (fx_usb_fixed)                                   /* USB LEVEL FIXED: USB took the full level, the DAC */
         usb_fixed_dac(out, n);                          /* (speaker, headphones) gets MASTER's (fx.c) */
+#if !AMBPLUS
     for (i = 1; i < n; i += 2u)                         /* the HOME scope: the music, before the click */
         scope_buf[scope_w++ & (SCOPE_N - 1u)] = (int16_t)out[2u * i];
+#endif
     click_render(out, n);                               /* the metronome (click.c): the DAC only, not USB */
     for (i = 0; i < n; i++) {
         out[2u * i] *= 1 << OUT_SHIFT;
@@ -283,5 +285,9 @@ static void audio_init(void)                   /* codec and ALNK0 bring-up (fm1_
     uint32_t i;
     for (i = 0; i < 2u * HALF_WORDS; i++)
         abuf[i] = 0;
+#if AMBPLUS
+    fm1_audio_prepare(abuf, HALF_WORDS, isr_alnk0, 3);
+#else
     fm1_audio_init(abuf, HALF_WORDS, isr_alnk0, 3);
+#endif
 }

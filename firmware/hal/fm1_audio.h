@@ -40,7 +40,7 @@ static void fm1__pc_out(uint32_t bit, int v)   /* codec control lines on PC0/1/2
     FM1_PR(FM1_PC, FM1_DIR) &= ~m;
 }
 
-FM1_INLINE void fm1_audio_init(int32_t *buf, uint32_t half_words, void (*isr)(void), uint32_t prio)
+FM1_INLINE void fm1_audio_prepare(int32_t *buf, uint32_t half_words, void (*isr)(void), uint32_t prio)
 {
     fm1__pc_out(6, 0);
     fm1_delay_ms(5);
@@ -69,9 +69,19 @@ FM1_INLINE void fm1_audio_init(int32_t *buf, uint32_t half_words, void (*isr)(vo
     FM1_ALNK_CON1 &= ~(1u << 15);
     FM1_ALNK_CON2 = 0x0Fu;
     fm1_irq_attach(FM1_IRQ_ALNK0, isr, prio);
+}
+
+FM1_INLINE void fm1_audio_start(void)
+{
     FM1_ALNK_CON0 |= 0x800u;
     fm1_delay_ms(5);
     fm1__pc_out(6, 1);
+}
+
+FM1_INLINE void fm1_audio_init(int32_t *buf, uint32_t half_words, void (*isr)(void), uint32_t prio)
+{
+    fm1_audio_prepare(buf, half_words, isr, prio);
+    fm1_audio_start();
 }
 
 FM1_INLINE uint8_t fm1_audio_pending(void) { return FM1_ALNK_CON2; }
