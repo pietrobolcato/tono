@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
+#include "tono_version.h"
 #define TONO_INK RGB(37,39,38)
 #define TONO_PAPER RGB(234,235,230)
 #define TONO_ORANGE RGB(222,86,22)
@@ -67,9 +68,10 @@ static void tono_logo(int x,int y,int divisor,uint16_t paper,uint16_t ink)
 }
 static void tono_wordmark(uint16_t paper, uint16_t ink)
 {
-    cv_begin(240, 68, paper);
+    cv_begin(240, 72, paper);
     tono_logo(61,7,1,paper,ink);
-    cv_text_in(0, 51, 240, &AF_TONO_LABEL, "FM1 AMBIENT SYNTHESIZER", ink, paper);
+    cv_text_in(0, 43, 240, &AF_TONO_LABEL, "v" TONO_RELEASE_VERSION, ink, paper);
+    cv_text_in(0, 58, 240, &AF_TONO_LABEL, "FM1 AMBIENT SYNTHESIZER", ink, paper);
     cv_blit(0, 163);
 }
 

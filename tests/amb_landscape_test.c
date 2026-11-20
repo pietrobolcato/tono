@@ -54,6 +54,39 @@ static void preserve_open_editor(void)
     assert(!memcmp(&amb.layer[affected],&edited,sizeof edited));
     song.playing=0;
 }
+static void toggle_sound_lock(void)
+{
+    fm1_in.buttons|=1u<<panel.btn[B_HOME];
+    amb_input();
+    press(B_PLAY);
+    fm1_in.buttons&=~(1u<<panel.btn[B_HOME]);
+    amb_input();
+}
+static void persistent_sound_lock(void)
+{
+    amb_fixture_scene(AMB_SCENE_GARDEN);
+    song.playing=1;ambr.view=0;amb_target(1);transport_req=0;
+    amb_walk_config()[4]=0;amb_journey_recentre();
+    amb_layer_t before=amb.layer[0],other=amb.layer[1];
+    toggle_sound_lock();
+    assert(amb_sound_locks()==1 && !transport_req && song.playing);
+    amb_landscape_turn(9);
+    for(unsigned i=0;i<50;i++)amb_landscape_colour(0);
+    for(unsigned i=0;i<4;i++)amb_landscape_bar();
+    assert(!memcmp(&amb.layer[0],&before,sizeof before));
+    assert(memcmp(&amb.layer[1],&other,sizeof other));
+    lane_clock[1].serial=0;amb_change_role();
+    assert(!memcmp(&amb.layer[0],&before,sizeof before));
+    song.playing=0;ambr.view=3;ambr.slot=0;ambr.overwrite=1;amb_save();
+    amb_fixture_scene(AMB_SCENE_GARDEN);
+    assert(!amb_sound_locks());
+    assert(amb_recall(0) && amb_sound_locks()==1);
+    ambr.view=0;amb_target(1);
+    toggle_sound_lock();
+    assert(!amb_sound_locks() && !transport_req);
+    amb_landscape_turn(-9);
+    assert(memcmp(&amb.layer[0],&before,sizeof before));
+}
 int main(void)
 {
     memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();
@@ -90,6 +123,8 @@ int main(void)
     turn(EN_ALGO,4);assert(amb.layer[0].patch!=picked);
     evolving_manual_turns(1);evolving_manual_turns(2);
     preserve_open_editor();
+    persistent_sound_lock();
+    puts("HOME + PLAY lock keeps transport, protects sound, round-trips and unlocks PASS");
     puts("Manual chapters and branches continue through reversals, retain an anchor and respect bar handoffs PASS");
     puts("Edited patch remains eligible, and becomes the return sound PASS");
     puts("Endless travel across both boundaries and reversible chord/patch selections PASS");

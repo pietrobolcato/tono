@@ -102,8 +102,8 @@ static unsigned amb_global_index(unsigned page)
 static const char *const AMB_MOOD[7] = {"homeward","warmer","brighter","suspended","deeper","open","darker"};
 #include "amb_nostalgic.h"
 _Static_assert(sizeof(amb_piece_t)==1440 && AMB_VERSION==5, "upgrade embedded song before changing format");
-enum { AMB_SCENE_GARDEN = 11, AMB_SCENE_INN = 12, AMB_SCENE_LAST_TRAM = 16 };
-static const char *const AMB_SCENE[] = {"Morning Air","Rain Study","Dark Water","Low Sun","Glass Room","Night Garden","Window Seats","Stone Cloister","Tidal Loom","Kite Strings","Departure Hall","Garden","Nostalgic New Inn","Pear Orchard","Tide Atlas","Pocket Orrery","Last Tram"};
+enum { AMB_SCENE_GARDEN = 11, AMB_SCENE_INN = 12, AMB_SCENE_TIDE_ATLAS = 14, AMB_SCENE_LAST_TRAM = 16, AMB_SCENE_FIRST_FERRY = 17 };
+static const char *const AMB_SCENE[] = {"Morning Air","Rain Study","Dark Water","Low Sun","Glass Room","Night Garden","Window Seats","Stone Cloister","Tidal Loom","Kite Strings","Departure Hall","Garden","Nostalgic New Inn","Pear Orchard","Tide Atlas","Pocket Orrery","Last Tram","First Ferry"};
 static const char *const AMB_MACRO[7][4] = {
     {"WARMTH","MOTION","SUSTAIN","SPACE"},{"WARMTH","DRIFT","SUSTAIN","SPACE"},
     {"SOFT","MOTION","SHIMMER","SPACE"},{"ROUND","PULSE","GLIDE","SPACE"},
@@ -123,6 +123,12 @@ static void amb_pool_set(unsigned pool)
 {
     pool=(pool|1u)&0xfffu;amb.layer[0].reserved=(uint8_t)pool;
     amb.layer[1].reserved=(uint8_t)(pool>>8);
+}
+/* Store a tagged four-layer mask in the last layer's unused save byte. */
+static unsigned amb_sound_locks(void)
+{
+    unsigned saved=amb.layer[3].reserved;
+    return (saved&0xf0u)==0xa0u?saved&15u:0;
 }
 /* All harmony edits use the same natural note/release path as AUTO. */
 static void amb_revoice(void)
@@ -353,6 +359,7 @@ static void amb_auto_tick(void)
     auto_walk.armed=1;
 }
 
+#include "amb_first_ferry.h"
 static void amb_make_scene(amb_piece_t *p,unsigned scene)
 {
     static const uint8_t roles[6][4]={{0,1,2,4},{0,5,2,4},{1,0,3,5},{0,3,2,5},{2,0,3,4},{5,1,2,4}};
@@ -377,7 +384,7 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
         /* Last Tram: nocturnal sax, piano and pedal with the air of a tape machine. */
         {9,0,63,4,{2,4,1},96,19,{{0,21,1,100},{2,14,0,91},{3,9,1,53},{5,1,1,16}}}
     };
-    _Static_assert(NELEM(AMB_SCENE)==7+NELEM(arrangements),"factory catalog");
+    _Static_assert(NELEM(AMB_SCENE)==8+NELEM(arrangements),"factory catalog");
     scene%=NELEM(AMB_SCENE);
     if(scene==AMB_SCENE_INN){
         uint8_t *out=(uint8_t *)p;
@@ -389,7 +396,8 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
         }
         return;
     }
-    const arrangement_t *arr=scene<6?0:&arrangements[scene-6-(scene>AMB_SCENE_INN)];
+    unsigned arrangement_scene=scene==AMB_SCENE_FIRST_FERRY?AMB_SCENE_TIDE_ATLAS:scene;
+    const arrangement_t *arr=scene<6?0:&arrangements[arrangement_scene-6-(arrangement_scene>AMB_SCENE_INN)];
     unsigned i,j;
     memset(p,0,sizeof *p);p->magic=AMB_MAGIC;p->version=AMB_VERSION;
     amb_policy_init(&p->policy,0x414d4200u+scene);p->release_ms=6000;p->master=760;
@@ -439,6 +447,7 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
         p->layer[1].mode=2;p->layer[3].mode=2;
         p->policy.variation=18;p->evolve[1]=15;p->evolve[2]=12;
     }
+    if(scene==AMB_SCENE_FIRST_FERRY)amb_first_ferry(p);
 }
 typedef struct {amb_piece_t piece;amb_take_t take;} amb_take_song_t;
 _Static_assert(sizeof(amb_take_song_t)<=ST_PAYLOAD_MAX,"voice take fits an existing song");
@@ -1240,6 +1249,7 @@ static int amb_stage_slot(unsigned slot)
     if(amb_pending.version<3){amb_pending.layer[0].reserved=amb_pending.layer[1].reserved=0;}
     if(amb_pending.version<4){memset(amb_pending.layer_eq,0,sizeof amb_pending.layer_eq);amb_pending.release_ms=3000;}
     if(amb_pending.version<5){
+        amb_pending.layer[3].reserved=0;
         amb_anchor_master(&amb_pending);
         for(unsigned k=0;k<4;k++){amb_pending.grain[k][1]=50;amb_pending.grain[k][3]=20;}
     }
@@ -1554,9 +1564,9 @@ static void amb_rec(void)
 {
     if(ambr.local_preset){amb_apply_page_preset();return;}
     if(ambr.reset_pending){
-        unsigned k=ambr.edit_layer,solo=amb.layer[0].solo_plus1;uint8_t p0=amb.layer[0].reserved,p1=amb.layer[1].reserved;
+        unsigned k=ambr.edit_layer,solo=amb.layer[0].solo_plus1;uint8_t p0=amb.layer[0].reserved,p1=amb.layer[1].reserved,p3=amb.layer[3].reserved;
         ambr.loading=1;amb_begin_change(k);amb.layer[k]=amb_reset_layer[k];memcpy(amb.grain[k],amb_reset_grain[k],4);memcpy(amb.layer_eq[k],amb_reset_eq[k],4);
-        amb.layer[0].solo_plus1=(uint8_t)solo;amb.layer[0].reserved=p0;amb.layer[1].reserved=p1;
+        amb.layer[0].solo_plus1=(uint8_t)solo;amb.layer[0].reserved=p0;amb.layer[1].reserved=p1;amb.layer[3].reserved=p3;
         if(!ambr.handoff[k])amb_apply_patch(k);
         amb_travel_rebase(k);ambr.recent_valid[k]=0;ambr.reset_pending=0;ambr.loading=0;
         amb_say("TRACK RESTORED TO LOADED PIECE");return;
@@ -1634,7 +1644,6 @@ static void amb_input(void)
     if(amb_save_slot && !song.playing)amb_commit_snapshot();
     uint32_t pressed=fm1_input_edges(0),notes=fm1_input_note_edges();
     unsigned b,k; int s,sel=panel_enc(EN_SELECT),algo=panel_enc(EN_ALGO),pre=panel_enc(EN_PRESET);
-    if(algo && ambr.view==0)amb_auto_reset();else amb_auto_tick();
     unsigned home=(fm1_in.buttons>>panel.btn[B_HOME])&1u,play=(fm1_in.buttons>>panel.btn[B_PLAY])&1u;
     static uint8_t home0,play0;
     for(k=0;k<3;k++) if(ambr.gen_edit[k] && fm1_ms-ambr.gen_time[k]>=90u) {
@@ -1642,7 +1651,24 @@ static void amb_input(void)
         ambr.gen_edit[k]=0;ambr.dirty=1;
     }
     if(home && !home0) ambr.home_used=0;
-    if(play && !play0) {ambr.play_t=fm1_ms;ambr.play_used=0;}
+    if(play && !play0) {
+        ambr.play_t=fm1_ms;ambr.play_used=0;
+        if(home && !ambr.view && !ambr.help && !ambr.zen && ambr.piece_preview==255){
+            ambr.home_used=ambr.play_used=1;
+            if(ambr.target){
+                unsigned layer=ambr.target-1,bit=1u<<layer,locks=amb_sound_locks()^bit;
+                ambr.loading=1;
+                amb.layer[3].reserved=(uint8_t)(locks?0xa0u|locks:0);
+                // Discard any queued swap for this layer, including on unlock.
+                travel.guarded_layers|=bit;travel.pending_layers&=~bit;
+                if(role_pending)role_pending|=bit;
+                amb_travel_rebase(layer);
+                ambr.loading=0;
+                amb_say(locks&bit?"SOUND LOCKED":"SOUND UNLOCKED");
+            }else amb_say("SELECT A LAYER TO LOCK");
+        }
+    }
+    if(algo && ambr.view==0)amb_auto_reset();else amb_auto_tick();
     if(play && !ambr.play_used && fm1_ms-ambr.play_t>=800u) {
         ambr.panic=1;transport_req=2;ambr.play_used=1;amb_say("PANIC - OUTPUT FADING");
     }
@@ -2279,6 +2305,7 @@ static void amb_draw_home(void)
     amb_chord_label(amb.chord,chord);cv_text(98,48,&AF_M,chord,SCOPE_INK);
     if(ambr.chord_q!=255)amb_text(162,52,"QUEUED",TONO_ORANGE,7);
     for(unsigned i=0;i<24;i++)cv_rect(17+9*i,77,7,2,i*100<24*percent?TONO_ORANGE:DISPLAY_GRID);
+    unsigned locks=amb_sound_locks();
     for(unsigned k=0;k<4;k++){
         const amb_layer_t *l=&amb.layer[k];int left=8+(k%2)*114,y=90+(k/2)*28;
         if(amb_theme()){
@@ -2293,6 +2320,10 @@ static void amb_draw_home(void)
             amb_text(left+19,y,AMB_ROLE[l->role],AINK,8);
         }
         amb_text(left+19,y+13,l->role==6?N_AS_SOURCE[l->base[P_E0]]:amb_patch_name(l),ADIM,14);
+        if(locks&(1u<<k)){
+            cv_frame(left+91,y+1,5,6,AQUEUE);
+            cv_rect(left+90,y+5,7,5,AQUEUE);
+        }
         if(l->base[P_MUTE] || (ambr.solo>=0 && ambr.solo!=(int)k))amb_text(left+99,y,"M",AQUEUE,1);
     }
 }
@@ -2335,12 +2366,17 @@ static void amb_draw_home_status(void)
     // The stock ADC thresholds give a coarse level, even on USB power.
     int32_t level = batt_level();
     uint16_t ink = !song.batt_raw ? ADIM : level == 0 ? AQUEUE : AINK;
-    cv_frame(216, 8, 15, 9, ink);
-    cv_rect(231, 11, 2, 3, ink);
+    cv_frame(216, 8, 13, 9, ink);
+    cv_rect(229, 11, 2, 3, ink);
     for (int32_t segment = 0; segment < level; segment++)
         cv_rect(218 + segment * 3, 10, 2, 5, ink);
     if (!song.batt_raw)
         cv_rect(222, 12, 3, 1, ADIM);
+    if(batt_shown()==4){
+        cv_line(236,8,233,12,AQUEUE);
+        cv_rect(233,12,5,1,AQUEUE);
+        cv_line(237,12,234,16,AQUEUE);
+    }
 }
 
 static void amb_draw(void)
@@ -2630,8 +2666,8 @@ static void amb_draw(void)
         amb_text(10,8,first,AINK,39);
         amb_text(10,23,second,AINK,39);
         amb_text(10,44,ambr.view==1 && ambr.page==1?"MASTER controls the edited layer.":"MASTER controls the selected level.",ADIM,39);
-        if(amb_page_bank())
-            amb_text(10,57,"PRESETS variation / REC apply",ADIM,39);
+        if(!ambr.view)amb_text(10,57,"HOME + PLAY locks the layer sound",ADIM,39);
+        else if(amb_page_bank())amb_text(10,57,"PRESETS variation / REC apply",ADIM,39);
         amb_text(10,75,"HOME close / HOME + FX bypass",AQUEUE,37);
         cv_blit_cells(0,147);
         return;
