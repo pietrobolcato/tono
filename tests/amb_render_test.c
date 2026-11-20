@@ -24,6 +24,8 @@ static void ar_text(int a,int b,int c,int d,const char *s,unsigned f)
 {
     if(!strcmp(s,"SELECT TARGET / EDIT / SCL ENSEMBLE") ||
        !strcmp(s,"MASTER picks up the saved level."))assert(ambr.help);
+    if(!strcmp(s,"EDIT  Timing and reach") || !strcmp(s,"EDIT  Back to Travel") ||
+       !strcmp(s,"REC apply / HOME cancel"))assert(b<93);
     if(f&2u){printf("CLIPPED %s %s\n",ar_name,s);ar_bad++;}
     assert(ar_n<100);ar_boxes[ar_n]=(abox){a,b,c,d,{0}};strncpy(ar_boxes[ar_n++].s,s,39);
 }
@@ -32,6 +34,8 @@ static void ar_blit(int x,int y,unsigned row)
     unsigned i,j;(void)row;
     for(i=0;i<ar_n;i++) {
         abox *a=&ar_boxes[i];if(!a->s[0])continue;
+        if(!strcmp(a->s,"EDIT  Timing and reach") || !strcmp(a->s,"EDIT  Back to Travel") ||
+           !strcmp(a->s,"REC apply / HOME cancel"))assert(a->y0+y>=219);
         if(a->x0+x<0 || a->y0+y<0 || a->x1+x>240 || a->y1+y>240){printf("BOUNDS %s %s\n",ar_name,a->s);ar_bad++;}
         for(j=0;j<i;j++) {
             abox *b=&ar_boxes[j];if(!b->s[0])continue;

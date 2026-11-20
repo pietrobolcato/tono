@@ -1949,7 +1949,7 @@ static void amb_sound_preview(const amb_layer_t *current,unsigned next)
         amb_text(12,104,line[0]?line[0]:"A different tone colour",AINK,36);
         if(line[1])amb_text(12,117,line[1],AINK,36);
     }
-    amb_text(12,133,"REC APPLY / HOME CANCEL",AQUEUE,30);
+
 }
 
 /* An impulse-response sketch: the horizontal axis is elapsed time. */
@@ -2433,12 +2433,11 @@ static void amb_draw(void)
             cv_bg=SCOPE_BG;amb_text(17,112,"NOTE POOL",SCOPE_INK,10);
             cv_bg=ABG;
         } else if(ambr.view==2 && ambr.page>=6){
-            static const char *const hints[]={"Reverse to retrace your sound.","One layer changes every four clicks.","Keep one instrument as others change."};
-            amb_text(12,58,"SELECT  /  JOURNEY",ADIM,20);
+            static const char *const hints[]={"Reverse to retrace your sound.","Four travel steps bring a new sound.","Keep one instrument as others change."};
+            amb_text(12,58,"JOURNEY",ADIM,20);
             cv_text(12,77,&AF_M,amb_walk_styles[amb_journey_style()],AINK);
             amb_text(12,100,hints[amb_journey_style()],ADIM,40);
-            const char *status=ambr.page==6?"EDIT  /  Auto timing and reach":
-                !amb_walk_value(0)?"Auto off  /  manual turns only":
+            const char *status=!amb_walk_value(0)?"Auto off  /  manual turns only":
                 amb_walk_value(1)==amb_walk_value(2)?"Auto on  /  fixed interval":"Auto on  /  random interval";
             amb_text(12,126,status,AINK,36);
         } else if(ambr.view==2 && ambr.page==4) {
@@ -2467,7 +2466,7 @@ static void amb_draw(void)
             static const char *const feel[]={"Up close, with a clearer attack","Rounder, with a softer entrance","A slow swell in a larger space"};
             amb_text(16,103,feel[ambr.local_preset-1],ADIM,36);
         }
-        amb_text(16,127,"REC APPLY / HOME CANCEL",AQUEUE,30);
+
     }else if(!ambr.help && ambr.reset_pending){
         GFX_HOOK_COVER(8,50,232,145);cv_bg=ASEL;cv_rect(8,50,224,95,cv_bg);
         amb_text(16,61,"RESTORE THIS TRACK?",AQUEUE,30);
@@ -2508,9 +2507,7 @@ static void amb_draw(void)
             amb_number(x+7,23,i+1,selected?ABG:AINK);
             if(selected)cv_rect(x,41,22,3,TONO_ORANGE);
         }
-    } else if(ambr.reset_pending || ambr.piece_preview!=255){
-        amb_text(12,20,ambr.reset_pending?"REC RESTORE / HOME CANCEL":"REC RECALL / HOME CANCEL",AINK,36);
-    }else for(k=0;k<4;k++) {
+    }else if(!ambr.reset_pending && ambr.piece_preview==255)for(k=0;k<4;k++) {
         char label[16]={0},value[24]={0};amb_knob_value(k,label,value);if(!label[0])continue;cv_bg=ABG;
         int left=9+k*57;
         if(k)cv_rect(left-4,12,1,42,ALINE);
@@ -2543,14 +2540,22 @@ static void amb_draw(void)
         cv_rect(12,70,217,1,ALINE);
         cv_rect(120,68,1,3,ADIM);
         cv_rect(marker-2,67,5,4,TONO_ORANGE);
-    }else if(ambr.view!=0 && ambr.notice[0] && fm1_ms-ambr.notice_ms<2500u)
+    }else if(ambr.notice[0] && fm1_ms-ambr.notice_ms<2500u)
         amb_text(10,59,ambr.notice,ADIM,39);
     else if(amb_tail_any())
         amb_text(10,59,ambr.handoff[4] || ambr.handoff[5]?"CROSSFADE":"OLD SOUND RELEASING / NEXT QUEUED",ADIM,39);
+    else if(amb_monitor_requested)amb_text(10,59,"FX BYPASSED",AQUEUE,13);
     cv_rect(8,72,224,1,ALINE);
-    if(ambr.view==0 && ambr.notice[0] && fm1_ms-ambr.notice_ms<2500u){amb_text(10,78,ambr.notice,ADIM,39);}
-    else {amb_text(10,78,amb_monitor_requested?"FX BYPASSED":"Help",amb_monitor_requested?AQUEUE:ADIM,13);
-    amb_text(162,78,"HOME + EDIT",AINK,12);}
+    const char *hint="Help";
+    if(ambr.reset_pending)hint="REC restore / HOME cancel";
+    else if(ambr.piece_preview!=255)hint="REC recall / HOME cancel";
+    else if(ambr.proposal!=255 || ambr.local_preset)hint="REC apply / HOME cancel";
+    else if(ambr.view==2 && ambr.page==6)hint="EDIT  Timing and reach";
+    else if(ambr.view==2 && ambr.page==7)hint="EDIT  Back to Travel";
+    else if(ambr.view==1 && ambr.page==1)
+        hint=l->role==6?"EDIT  Next sound page":ambr.bank?"EDIT  Back to patch":"EDIT  Sound details";
+    amb_text(10,78,hint,ADIM,30);
+    amb_text(162,78,"HOME + EDIT",AINK,12);
     cv_blit_cells(0,147);
     (void)b;
 }
