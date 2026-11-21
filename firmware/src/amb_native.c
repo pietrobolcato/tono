@@ -73,7 +73,8 @@ static struct {
     uint32_t level_feedback_ms;uint8_t level_feedback_target,level_feedback_active;
     amb_walk_t harmony_walk;
     int32_t evolve_smooth[4];
-    uint8_t recent[4][16], recent_vel[4][16], recent_valid[4], reset_pending, detail, foundation_pending[4];
+    uint16_t recent_slide[4];
+    uint8_t acid_window[4],recent[4][16], recent_vel[4][16], recent_valid[4], reset_pending, detail, foundation_pending[4];
     uint8_t zen,zen_train;
     uint8_t evolve_open,evolve_queued,evolve_role,evolve_patch,evolve_layer;
     uint8_t help, local_preset, preset_position;
@@ -993,6 +994,7 @@ static void amb_capture_generated(unsigned k)
 {
     amb_layer_t *l=&amb.layer[k];unsigned i,n=0;
     for(i=0;i<16;i++)n+=ambr.recent[k][i]!=0;
+    if(amb_acid(l) && ambr.recent_valid[k])l->drums[3]=ambr.recent_slide[k];
     if(ambr.recent_valid[k] && (n || amb.policy.active[0]==8)){memcpy(l->notes,ambr.recent[k],16);memcpy(l->velocity,ambr.recent_vel[k],16);}
     else if(amb.policy.active[0]==8 && l->role!=5){
         memset(l->notes,0,sizeof l->notes);
@@ -1015,8 +1017,9 @@ static void amb_capture_generated(unsigned k)
     if(!n && (amb.policy.active[0]!=8 || !ambr.recent_valid[k])){l->notes[0]=(uint8_t)(ambr.voicing[k]+(l->role==2?12:0));l->velocity[0]=70;}
 }
 #include "amb_garden.h"
-static void amb_acid_step(unsigned k,unsigned note,unsigned velocity,unsigned gate,int slide)
+static void amb_acid_step(unsigned k,unsigned note,unsigned velocity,unsigned speed,int slide)
 {
+    unsigned gate=FS*60u*(1u<<speed)/(4u*amb.global[G_BPM])+CTL;
     track_t *t=&trk[k];
     ambr.accent[k]=velocity>=96?18:0;
     if(slide && ambr.held_n[k] && ambr.held[k][0]!=note){
@@ -1054,19 +1057,44 @@ static void amb_layer_step(unsigned k,unsigned step,unsigned mask)
             if(amb_carry_note(k,note,gate))return;
         }
         unsigned velocity=amb_routed(k,ROUTE_VEL,l->velocity[slot],1,127);
-        if(amb_acid(l))amb_acid_step(k,note,velocity,FS*60u*(1u<<speed)/(4u*amb.global[G_BPM])+CTL,(l->drums[3]>>slot)&1u);
+        if(amb_acid(l))amb_acid_step(k,note,velocity,speed,(l->drums[3]>>slot)&1u);
         else{amb_release(k);amb_note(k,note,velocity,gate);}return;
     }
     mask=amb_align_cue(l,k,step,mask,&ambr.grid_cue[k]);
+    if(amb_acid(l)){
+        if(step% (1u<<speed))return;
+        unsigned pulse=step>>speed,slot=pulse%16,bit=1u<<slot;
+        /* A conductor cue starts a short answer. Revisit the same cell for
+         * four cycles, with a fresh turn at the end of each cycle. */
+        unsigned seed=amb.policy.seed+k*97u+amb.policy.active[1]*53u+pulse/64u;
+        unsigned shape=amb_hash(seed+slot+(slot>=12?pulse/16u:0));
+        unsigned mode=amb_routed(k,ROUTE_MODE,l->mode,0,4);
+        if(!ambr.recent_valid[k]){ambr.acid_window[k]=0;ambr.recent_slide[k]=0;}
+        if(!slot)ambr.acid_window[k]=0;
+        if(mask&(1u<<k))ambr.acid_window[k]=mode==4?!(step%16 || bar%4==3):4;
+        unsigned note=0,velocity=0,slide=0;
+        if(ambr.acid_window[k]){
+            ambr.acid_window[k]--;
+            unsigned density=amb_routed(k,ROUTE_DENSITY,l->density,0,100);
+            if(density && (!(slot%4) || shape%100<35+density/2)){
+                static const uint8_t degrees[]={0,3,5,7,7,10,12,0};
+                unsigned root=(l->role==3?48:60)+ambr.voicing[0]%12;
+                note=amb_pool_nearest(root+(slot%4?degrees[(shape>>8)&7]:0));
+                velocity=(!(slot%4) || (shape&15)==3)?107:72;
+                slide=(slot%4 && (shape>>12)%3==0 && ambr.held_n[k] && ambr.held[k][0]!=note);
+            }
+        }
+        ambr.recent_slide[k]=(ambr.recent_slide[k]&~bit)|(slide?bit:0);
+        ambr.recent[k][slot]=note;ambr.recent_vel[k][slot]=velocity;ambr.recent_valid[k]=1;
+        if(note)amb_acid_step(k,note,velocity,speed,slide);
+        else amb_release(k);
+        return;
+    }
     n=amb_generated_notes(k,step,mask,notes,&gate);
     if(!(step% (1u<<speed))){i=(step>>speed)%16;ambr.recent[k][i]=n?notes[0]:0;ambr.recent_vel[k][i]=65;ambr.recent_valid[k]=1;}
     if(!n)return;
     if(n==1 && (l->role==0 || l->role==1 || l->role==5) && amb_carry_note(k,notes[0],gate))return;
     if(l->role==0 && amb_keep_pad(k,notes,n,gate))return;
-    if(amb_acid(l)){
-        unsigned articulation=amb_hash(amb.policy.seed+k*37+step);
-        amb_acid_step(k,notes[0],articulation&4?105:72,gate,(articulation&3)==0);return;
-    }
     unsigned velocity=65;
     if(amb.layer[2].reserved==AMB_PIANO_PHRASING && l->role==2){
         unsigned touch=amb_hash(amb.policy.seed+step*59u+k*71u);
