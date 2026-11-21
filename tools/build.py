@@ -264,13 +264,25 @@ def build_app():
     size = os.environ.get("FELUCCA_SIZE") != "0"
     hot = size and os.environ.get("FELUCCA_HOTRAM") != "0"   # (0.6.78) core 0's hottest audio code in RAM (HOT_FNS)
     flags.append(f"-DFELUCCA_HOTRAM={int(hot)}")
+    if os.environ.get("AMBPLUS") == "1":
+        flags.append("-DTONO_A22_EXTERNAL_DSP=1")
     cmain = (("cc", *flags, "-S", "-emit-llvm", "-Xclang", "-disable-llvm-optzns", "-c",
               FW / "src" / "felucca.c", "-o", OUT / "felucca.ll") if size else
              ("cc", *flags, "-c", FW / "src" / "felucca.c", "-o", OUT / "felucca.o"))
+    # Imported A22 renderers use the AC79 hardware float instructions. Keep
+    # those flags local to its translation unit and Tono's integer mixer intact.
+    voice_objects = []
+    voice_compiles = []
+    if os.environ.get("AMBPLUS") == "1":
+        obj = OUT / "a22_dsp.o"
+        voice_compiles.append(("cc", "-Os", "-mcpu=r3", "-mfprev1", "-ffp-contract=off",
+                               "-ffunction-sections", "-fdata-sections", "-fno-builtin",
+                               "-c", FW / "src" / "a22" / "a22_dsp.c", "-o", obj))
+        voice_objects.append(obj)
     tc_all(("cc", "-c", FW / "crt0.S", "-o", OUT / "crt0.o"),
            ("cc", "-c", FW / "hal" / "fm1_vec.S", "-o", OUT / "fm1_vec.o"),
            ("cc", "-c", FW / "hal" / "fm1_isr.S", "-o", OUT / "fm1_isr.o"),
-           cmain)
+           cmain, *voice_compiles)
     if size:
         subprocess.run([sys.executable, SRC / "tools" / "size_fns.py", OUT / "felucca.ll", OUT / "felucca_size.ll"],
                        check=True)
@@ -290,7 +302,7 @@ def build_app():
             tc("cc", *cf, "-c", OUT / "felucca_size.ll", "-o", OUT / "felucca.o")
     elf = OUT / "felucca.elf"
     tc("pi32v2/bin/ld", "-T", FW / "app.ld", OUT / "crt0.o", OUT / "fm1_vec.o", OUT / "fm1_isr.o",
-       OUT / "felucca.o", "-o", elf)
+       OUT / "felucca.o", *voice_objects, "-o", elf)
     for sect in ("text.bin", "data.bin", "ramtext.bin", "c1text.bin", "hottext.bin"):
         (OUT / sect).unlink(missing_ok=True)
     *_, syms, dis, rt = tc_all(("common/bin/objcopy", "-O", "binary", "-j", ".text", elf, OUT / "text.bin"),
