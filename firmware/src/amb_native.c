@@ -266,6 +266,11 @@ static void amb_fill_patch(amb_layer_t *l,unsigned key,unsigned k,unsigned role,
     if(role==7 && patch==2){l->base[P_E5]=9;l->base[P_ED_FLT]=12;}
     if(role==7 && patch==5){l->lfo_dest=3;l->lfo_depth=24;l->base[P_LRATE]=18;}
     if(role==6){l->base[P_E4]=0;l->base[P_E5]=100;l->base[P_E6]=40;l->base[P_E7]=85;l->base[P_LN7]=100;l->base[P_LN6]=20;}
+    if(l->engine==ENGI_AMB_A22){
+        for(i=0;i<4;i++)l->base[P_ATK+i]=pr->env[i];
+        l->base[P_LD_FLT]=l->lfo_depth=0;
+        l->base[P_FRES]=l->base[P_CHOR]=l->base[P_GLIDE]=0;
+    }
     for(i=0;i<4;i++)l->macro[i]=64;
 }
 /* Keep existing v1-v4 saved PHASE texture edits literal; only fresh factory
@@ -767,6 +772,15 @@ static __attribute__((noinline)) void amb_prepare(void)
         if(l->engine==12)t->p[P_E2]=(int16_t)clamp(l->base[P_E2]-warm/2,-64,63);
         if(l->engine==11)t->p[P_E1]=(int16_t)clamp(l->base[P_E1]-warm,0,127);
         if(l->engine==ENGI_SINEFM)t->p[P_E1]=(int16_t)clamp(l->base[P_E1]-warm/2,0,127);
+        if(l->engine==ENGI_AMB_A22){
+            if(l->base[P_E0]<8){
+                t->p[P_E4]=clamp(l->base[P_E4]+tone/2,0,100);       /* warmth */
+                t->p[P_E3]=clamp(l->base[P_E3]+movement/2,0,100);   /* tremolo */
+            }else{
+                t->p[P_E3]=clamp(l->base[P_E3]-tone/2,0,100);       /* cutoff */
+                t->p[P_E2]=clamp(l->base[P_E2]+movement/3,0,100);   /* oscillator colour */
+            }
+        }
         if(l->engine==2)t->p[P_E2]=(int16_t)clamp(l->base[P_E2]-warm,0,127);
         if(l->engine==7)t->p[P_E3]=(int16_t)clamp(l->base[P_E3]-warm/8,-8,8);
         if(l->role==0 || l->role==1)t->p[P_SUS]=(int16_t)clamp(l->base[P_SUS]+bloom/3,40,127);
@@ -1506,6 +1520,19 @@ static const param_desc_t *amb_param_desc(const amb_layer_t *l,unsigned id)
     /* The queued sound can differ from the sounding track until its tail
      * ends. Resolve mode-specific names from the saved destination. */
     const param_desc_t *d=0;
+    if(l->engine==ENGI_AMB_A22){
+#define A22_PERCENT(label) {label,F_PCT,0,100,0,0,0}
+        static const param_desc_t controls[2][4]={
+            {A22_PERCENT("BARK"),A22_PERCENT("TINE"),A22_PERCENT("TREM"),A22_PERCENT("WARMTH")},
+            {A22_PERCENT("SHAPE"),A22_PERCENT("TZFM"),A22_PERCENT("CUTOFF"),A22_PERCENT("RESO")}
+        };
+        static const param_desc_t env[4]={
+            A22_PERCENT("ATK"),A22_PERCENT("DEC"),A22_PERCENT("SUS"),A22_PERCENT("REL")
+        };
+#undef A22_PERCENT
+        if(id>=P_E1 && id<=P_E4)return &controls[l->base[P_E0]>=8][id-P_E1];
+        if(id>=P_ATK && id<=P_REL)return &env[id-P_ATK];
+    }
     if(id>=P_E0){
         if(l->engine==3)d=lofi_param_desc(l->base,id-P_E0);
         if(l->engine==11)d=noise_param_desc(l->base,id-P_E0);
@@ -1530,6 +1557,10 @@ static unsigned amb_sound_id(const amb_layer_t *l,unsigned bank,unsigned knob)
         }
         if(knob==1 && l->generated && l->mode==3 && l->role!=4 && l->role!=5)return P_CHOR;
         return play[knob];
+    }
+    if(l->engine==ENGI_AMB_A22){
+        static const uint8_t mix[4]={P_CHOR,P_DLY,P_REV,P_PAN};
+        return bank?mix[knob]:P_E1+knob;
     }
     if(l->engine==0)return analog[bank%2][knob];
     if(l->engine==ENGI_VOICE){
@@ -1638,6 +1669,7 @@ static const char *amb_route_name(const amb_layer_t *l,unsigned route)
     if(route<4)return original[route];
     if(route<ROUTE_MACRO){
         unsigned id=amb_route_param[route-4];
+        if(l->engine==ENGI_AMB_A22 && id==P_E0)return 0; /* model changes go through patch handoff */
         const param_desc_t *d=amb_param_desc(l,id);
         if(route>=ROUTE_MACRO-6){
             if(route>=ROUTE_MACRO-2)return l->role==6?(route==ROUTE_MACRO-2?"GAIN":"FADE"):0;
@@ -2763,7 +2795,7 @@ static void amb_draw(void)
             if(amb_sound_picker() && ambr.proposal!=255)amb_sound_preview(l,ambr.proposal);
             else if(l->role!=6 && ambr.bank){
                 static const char *const group[3]={"ENGINE","FILTER","PLAY"};
-                amb_text(12,54,ENGINES[l->engine]->name,ADIM,12);amb_text(125,54,group[ambr.detail],AINK,12);
+                amb_text(12,54,ENGINES[l->engine]->name,ADIM,12);amb_text(125,54,l->engine==ENGI_AMB_A22 && !ambr.detail?"MIX":group[ambr.detail],AINK,12);
                 for(i=0;i<4;i++){
                     unsigned id=amb_sound_id(l,1,i);const param_desc_t *d=amb_param_desc(l,id);char val[24];const char *unit=0;
                     int width=(l->base[id]-d->min)*78/(d->max-d->min?d->max-d->min:1);param_format(d,l->base[id],val,&unit);

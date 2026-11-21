@@ -6,6 +6,9 @@ typedef struct {
     uint8_t engine, preset, attack, release, level, reverb, delay, color;
 } amb_recipe_t;
 #define AR(n,e,p,a,r,l,v,d,c) {n,e,p,a,r,l,v,d,c}
+/* A22 articulation comes from its engine preset. Start with dry sends so
+ * the original voicing comes through. Layer and master FX remain editable. */
+#define A22(n,p) AR("A22 " n,ENGI_AMB_A22,p,0,40,89,0,0,102)
 static const amb_recipe_t amb_pad_patches[] = {
   AR("Cloud Bloom",0,1,86,108,92,83,29,51),AR("Soft Choir",2,8,78,112,88,76,36,64),
   AR("Velvet Saw",0,15,71,100,90,68,26,45),AR("Glass Haze",2,9,84,116,84,75,19,58),
@@ -20,7 +23,8 @@ static const amb_recipe_t amb_pad_patches[] = {
   AR("Sunroom Keys",ENGI_SINEFM,3,22,101,88,49,15,85),
   AR("Linen Pad",ENGI_SINEFM,4,91,116,85,69,19,75),
   AR("Solo Violin",15,1,20,76,89,46,9,97),AR("Chamber Cello",15,2,24,79,88,42,6,95),
-  AR("Tenor Sax",15,4,1,56,83,27,0,102),AR("Concert Flute",15,5,15,63,90,50,14,99)
+  AR("Tenor Sax",15,4,1,56,83,27,0,102),AR("Concert Flute",15,5,15,63,90,50,14,99),
+  A22("Organ",4), A22("Tape",7), A22("Super",10), A22("Brass",14), A22("Chord",15)
 };
 static const amb_recipe_t amb_drone_patches[] = {
   AR("Deep Current",0,22,110,120,90,75,35,28),AR("Hollow Earth",2,8,103,116,86,80,42,43),
@@ -42,7 +46,8 @@ static const amb_recipe_t amb_bells_patches[] = {
   AR("Garden Bell",ENGI_SINEFM,1,22,102,86,80,94,90),
   AR("Willow Tine",ENGI_SINEFM,6,3,91,86,58,24,76),
   AR("Dew Bell",ENGI_SINEFM,7,13,103,81,82,44,94),
-  AR("Kawai Grand",15,3,0,70,106,33,0,94)
+  AR("Kawai Grand",15,3,0,70,106,33,0,94),
+  A22("Rhodes",0), A22("Wurli",1), A22("DX EP",2), A22("Clav",3), A22("Felt",5), A22("Vibes",6)
 };
 static const amb_recipe_t amb_bass_patches[] = {
   AR("Round Sub",0,7,8,65,101,20,14,32),AR("Soft Pulse",0,2,14,72,96,28,23,39),
@@ -55,14 +60,16 @@ static const amb_recipe_t amb_bass_patches[] = {
   AR("Acid Undertow",0,4,1,42,100,14,21,46),AR("Dub Felt",0,18,4,60,98,19,46,42),
   AR("Bowed Current",15,2,16,72,99,21,8,99),AR("Copper Sub",0,7,5,61,100,10,8,68),
   AR("Tarmac Pulse",0,20,4,54,93,28,26,58),AR("Loom Hollow",12,14,1,78,93,26,11,109),
-  AR("Silt Throat",5,2,35,83,84,37,20,78)
+  AR("Silt Throat",5,2,35,83,84,37,20,78),
+  A22("Sub",11), A22("Acid",13)
 };
 static const amb_recipe_t amb_lead_patches[] = {
   AR("Amber Glide",0,21,14,64,92,40,26,67), AR("Acid Ribbon",0,4,2,50,88,28,38,65),
   AR("Muted Cornet",0,9,42,80,89,52,16,38), AR("Reed Lantern",7,3,22,77,82,48,21,71),
   AR("Porcelain Wire",ENGI_SINEFM,6,7,78,93,45,32,75), AR("Velvet Pulse",0,24,28,78,89,55,23,37),
   AR("Vitreous Arc",0,12,47,96,90,61,28,53),AR("Aether Chiff",12,10,9,76,91,53,26,86),
-  AR("Meridian Fold",2,5,36,92,85,61,27,63)
+  AR("Meridian Fold",2,5,36,92,85,61,27,63),
+  A22("Dual",8), A22("TZFM",9), A22("Sync",12)
 };
 static const amb_recipe_t amb_drums_patches[] = {
   AR("Dust Steps",10,3,0,75,86,42,23,45),AR("Soft Pulse",10,2,0,81,91,34,19,52),
@@ -88,6 +95,7 @@ static const amb_recipe_t amb_texture_patches[] = {
   AR("Rail Crossing",11,3,15,93,84,54,16,55),
   AR("Concourse",5,3,39,90,80,58,13,61),AR("Passing Cars",11,4,44,85,92,14,0,62)
 };
+#undef A22
 #undef AR
 static const struct { const amb_recipe_t *patches; unsigned count; } amb_bank[] = {
     {amb_pad_patches, NELEM(amb_pad_patches)},

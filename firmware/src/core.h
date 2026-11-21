@@ -43,7 +43,7 @@ static int8_t amb_bar_octave[NTRK];
 #define FELUCCA_FM4 0            /* the DIGITAL engine (eng_digital.c, four-operator FM): kept in the tree, not built
                                   * by default; replaced by FM6, its sounds convert (fm4_convert.c) */
 #endif
-#define NENGINES (15 + 3*AMBPLUS)   /* AMB+ appends SAMPLE, SINE FM and SOFT PULSE at 15..17. */
+#define NENGINES (15 + 4*AMBPLUS)   /* AMB+ appends SAMPLE, SINE FM, SOFT PULSE and A22 at 15..18. */
 #define ENGI_DIGITAL 1u          /* reserved without FELUCCA_FM4: never selectable (eng_ok), its sounds load as FM6 */
 #define NENG_SHOWN (NENGINES - !FELUCCA_FM4 - 5)   /* the engines one can pick: PRESETS, the EDIT layer, the editor,
                                                 * in the display order of engines.c ENGINE_ORDER (PHYS 9, and in
@@ -233,6 +233,7 @@ static void params_by_count(int16_t *out, const int16_t *in, uint32_t np, const 
 #define ENGI_AMB_SAMPLE 15u
 #define ENGI_SINEFM 16u
 #define ENGI_SOFTPULSE 17u
+#define ENGI_AMB_A22 18u
 #define ENGI_ANIMAL 14u          /* (JIANT 0.8.3) eng_animal.c */
 #define ENGI_PHASE 2u            /* (0.9.9: named for the power-on parts and the display order, engines.c) */
 #define ENGI_LOFI 3u

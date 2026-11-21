@@ -24,6 +24,13 @@ static const char *amb_param_hint(const amb_layer_t *l,unsigned id)
         if(d==&LOFI_VAR)return "Vary the formula";
         if(d==&LOFI_FALGO || d==&LOFI_ALGO)return "Choose a sound formula";
     }
+    if(l->engine==ENGI_AMB_A22 && id>=P_E0){
+        static const char *const shape[2][4]={
+            {"Strength of the attack","Bright tine overtones","Tremolo intensity","Round off the top end"},
+            {"Oscillator shape","Cross-modulation amount","Internal filter cutoff","Internal filter peak"}
+        };
+        return id>=P_E1 && id<=P_E4?shape[l->base[P_E0]>=8][id-P_E1]:"";
+    }
     if(id>=P_E0)return engines[l->engine][id-P_E0];
     switch(id){
     case P_FTYPE:return "Filter response shape";

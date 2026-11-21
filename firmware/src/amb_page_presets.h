@@ -54,6 +54,7 @@ static void amb_apply_page_preset(void)
         const amb_recipe_t *r=amb_recipe(l->role,l->patch);
         unsigned color=l->engine==0?P_E4:P_FCUT;
         int attack=r->attack, tone=r->color+(color==P_FCUT?25:0), room=r->reverb, echo=r->delay;
+        if(l->engine==ENGI_AMB_A22)attack=ENG_AMB_A22.presets[r->preset].env[0];
         if(l->role==6){
             /* Keep the articulation of each recording when changing its space. */
             static const uint8_t sources[][4]={{3,108,50,20},{42,90,55,16},{20,115,46,9},
@@ -63,7 +64,7 @@ static void amb_apply_page_preset(void)
             const uint8_t *source=sources[l->base[P_E0]];
             attack=source[0];tone=source[1];room=source[2];echo=source[3];
         }
-        l->base[P_ATK]=clamp(attack+v[0],0,127);
+        l->base[P_ATK]=clamp(attack+v[0],0,amb_param_desc(l,P_ATK)->max);
         l->base[color]=clamp(tone+v[1],0,127);
         l->base[P_REV]=clamp(room+v[2],0,127);
         l->base[P_DLY]=clamp(echo+v[3],0,127);

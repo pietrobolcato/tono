@@ -17,6 +17,7 @@
 #include "eng_amb_sample.c"
 #include "eng_sinefm.c"
 #include "eng_softpulse.c"
+#include "eng_amb_a22.c"
 #endif
 #include "fm4_convert.c"        /* DIGITAL's tables, and its sounds -> FM6 */
 #if FELUCCA_FM4
@@ -73,6 +74,7 @@ static const engine_t *const ENGINES[NENGINES] = {
     &ENG_AMB_SAMPLE,             /* 15: bounded read-only PCM */
     &ENG_SINEFM,                 /* 16 */
     &ENG_SOFTPULSE,              /* 17 */
+    &ENG_AMB_A22,                /* 18 */
 #endif
 };
 
@@ -94,7 +96,7 @@ static const uint8_t ENGINE_ORDER[NENG_SHOWN] = {
     ENGI_PHASE, ENGI_WHEEL,      /* PHASE WHEEL */
     ENGI_NOISE,                  /* NOISE */
 #if AMBPLUS
-    ENGI_AMB_SAMPLE, ENGI_SINEFM, ENGI_SOFTPULSE,
+    ENGI_AMB_SAMPLE, ENGI_SINEFM, ENGI_SOFTPULSE, ENGI_AMB_A22,
 #endif
 #if FELUCCA_FM4
     ENGI_DIGITAL,                /* DIGITAL (retired, FELUCCA_FM4 builds only): after the rest */
