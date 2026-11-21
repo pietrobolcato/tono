@@ -3,6 +3,7 @@
  * stubbed. This is an automated test harness, not another interactive synth. */
 #include <assert.h>
 #define AMBPLUS 1
+#define AMB_RETAIN_ARCHIVED_SCENES 1
 #define UI_MAIN unused_jiant_ui_main
 #include "ui_test.c"
 /* Matrix data from the pinned JIANT HAL (GPL-3.0-only, Leo Kuroshita). */

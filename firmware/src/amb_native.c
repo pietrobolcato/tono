@@ -106,13 +106,20 @@ _Static_assert(sizeof(amb_piece_t)==1440 && AMB_VERSION==5, "upgrade embedded so
 enum { AMB_SCENE_GARDEN = 11, AMB_SCENE_INN = 12, AMB_SCENE_TIDE_ATLAS = 14, AMB_SCENE_LAST_TRAM = 16, AMB_SCENE_FIRST_FERRY = 17, AMB_SCENE_EVENING_ARRAY, AMB_SCENE_FUMAROLE, AMB_SCENE_WINDOW_LIGHT, AMB_SCENE_LINEN_AND_BOW, AMB_SCENE_UMBRA_MERIDIAN, AMB_SCENE_LONG_LEE, AMB_SCENE_EMBER_MERIDIAN };
 /* Each factory title can carry two lines of preview copy. */
 #define AMB_SONG(name, line1, line2) name "\0" line1 "\0" line2
+/* Archived recipes remain addressable by their original IDs in the host
+ * regression harness. Their titles never appear on the device. */
+#ifdef AMB_RETAIN_ARCHIVED_SCENES
+#define AMB_ARCHIVED(name) name "\0\0"
+#else
+#define AMB_ARCHIVED(name) "\0\0"
+#endif
 static const char *const AMB_SCENE[] = {
-    "Morning Air\0\0","Rain Study\0\0","Dark Water\0\0","Low Sun\0\0",
-    "Glass Room\0\0","Night Garden\0\0","Window Seats\0\0","Stone Cloister\0\0",
-    "Tidal Loom\0\0","Kite Strings\0\0","Departure Hall\0\0",
+    AMB_ARCHIVED("Morning Air"),AMB_ARCHIVED("Rain Study"),AMB_ARCHIVED("Dark Water"),AMB_ARCHIVED("Low Sun"),
+    AMB_ARCHIVED("Glass Room"),AMB_ARCHIVED("Night Garden"),AMB_ARCHIVED("Window Seats"),AMB_ARCHIVED("Stone Cloister"),
+    AMB_ARCHIVED("Tidal Loom"),AMB_ARCHIVED("Kite Strings"),AMB_ARCHIVED("Departure Hall"),
     AMB_SONG("Garden","Soft Rhodes and bells","over a drifting pedal."),
     AMB_SONG("Nostalgic New Inn","Cloudy chords, soft echoes","and a quiet beat."),
-    "Pear Orchard\0\0","Tide Atlas\0\0","Pocket Orrery\0\0",
+    AMB_ARCHIVED("Pear Orchard"),AMB_ARCHIVED("Tide Atlas"),AMB_ARCHIVED("Pocket Orrery"),
     AMB_SONG("Last Tram","Nocturnal sax and piano","over a low pedal and tape hiss."),
     AMB_SONG("First Ferry","Dawn flute, cello and tines","over a soft water wake."),
     AMB_SONG("Berlin Mornings","Berlin School analogue pulse,","warm strings and distant keys."),
@@ -124,6 +131,7 @@ static const char *const AMB_SCENE[] = {
     AMB_SONG("Symphony for a Warmer Mars","Warmer synths and more room","between wordless vocal lines.")
 };
 #undef AMB_SONG
+#undef AMB_ARCHIVED
 static const char *const AMB_MACRO[7][4] = {
     {"WARMTH","MOTION","SUSTAIN","SPACE"},{"WARMTH","DRIFT","SUSTAIN","SPACE"},
     {"SOFT","MOTION","SHIMMER","SPACE"},{"ROUND","PULSE","GLIDE","SPACE"},
@@ -467,6 +475,7 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
         p->layer[1].density=24;p->layer[1].base[P_TRANS]=-12;
         p->layer[2].mode=4;
     }
+#ifdef AMB_RETAIN_ARCHIVED_SCENES
     if(scene==6)p->layer[0].density=46;
     if(scene==7)p->layer[0].mode=AMB_CHANT;
     if(scene==10){
@@ -479,6 +488,7 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
         p->layer[1].mode=2;p->layer[3].mode=2;
         p->policy.variation=18;p->evolve[1]=15;p->evolve[2]=12;
     }
+#endif
     if(scene==AMB_SCENE_FIRST_FERRY)amb_first_ferry(p);
     else if(scene>=AMB_SCENE_EVENING_ARRAY)amb_finish_new_song(p,scene);
     if(requested==AMB_SCENE_LINEN_AND_BOW)amb_linen_and_bow(p);
