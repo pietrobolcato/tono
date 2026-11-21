@@ -7,7 +7,7 @@ int main(void)
     memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();
     for(i=0;i<amb_patch_count(5);i++){
         song.playing=0;amb_fixture_scene(0);amb_patch(0,5,i);
-        assert(amb.layer[0].engine==(i<12?11:ENGI_AMB_SAMPLE) && amb.layer[0].mode==0 && amb.layer[0].density==100);
+        assert(amb.layer[0].engine==(i==26?ENGI_VOICE:(i<12 || i==25 || i==27)?11:ENGI_AMB_SAMPLE) && amb.layer[0].mode==0 && amb.layer[0].density==100);
         amb_prepare();trk[0].engine=trk[0].eng_req;panic_req=0;
         for(k=0;k<128;k++){uint8_t notes[2];unsigned gate;
             assert(amb_generated_notes(0,k,0,notes,&gate)==(k%2?0:1));if(!(k%2))assert(notes[0]==60 && gate>=FS*30u);}

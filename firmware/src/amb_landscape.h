@@ -40,7 +40,7 @@ static void amb_reset_lanes(void)
 }
 static unsigned amb_travel_guard(void)
 {
-    return amb_sound_locks()|(ambr.view==1?1u<<ambr.edit_layer:0);
+    return ((ambr.evolve_open || ambr.evolve_queued)?1u<<ambr.evolve_layer:0)|amb_sound_locks()|(ambr.view==1?1u<<ambr.edit_layer:0);
 }
 static int amb_endless(void){return (favorites.factory[15][13]&2)!=0;}
 static int amb_vary_patterns(void){return (favorites.factory[15][13]&4)!=0;}
@@ -166,6 +166,61 @@ static void amb_landscape_apply(unsigned k,const amb_layer_t *sound)
     if(!ambr.handoff[k])amb_apply_patch(k);
 }
 
+static void amb_replace_role(unsigned k,unsigned role,unsigned patch)
+{
+    amb_layer_t *l=&amb.layer[k];
+    amb_layer_t next={0};
+    next.mode=role==0?3:2;next.speed=1;next.density=35;next.follow=100;
+    unsigned donor=0;
+    while(donor<4 && amb_reset_layer[donor].role!=role)donor++;
+    if(donor<4)next=amb_reset_layer[donor];
+    amb_fill_patch(&next,amb.key,k,role,role==6?0:patch);
+    if(role==6)next.base[P_E0]=patch;
+    amb_landscape_apply(k,&next);
+    l->generated=1;l->speed=next.speed;l->follow=next.follow;
+    l->swing=next.swing;l->fill=next.fill;l->mutation=next.mutation;
+    l->lfo_dest=next.lfo_dest;l->lfo_depth=next.lfo_depth;
+    l->base[P_TRANS]=next.base[P_TRANS];
+    amb_bar_octave[k]=0;ambr.octave_seen[k+1]=ambr.octave_taps[k+1];
+    memcpy(l->macro,next.macro,sizeof l->macro);
+    if(donor<4){
+        memcpy(amb.grain[k],amb_reset_grain[donor],4);
+        memcpy(amb.layer_eq[k],amb_reset_eq[donor],4);
+    }else{
+        memcpy(amb.grain[k],(int8_t[]){0,50,0,20},4);
+        memset(amb.layer_eq[k],0,4);
+    }
+    amb_base_revision[k]++;
+    ambr.recent_valid[k]=0;travel.previous_sound[k]=0;
+    travel.pending_layers&=~(1u<<k);amb_travel_rebase(k);
+}
+static unsigned amb_evolution_current(void)
+{
+    amb_layer_t *l=&amb.layer[ambr.evolve_layer];
+    return l->role==6?l->base[P_E0]:l->patch;
+}
+static void amb_evolution_turn(int movement)
+{
+    unsigned role=ambr.evolve_role,count=role==6?AMB_MIC_SOURCE:amb_patch_count(role);
+    unsigned next=amb_wrap(ambr.evolve_patch+movement,count);
+    if(role==amb.layer[ambr.evolve_layer].role && next==amb_evolution_current())
+        next=amb_wrap(next+(movement<0?-1:1),count);
+    ambr.evolve_patch=next;
+}
+static void amb_commit_evolution(void)
+{
+    if(!ambr.evolve_queued)return;
+    unsigned k=ambr.evolve_layer,role=ambr.evolve_role,patch=ambr.evolve_patch;
+    amb_layer_t *l=&amb.layer[k];
+    if(l->role!=role)amb_replace_role(k,role,patch);
+    else{
+        amb_layer_t next=*l;
+        if(role==6)next.base[P_E0]=patch;
+        else amb_fill_patch(&next,amb.key,k,role,patch);
+        amb_landscape_apply(k,&next);amb_travel_rebase(k);
+    }
+    ambr.evolve_open=ambr.evolve_queued=0;ambr.dirty=1;
+}
 /* Replace one generated voice. Keep a harmonic foundation and introduce
  * only a role which is absent from the ensemble. Personal takes stay put. */
 static void amb_change_role(void)
@@ -175,22 +230,17 @@ static void amb_change_role(void)
     for(unsigned i=0;i<4;i++){
         unsigned k=(serial+i)&3;
         amb_layer_t *l=&amb.layer[k];
-        if(((amb_travel_guard()|role_pending)&(1u<<k)) || !l->generated || l->base[P_MUTE] || ambr.handoff[k] || ambr.fade_slot[k] ||
+        if(((amb_travel_guard()|role_pending)&(1u<<k)) || l->base[P_MUTE] || ambr.handoff[k] || ambr.fade_slot[k] ||
            (l->role==6 && l->base[P_E0]==AMB_MIC_SOURCE))continue;
         unsigned used=0,foundation=0;
         for(unsigned j=0;j<4;j++)if(j!=k){
             used|=1u<<amb.layer[j].role;
             if(!amb.layer[j].base[P_MUTE] && amb.layer[j].role<2)foundation=1;
         }
-        for(unsigned n=0;n<7;n++){
-            unsigned role=(dice%7+n)%7;
+        for(unsigned n=0;n<8;n++){
+            unsigned role=(dice%8+n)%8;
             if(role==l->role || (used&(1u<<role)) || (!foundation && role>=2))continue;
-            amb_layer_t next=*l;
-            amb_fill_patch(&next,amb.key,k,role,(dice>>8)%amb_patch_count(role));
-            if(role==6)next.base[P_E0]=(dice>>16)%13;
-            amb_landscape_apply(k,&next);
-            ambr.recent_valid[k]=0;travel.previous_sound[k]=0;
-            travel.pending_layers&=~(1u<<k);amb_travel_rebase(k);
+            amb_replace_role(k,role,role==6?(dice>>16)%13:(dice>>8)%amb_patch_count(role));
             return;
         }
     }
@@ -236,10 +286,10 @@ static void amb_journey_phrase(unsigned style,int movement)
 }
 static void amb_journey_orchestrate(int playing)
 {
-    static const uint8_t voices[7][2][4]={
+    static const uint8_t voices[8][2][4]={
         {{5,15,20,9},{18,22,17,8}},{{3,13,6,8},{9,12,5,2}},
         {{8,5,2,7},{13,14,11,10}},{{7,6,0,3},{1,10,8,9}},
-        {{5,4,6,0},{2,8,7,1}},{{10,7,5,3},{12,15,2,1}},{{3,1,5,11},{4,6,0,8}}
+        {{5,4,6,0},{2,8,7,1}},{{10,7,5,3},{12,15,2,1}},{{3,1,5,11},{4,6,0,8}},{{0,2,3,5},{1,4,2,0}}
     };
     for(unsigned j=0;j<4;j++){
         unsigned k=(j+travel.chapter)&3;
@@ -261,9 +311,9 @@ static void amb_journey_orchestrate(int playing)
 static int amb_landscape_instrument(unsigned k,int position)
 {
     /* Orchestration changes only the sound. The sequence stays with its layer. */
-    static const uint8_t palette[7][2][2]={
+    static const uint8_t palette[8][2][2]={
         {{5,20},{18,22}}, {{3,13},{9,12}}, {{8,12},{13,14}},
-        {{7,6},{1,10}}, {{5,6},{2,8}}, {{10,21},{12,15}}, {{3,1},{4,6}}
+        {{7,6},{1,10}}, {{5,6},{2,8}}, {{10,21},{12,15}}, {{3,1},{4,6}},{{0,3},{1,4}}
     };
     amb_layer_t *l=&amb.layer[k];
     int stage=amb_travel_stage(k,position);

@@ -81,7 +81,8 @@ static const char *amb_knob_hint(const amb_layer_t *l,unsigned knob)
     if(ambr.view==0 || (ambr.view==1 && ambr.page==0)){
         if(!ambr.view){if(!ambr.target)return master[knob];l=&amb.layer[ambr.target-1];}
         if(!knob && l->engine==ENGI_VOICE)return "Shift the starting vowel";
-        return macro[l->role][knob];
+        if(amb_acid(l))return acid_macro[knob];
+        return macro[l->role==7?3:l->role][knob];
     }
     if(ambr.view==2 && ambr.page==7){
         static const char *const timing[]={"Count bars or seconds","Shortest wait","Longest wait","Farthest destination"};
@@ -99,6 +100,7 @@ static const char *amb_knob_hint(const amb_layer_t *l,unsigned knob)
     if(ambr.page==4){
         unsigned id=amb_pattern_param(l,knob);
         if(id)return amb_param_hint(l,id);
+        if(!l->generated && amb_acid(l) && !knob)return "Slide into selected step";
         if(!l->generated)return (l->role==4?manual_drum:manual)[knob];
         return (l->role==4?drum:pattern)[knob];
     }

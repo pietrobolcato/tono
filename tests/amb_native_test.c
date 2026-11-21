@@ -51,7 +51,7 @@ static void check_page_presets(void)
 {
     amb_fixture_scene(0);
     unsigned checks=0;
-    for(unsigned role=0;role<7;role++){
+    for(unsigned role=0;role<NELEM(AMB_ROLE);role++){
         amb_patch(0,role,0);
         for(unsigned view=1;view<=2;view++)for(unsigned page=0;page<(view==1?7:6);page++){
             unsigned count=view==1 && page==5?6:view==2 && page==3?4:1;

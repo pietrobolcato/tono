@@ -290,7 +290,7 @@ static void garden_step(unsigned k, unsigned step)
         g->role = l->role;
         g->ready = 1;
         g->rng = amb_hash(amb.policy.seed + k * 997u) | 1u;
-        if (l->role == 2 || l->role == 6)
+        if (l->role == 2 || l->role == 6 || l->role == 7)
             for (unsigned i = 0; i < 4; i++) {
                 memset(g->loop[i].offset, -1, sizeof g->loop[i].offset);
                 garden_pass(g, i, density, variation, count, arc, 1);

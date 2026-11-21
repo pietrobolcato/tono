@@ -105,7 +105,7 @@ In **GLO → TRAVEL → EDIT**, turn **SELECT** between **Movement**, **Patterns
 | Follow Travel | Shares the exact Auto Travel deadline, including the random wait. When AUTO is off the lane waits. Manual turns restart the Auto Travel timer. Linked changes land on a downbeat. |
 | Bars / Seconds / Minutes / Hours | Runs independently during playback, including when Auto Movement is off. Min and Max accept 1–120. Equal values give a fixed interval. A range chooses another wait each time. Time-based changes land on the first downbeat after the wait. Stop and restart begin a fresh interval. |
 
-Patterns changes one generator family at a time, cycling Rhythm, Phrase and Interplay. A manually queued choice takes priority for its family. Layer types changes at most one generated instrument per event using the layer’s existing release or crossfade. It introduces a role missing from the ensemble and keeps an audible Pad or Drone as a harmonic foundation. Manual patterns, muted layers, personal takes and layers in a handoff are ineligible for role replacement. Solo pauses role replacement. These rules apply to Garden too.
+Patterns changes one generator family at a time, cycling Rhythm, Phrase and Interplay. A manually queued choice takes priority for its family. Layer types changes at most one instrument per event using the layer’s existing release or crossfade. It introduces a role missing from the ensemble and keeps an audible Pad or Drone as a harmonic foundation. A replacement starts an AUTO pattern in its patch register. Layer EQ and grain settings come from the loaded arrangement when it contains the incoming role. An absent role starts with flat EQ and dry grains. Muted layers, protected layers, personal takes and layers in a handoff are ineligible for replacement. Solo pauses role replacement. These rules apply to Garden too.
 
 Auto Travel skips sound, macro and role changes for the layer whose EDIT screen is open. It can evolve that layer at the next eligible change after you leave EDIT.
 
@@ -120,3 +120,13 @@ On a Texture layer, browse to Eagle Landed, Radio Check or Moon Address with ALG
 On Sample → Sound → Source, select MIC TAKE with ALGORITHM + REC. REC now starts USB capture. Sing one held note and press REC to end early, or let the 1.44-second buffer fill. Recording starts on signal. A second REC confirmation protects an existing take. An empty input keeps the previous recording. The display shows the detected root or the C4 reference for unpitched audio. All Sample layers using MIC TAKE share that song's recording.
 
 EDIT opens Playback. STYLE chooses keyboard tracking or ORIGINAL speed. PITCH transposes in semitones. LOOP selects Off, Forward, Reverse or Bounce. XFADE blends forward or reverse loop seams. One-shot ends at the trim boundary. The source page sets Start, End, Gain and Fade. Existing layer EQ, delay, reverb and granular controls process the sample. Save a song using MIC TAKE to store its audio inside its existing user slot.
+
+With a layer selected on HOME, move MASTER to set its level, then press HOME + LFO to route its LFO to VOLUME. The same shortcut works after adjusting the layer level in SOUND.
+
+### Lead and Bass
+
+In EDIT → MODE, turn ALGORITHM to Lead and press REC. In SOUND, turn ALGORITHM to propose a voice and REC to select it. Lead plays in a melodic register and follows the song's generator. Its four performance controls are Warmth, Motion, Glide and Space. Bass includes four additional voices, with Acid Undertow and Acid Ribbon offering separate bass and lead interpretations of resonant analogue synthesis.
+
+On HOME, select a layer and hold HOME while turning ALGORITHM to open layer evolution. Release HOME and browse patches with ALGORITHM. SELECT chooses the role. REC applies the proposal immediately when stopped or on the next bar during playback. HOME cancels. Keeping the role keeps its pattern. Changing roles loads an automatic pattern, register, EQ and granular settings appropriate to the destination. The layer keeps its mixer level and pan.
+
+On Acid Undertow and Acid Ribbon the four layer performance knobs are Cutoff, Resonance, Env Mod and Decay. In a manual pattern select a step, turn knob 1 to enable Slide In and use velocity 96 or higher for an accent. A preceding sounding note supplies the start pitch of a slide.

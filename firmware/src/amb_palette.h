@@ -51,7 +51,18 @@ static const amb_recipe_t amb_bass_patches[] = {
   AR("Low Echo",12,2,12,83,90,36,49,53),AR("Root Bed",0,22,62,98,97,46,22,29),
   AR("Reed Pedal",7,9,28,77,84,34,9,72),
   AR("Garden Pedal",ENGI_SINEFM,2,112,99,78,12,0,84),
-  AR("Linden Bass",ENGI_SINEFM,8,27,88,86,19,0,71)
+  AR("Linden Bass",ENGI_SINEFM,8,27,88,86,19,0,71),
+  AR("Acid Undertow",0,4,1,42,100,14,21,46),AR("Dub Felt",0,18,4,60,98,19,46,42),
+  AR("Bowed Current",15,2,16,72,99,21,8,99),AR("Copper Sub",0,7,5,61,100,10,8,68),
+  AR("Tarmac Pulse",0,20,4,54,93,28,26,58),AR("Loom Hollow",12,14,1,78,93,26,11,109),
+  AR("Silt Throat",5,2,35,83,84,37,20,78)
+};
+static const amb_recipe_t amb_lead_patches[] = {
+  AR("Amber Glide",0,21,14,64,92,40,26,67), AR("Acid Ribbon",0,4,2,50,88,28,38,65),
+  AR("Muted Cornet",0,9,42,80,89,52,16,38), AR("Reed Lantern",7,3,22,77,82,48,21,71),
+  AR("Porcelain Wire",ENGI_SINEFM,6,7,78,93,45,32,75), AR("Velvet Pulse",0,24,28,78,89,55,23,37),
+  AR("Vitreous Arc",0,12,47,96,90,61,28,53),AR("Aether Chiff",12,10,9,76,91,53,26,86),
+  AR("Meridian Fold",2,5,36,92,85,61,27,63)
 };
 static const amb_recipe_t amb_drums_patches[] = {
   AR("Dust Steps",10,3,0,75,86,42,23,45),AR("Soft Pulse",10,2,0,81,91,34,19,52),
@@ -73,7 +84,9 @@ static const amb_recipe_t amb_texture_patches[] = {
   AR("Undertow",15,0,108,120,86,88,24,62),AR("Wire Brush",15,0,80,117,74,81,32,102),
   AR("Dry Timber",15,0,57,102,78,31,11,75),AR("Distant Cogs",15,0,99,118,78,88,39,66),
   AR("Eagle Landed",15,0,33,88,89,99,36,71),AR("Radio Check",15,0,28,85,88,92,22,49),
-  AR("Moon Address",15,0,9,94,89,54,16,101)
+  AR("Moon Address",15,0,9,94,89,54,16,101),
+  AR("Rail Crossing",11,3,15,93,84,54,16,55),
+  AR("Concourse",5,3,39,90,80,58,13,61),AR("Passing Cars",11,4,44,85,92,14,0,62)
 };
 #undef AR
 static const struct { const amb_recipe_t *patches; unsigned count; } amb_bank[] = {
@@ -87,9 +100,11 @@ static const struct { const amb_recipe_t *patches; unsigned count; } amb_bank[] 
 static unsigned amb_patch_count(unsigned role)
 {
     /* SAMPLE historically stores a recipe index, its source lives in E0. */
+    if(role==7)return NELEM(amb_lead_patches);
     return role<NELEM(amb_bank)?amb_bank[role].count:8;
 }
 static const amb_recipe_t *amb_recipe(unsigned role,unsigned patch)
 {
+    if(role==7)return &amb_lead_patches[patch];
     return &amb_bank[role<6?role:5].patches[patch];
 }

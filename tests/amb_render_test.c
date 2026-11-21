@@ -139,7 +139,7 @@ int main(int argc,char **argv)
     for(target=0;target<5;target++){amb_target(target);snprintf(name,sizeof name,"home_%u",target);ar_frame(name,dir,1);}
     amb_target(4);fm1_ms=10000;amb_master(0,0);amb_master(800,0);ar_frame("layer_level_feedback",dir,1);
     fm1_ms+=1200;ar_frame("master_after_level_feedback",dir,1);
-    for(role=0;role<7;role++){
+    for(role=0;role<NELEM(AMB_ROLE);role++){
         amb_patch(0,role,0);ambr.target=1;ambr.edit_layer=0;ambr.view=1;
         for(page=0;page<7;page++)for(bank=0;bank<(page==1?(role==6?3u:2u):1u);bank++)for(fx=0;fx<(page==5?6u:1u);fx++){
             ambr.page=(uint8_t)page;ambr.bank=(uint8_t)bank;ambr.fx=(uint8_t)fx;
@@ -164,7 +164,7 @@ int main(int argc,char **argv)
     for(page=0;page<3;page++)for(style=0;style<amb_style_count(page);style++){
         amb_policy_choose(&amb.policy,page,style,0);snprintf(name,sizeof name,"generate_%u_%u",page,style);ar_frame(name,dir,style>=7 || style==5);
     }
-    for(role=0;role<7;role++){
+    for(role=0;role<NELEM(AMB_ROLE);role++){
         amb_patch(0,role,0);ambr.view=1;ambr.page=4;
         for(bank=0;bank<2;bank++){
             amb.layer[0].generated=(uint8_t)bank;snprintf(name,sizeof name,"pattern_role_%u_%s",role,bank?"auto":"manual");ar_frame(name,dir,1);
@@ -183,7 +183,7 @@ int main(int argc,char **argv)
     amb_fixture_scene(7);ambr.view=4;ar_frame("ensemble",dir,1);
     ambr.view=0;ambr.help=1;ar_frame("home_help",dir,1);
     ambr.view=1;ambr.page=1;ambr.help=1;ar_frame("vowel_help",dir,1);
-    for(role=0;role<7;role++){
+    for(role=0;role<NELEM(AMB_ROLE);role++){
         amb_patch(0,role,role==0?10:0);
         for(page=0;page<7;page++)for(bank=0;bank<(page==1?(role==6?3u:2u):1u);bank++){
             ambr.page=page;ambr.bank=bank;
@@ -255,7 +255,7 @@ int main(int argc,char **argv)
         }
     }
     ambr.view=1;ambr.page=1;ambr.bank=0;ambr.edit_layer=0;
-    for(role=0;role<7;role++){
+    for(role=0;role<NELEM(AMB_ROLE);role++){
         amb_patch(0,role,0);
         unsigned count=role==6?NELEM(N_AS_SOURCE):amb_patch_count(role);
         for(unsigned patch=1;patch<count;patch++){

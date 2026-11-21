@@ -3,7 +3,7 @@
 #define AMB_MAIN unused_amb_main
 #include "../tests/amb_native_test.c"
 
-static const char *const role_names[]={"Pad","Drone","Bells","Bass","Drums","Texture","Sample"};
+static const char *const role_names[]={"Pad","Drone","Bells","Bass","Drums","Texture","Sample","Lead"};
 
 static void initialize(void)
 {
@@ -36,7 +36,7 @@ static void protected_scenes(void)
     }
 }
 
-static void audition(unsigned role,unsigned id,FILE *wav)
+static void audition(unsigned role,unsigned id,FILE *wav,int mixed)
 {
     static const uint8_t melodic_notes[]={60,64,67,62,69};
     static const uint8_t low_notes[]={48,55,50,57,48};
@@ -53,12 +53,17 @@ static void audition(unsigned role,unsigned id,FILE *wav)
     trk[0].engine=amb.layer[0].engine;
     trk[0].xf_on=trk[0].xf=trk[0].xin=0;
     amb_render(FS/2); /* Apply the patch and drain its queued all-notes-off. */
+    assert(amb_valid(&amb));
     wav_hdr(wav,frames);
     for(unsigned at=0;at<frames;at+=CTL){
-        unsigned quantum=(role==4?FS/2:FS*6)/CTL*CTL;
+        unsigned quantum=(role==7 || role==3?FS*3/4:role==4?FS/2:FS*6)/CTL*CTL;
         unsigned position=at%quantum;
         unsigned phrase=at/quantum;
-        unsigned release=(role==4?FS/8:role==2?FS*2:FS*4)/CTL*CTL;
+        unsigned release=(role==7 || role==3?FS/2:role==4?FS/8:role==2?FS*2:FS*4)/CTL*CTL;
+        if(mixed && position==0 && !(phrase%4)){
+            trk_all_off(&trk[1]);trk_note_on(&trk[1],48,55);
+            trk_note_on(&trk[2],phrase%8?67:64,58);
+        }
         if(position==0 && (role!=5 || phrase==0)){
             note=role==4?drum_notes[phrase%NELEM(drum_notes)]:
                  role==1 || role==3?low_notes[phrase%NELEM(low_notes)]:melodic_notes[phrase%NELEM(melodic_notes)];
@@ -77,11 +82,11 @@ int main(int argc,char **argv)
 {
     if(argc==2 && !strcmp(argv[1],"catalog")){catalog();return 0;}
     if(argc==2 && !strcmp(argv[1],"protected")){initialize();protected_scenes();return 0;}
-    if(argc!=4)return 2;
+    if(argc!=4 && argc!=5)return 2;
     unsigned role=(unsigned)atoi(argv[1]),id=(unsigned)atoi(argv[2]);
     if(role>=NELEM(role_names) || id>=(role==6?AMB_MIC_SOURCE:amb_patch_count(role)))return 2;
     FILE *wav=fopen(argv[3],"wb");
     if(!wav)return 1;
-    audition(role,id,wav);
+    audition(role,id,wav,argc==5);
     return fclose(wav)!=0;
 }

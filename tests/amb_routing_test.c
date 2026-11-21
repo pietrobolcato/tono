@@ -35,6 +35,9 @@ static void check_layer_shortcut(void)
     assert(!strcmp(amb_route_name(l,l->lfo_dest),"BREATH"));
     assert(l->lfo_depth==31 && l->base[P_LRATE]==rate && l->base[P_LWAVE]==wave);
 
+    ambr.view=0;amb_master(512,1);amb_master(100,0);link_last_edit();
+    assert(l->lfo_dest==3 && l->lfo_depth==31);
+
     held_turn(B_HOME,1);
     assert(ambr.edit_layer==1);
     uint8_t previous=amb.layer[1].lfo_dest;
@@ -79,7 +82,7 @@ int main(void)
     memset(amb_nor,255,sizeof amb_nor);
     ui_power_on();amb_init();amb_fixture_scene(0);
     amb_layer_t *l=&amb.layer[0];
-    for(unsigned role=0;role<7;role++)for(unsigned patch=0;patch<(role==6?NELEM(N_AS_SOURCE):amb_patch_count(role));patch++){
+    for(unsigned role=0;role<NELEM(AMB_ROLE);role++)for(unsigned patch=0;patch<(role==6?NELEM(N_AS_SOURCE):amb_patch_count(role));patch++){
         amb_patch(0,role,role==6?0:patch);
         if(role==6)l->base[P_E0]=patch;
         amb_base_revision[0]++;
