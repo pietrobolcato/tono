@@ -128,9 +128,9 @@ int AMB_MAIN(int argc,char **argv)
     amb_scan_slots();
     assert(amb_slot_state[0]==AMB_SAVED && amb_slot_state[1]==AMB_EMPTY);
     assert(amb_slot_state[2]==AMB_UNREADABLE && amb_slot_state[3]==AMB_UNREADABLE);
-    ambr.view=0;ambr.piece_preview=255;ambr.preset_position=NELEM(AMB_SCENE)-1;
+    ambr.view=0;ambr.piece_preview=255;ambr.preset_position=AMB_SCENE_WINDOW_LIGHT;
     turn(EN_PRESET,1);assert(ambr.piece_preview==NELEM(AMB_SCENE));
-    turn(EN_PRESET,1);assert(ambr.piece_preview==0);
+    turn(EN_PRESET,1);assert(ambr.piece_preview==AMB_SCENE_GARDEN);
     turn(EN_SELECT,-1);assert(ambr.piece_preview==NELEM(AMB_SCENE));press(B_HOME);
     /* Confirm while performing, navigate away, edit, and stop. The frozen
      * snapshot goes to the original slot. No erase/program during playback. */

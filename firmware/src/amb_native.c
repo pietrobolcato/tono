@@ -1222,10 +1222,16 @@ static void amb_scan_slots(void)
 }
 static unsigned amb_next_piece(unsigned p,int clicks)
 {
+    /* Recipes keep their IDs for reproducible playback. Only these seven
+     * appear in the factory bank before the existing user slots. */
+    const uint32_t factory_bank=(1u<<AMB_SCENE_GARDEN)|(1u<<AMB_SCENE_INN)|
+        (1u<<AMB_SCENE_LAST_TRAM)|(1u<<AMB_SCENE_FIRST_FERRY)|
+        (1u<<AMB_SCENE_EVENING_ARRAY)|(1u<<AMB_SCENE_FUMAROLE)|(1u<<AMB_SCENE_WINDOW_LIGHT);
     int dir=clicks<0?-1:1;
     while(clicks){
         do {p=amb_wrap((int)p+dir,NELEM(AMB_SCENE)+AMB_SLOTS);}
-        while(p>=NELEM(AMB_SCENE) && amb_slot_state[p-NELEM(AMB_SCENE)]!=AMB_SAVED);
+        while(p<NELEM(AMB_SCENE) ? !(factory_bank&(1u<<p)) :
+              amb_slot_state[p-NELEM(AMB_SCENE)]!=AMB_SAVED);
         clicks-=dir;
     }
     return p;
