@@ -1,8 +1,25 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #define AMB_MAIN other_main
 #include "amb_native_test.c"
+/* Frozen hashes of every decoded frame from the original CC0 PCM excerpts. */
+static void check_packed_factory_recordings(void)
+{
+    static const unsigned sources[]={3,4,6};
+    static const uint32_t expected[]={0x1afd66d7u,0xc5ff8c6eu,0x87959290u};
+    for(unsigned i=0;i<NELEM(sources);i++){
+        const unsigned source=sources[i];
+        const amb_recording_t *r=&amb_recordings[source];
+        uint32_t hash=2166136261u;
+        for(unsigned frame=0;frame<r->length;frame++){
+            uint16_t sample=(uint16_t)amb_recorded_at(source,r->pcm,frame);
+            hash=(hash^sample)*16777619u;
+        }
+        assert(hash==expected[i]);
+    }
+}
 int main(void)
 {
+    check_packed_factory_recordings();
     memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();
     amb_take_start();
     for(unsigned i=0;i<44100;i++){

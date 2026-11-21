@@ -12,10 +12,10 @@ typedef struct {const uint8_t *pcm;unsigned length,root,rate_q16,loop_percent;} 
 static const amb_recording_t amb_recordings[]={
     {AMB_SAMPLES[0],AMB_SAMPLE_N,60,2972,24},{AMB_SAMPLES[1],AMB_SAMPLE_N,60,2972,24},
     {amb_pcm_violin,NELEM(amb_pcm_violin),60,14861,29},
-    {amb_pcm_cello,NELEM(amb_pcm_cello),60,17833,12},
-    {amb_pcm_piano,NELEM(amb_pcm_piano),72,17833,29},
+    {amb_pcm_cello,amb_pcm_cello_length,60,17833,12},
+    {amb_pcm_piano,amb_pcm_piano_length,72,17833,29},
     {amb_pcm_tenor,NELEM(amb_pcm_tenor),72,14861,29},
-    {amb_pcm_flute,NELEM(amb_pcm_flute),72,14861,15},
+    {amb_pcm_flute,amb_pcm_flute_length,72,14861,15},
     /* Six phrase maps, each addressing grains of its own percussion take. */
     {amb_texture_frames[0],24576,60,8025,9},{amb_texture_frames[1],24576,60,8025,11},
     {amb_texture_frames[2],24576,60,8025,7},{amb_texture_frames[3],24576,60,8025,13},
@@ -45,6 +45,32 @@ static void amb_speech_init(void)
 static inline int32_t amb_pcm_at(const uint8_t *pcm,unsigned at)
 {
     return amb_pcm_decode[pcm[at]];
+}
+/* Sixteen samples spaced one period apart share a base and an unsigned
+ * bit width. The two adjacent offsets encode the width as 1 + 2*width
+ * bytes per group. A lookup never decodes preceding audio. */
+static inline unsigned amb_packed_code(const uint8_t *data,const uint16_t *offsets,
+                                       unsigned at,unsigned period)
+{
+    unsigned cycle=at/period;
+    unsigned group=(cycle>>4)*period+(at-cycle*period);
+    unsigned offset=offsets[group];
+    unsigned width=(offsets[group+1]-offset-1)>>1;
+    unsigned bit=(cycle&15)*width;
+    const uint8_t *bytes=data+offset+1+(bit>>3);
+    unsigned word=bytes[0] | ((unsigned)bytes[1]<<8);
+    return data[offset]+((word>>(bit&7))&((1u<<width)-1));
+}
+static int amb_recorded_at(unsigned source,const uint8_t *src,unsigned at)
+{
+    unsigned code;
+    switch(source){
+    case 3: code=amb_packed_code(src,amb_pcm_cello_offsets,at,amb_pcm_cello_period);break;
+    case 4: code=amb_packed_code(src,amb_pcm_piano_offsets,at,amb_pcm_piano_period);break;
+    case 6: code=amb_packed_code(src,amb_pcm_flute_offsets,at,amb_pcm_flute_period);break;
+    default: return amb_pcm_at(src,at);
+    }
+    return amb_pcm_decode[code];
 }
 static inline int amb_texture_point(unsigned bank,unsigned code,unsigned pos)
 {
@@ -140,8 +166,9 @@ static void amb_sample_render(track_t *t,voice_t *v,int32_t *out,uint32_t n,cons
                 first=amb_texture_read(bank,read);second=amb_texture_read(bank,following);
                 if(at>=end-fade)overlap=amb_texture_read(bank,tail);
             }else{
-                first=amb_pcm_at(src,read);second=amb_pcm_at(src,following);
-                if(at>=end-fade)overlap=amb_pcm_at(src,tail);
+                first=cached!=~0u && at==cached+1?second:amb_recorded_at(source,src,read);
+                second=amb_recorded_at(source,src,following);
+                if(at>=end-fade)overlap=amb_recorded_at(source,src,tail);
             }
             cached=at;
         }

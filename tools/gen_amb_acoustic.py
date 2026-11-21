@@ -1,5 +1,6 @@
 """Rebuild Tono's CC0 mono instrument excerpts using ffmpeg and the Python stdlib."""
 from amb_companding import encode, decode_table
+from amb_pcm_pack import write_pcm
 import array
 import hashlib
 import io
@@ -76,9 +77,6 @@ for name, (repo, revision), path, count, rate in SOURCES:
     if name == "cello":
         values = steady_cello_sustain(values)
     values = [encode(x) for x in values]
-    out.write(f"static const uint8_t amb_pcm_{name}[{count}] = {{\n")
-    for i in range(0, count, 16):
-        out.write("    "+",".join(map(str,values[i:i+16]))+",\n")
-    out.write("};\n")
+    write_pcm(out, name, values)
     print(name, hashlib.sha256(pcm).hexdigest(), flush=True)
 Path(__file__).resolve().parents[1].joinpath("firmware/src/amb_acoustic_pcm.h").write_text(out.getvalue())
