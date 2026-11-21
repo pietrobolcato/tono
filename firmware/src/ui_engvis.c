@@ -1151,9 +1151,9 @@ static void vx_fm_ops(const track_t *t, vxfm_t *o)
         int32_t e = 0, ol = op[FP_OL] % 100u, a = ol * 256 / 99, c = op[FP_FC] & 31;
         o->st[k] = 4;
         for (v = 0; v < FM6_POLY; v++) {                 /* (msfa's level: scaleout units 0..127, the stage's L 0..99) */
-            const fm6_env_t *n = &fm6_note[tr][v].env[5u - k];
+            const fm6_env_t *n = &FM6_NOTES(tr)[v].env[5u - k];
             int32_t s = (((n->level >> 16) - n->outlevel + 4256) / 32 - 28) * 256 / 99;
-            if (!fm6_note[tr][v].live || !t->v[v].active) continue;
+            if (!FM6_NOTES(tr)[v].live || !t->v[v].active) continue;
             if (s > e || o->st[k] == 4u) { o->st[k] = n->ix | (n->down ? 0u : 8u); }
             e = s > e ? s : e;
         }

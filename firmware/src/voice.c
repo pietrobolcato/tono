@@ -94,8 +94,16 @@ static __attribute__((noinline)) void tf_sides(uint32_t ti, const tsvf_t *c, int
                                                uint32_t on, uint32_t n)
 {
     uint32_t sd, i;
-    for (sd = 0; sd < 2u; sd++) {
-        int32_t *b = sd ? dx_sr : dx_sl, ic1 = tf_side[ti][sd * 2u], ic2 = tf_side[ti][sd * 2u + 1u];
+    unsigned channels=2;
+#if AMBPLUS
+    if(trk[ti].engine==ENGI_AMB_A22)channels=1;
+#endif
+    for (sd = 0; sd < channels; sd++) {
+        int32_t *b = sd ? dx_sr : dx_sl;
+#if AMBPLUS
+        if(channels==1)b=voice_bank[ti].a22.side;
+#endif
+        int32_t ic1 = tf_side[ti][sd * 2u], ic2 = tf_side[ti][sd * 2u + 1u];
         if (!was) {
             ic1 = 0;
             ic2 = b[0];
@@ -179,7 +187,11 @@ static __attribute__((noinline)) void tf_run(track_t *t, int32_t *out, uint32_t 
                 y = y + (((x - y) * w) >> 12);          /* out */
             out[i] = y;
         }
-        if ((dx_xon & 1u) && ENGINES[t->engine] == &ENG_DRUM)
+        if (((dx_xon & 1u) && ENGINES[t->engine] == &ENG_DRUM)
+#if AMBPLUS
+            || t->engine==ENGI_AMB_A22
+#endif
+        )
             tf_sides(ti, &c, k, ft, was, on, n > CTL ? CTL : n);
         tf_on[ti] = (uint8_t)on;
     }
@@ -913,6 +925,10 @@ static void engine_block(track_t *t)
         }
         any = t->engine != eng_idx(t->eng_req);
         t->engine = eng_idx(t->eng_req);
+#if AMBPLUS
+        if(any && (t->engine==ENGI_AMB_A22 || t->engine==ENGI_FM6))
+            memset(&voice_bank[t-trk],0,sizeof voice_bank[0]);
+#endif
         t->xf_on = 0;
         t->nmono = 0;
         t->mono_note = 0;
@@ -1156,7 +1172,11 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
     if (nr && e == &ENG_DRUM)                           /* (0.6.16) DRUM-X: DRV and the knee on the kit's sum */
         drum_bus(t, out, n);
     if (nr && (t->p[P_FTYPE] || t->p[P_FCUT] < 127 || t->p[P_FRES] || tf_on[(uint32_t)(t - trk) % NTRK] ||
-               ((e == &ENG_WHEEL || e == &ENG_DRUM) && (t->p[P_LD_FLT] || t->p[P_ED_FLT])) ||   /* (0.6.81: their
+               ((e == &ENG_WHEEL || e == &ENG_DRUM
+#if AMBPLUS
+                 || e==&ENG_AMB_A22
+#endif
+                ) && (t->p[P_LD_FLT] || t->p[P_ED_FLT])) ||   /* (0.6.81: their
                                                          * only filter, for the LFO / ENV -> FILTER) */
                tf_xb[(uint32_t)(t - trk) % NTRK] || tf_cmb[(uint32_t)(t - trk) % NTRK]))
         /* (JIANT 0.5) the FILTER (track_post); 0.6.8: and a block more to leave the chain (track_filter's fade) */

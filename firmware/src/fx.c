@@ -1977,15 +1977,16 @@ static __attribute__((noinline)) void amb_monitor_begin(void)
     amb_monitor_core1=0;
     if(amb_monitor_active)memset(amb_monitor_bus,0,sizeof amb_monitor_bus);
 }
-static __attribute__((noinline)) void amb_monitor_part(unsigned core,const int32_t *b,
+static __attribute__((noinline)) void amb_monitor_part(unsigned core,const int32_t *b,const int32_t *side,
                                                        unsigned n,int level,int step,int pan)
 {
     int left=4096-(pan>0?pan*64:0),right=4096+(pan<0?pan*64:0);
     int32_t *out=amb_monitor_bus[core];
     for(unsigned i=0;i<n;i++,level+=step){
         int32_t x=((b[i]>>2)*(level>>8))>>10;
-        out[2*i]+=(x*left)>>12;
-        out[2*i+1]+=(x*right)>>12;
+        int32_t diff=side?((side[i]>>2)*(level>>8))>>10:0;
+        out[2*i]+=((x+diff)*left)>>12;
+        out[2*i+1]+=((x-diff)*right)>>12;
     }
 }
 static __attribute__((noinline)) void amb_monitor_output(int32_t *out,unsigned n)
@@ -2001,6 +2002,22 @@ static __attribute__((noinline)) void amb_monitor_output(int32_t *out,unsigned n
             dry=soft_knee(softclip((((dry>>2)*mg)>>10)),12000);
             out[j]+=(dry-out[j])*(int)amb_monitor_blend/AMB_MONITOR_RAMP;
         }
+    }
+}
+#endif
+
+#if AMBPLUS
+/* Restore the instrument's stereo difference after the shared mono FX bus.
+ * Same track level, pan, fade and performance mute as the mid signal. */
+static __attribute__((noinline)) void amb_a22_stereo(const int *side,int *l,int *r,
+            unsigned n,int level,int dl,int gl,int dgl,int gr,int dgr,int mute,int end_mute)
+{
+    int dm=(end_mute-mute)/(int)CTL;
+    for(unsigned i=0;i<n;i++,level+=dl,gl+=dgl,gr+=dgr,mute+=dm){
+        int x=((side[i]>>2)*(level>>8))>>10;
+        if(mute!=32768)x=mulq15(x,mute);
+        l[i]+=(x*gl)>>12;
+        r[i]-=(x*gr)>>12;
     }
 }
 #endif
@@ -2082,7 +2099,7 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
             lq = duck_ramp(l0 >> 8, mp_lvl[ti] >> 8, &dl);
 #if AMBPLUS
         if(amb_monitor_active && !(mix_skip & (1u<<ti)) && !(pf.mute & (1u<<ti)))
-            amb_monitor_part(c1,b,n,l0,(mp_lvl[ti]-l0)>>CTL_LOG2,t->p[P_PAN]);
+            amb_monitor_part(c1,b,t->engine==ENGI_AMB_A22?voice_bank[ti].a22.side:0,n,l0,(mp_lvl[ti]-l0)>>CTL_LOG2,t->p[P_PAN]);
 #endif
         track_dist(t, b, n);
 #if AMBPLUS
@@ -2100,6 +2117,10 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
             return;
         }
         int32_t lq0 = lq, gl0 = gl, gr0 = gr;           /* (0.7.5: uin_mix, the same ramps) */
+#if AMBPLUS
+        if(t->engine==ENGI_AMB_A22)
+            amb_a22_stereo(voice_bank[ti].a22.side,ol,or_,n,lq,dl,gl,dgl,gr,dgr,pm0,pm1);
+#endif
         if (dx_xon && ENGINES[t->engine] == &ENG_DRUM)  /* (0.6.48) IMAGE, SENDs: from the same ramps as below */
         {
             int32_t *const sx[3] = {sc, sd, sr};

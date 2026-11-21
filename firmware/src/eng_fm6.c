@@ -58,7 +58,17 @@ static struct {                                  /* the patch through the macros
 } fm6_eff[NTRK];
 static fm6_lfo_t fm6_lfo[NTRK];
 static int32_t fm6_lfo_v[NTRK], fm6_lfo_d[NTRK]; /* this block's LFO value and delay (Q24) */
+/* The active engine owns its part's voice storage. FM6 and A22 can run on
+ * different layers simultaneously, including the two crossfade tail layers. */
+#if AMBPLUS
+#include "a22/a22_dsp.h"
+static union { fm6_note_t fm[FM6_POLY]; A22Part a22; } voice_bank[NTRK];
+_Static_assert(sizeof(A22Part) <= sizeof(fm6_note_t)*FM6_POLY, "A22 exceeds the existing voice bank");
+#define FM6_NOTES(track_index) voice_bank[(track_index)].fm
+#else
 static fm6_note_t fm6_note[NTRK][FM6_POLY];
+#define FM6_NOTES(track_index) fm6_note[(track_index)]
+#endif
 /* the voice bank (fm6_vbank.c; in the pool, zeroed at boot: no bank without the store) */
 static uint32_t fm6_bank_used __attribute__((section(".pool")));   /* bit k: B k+1 holds a voice */
 static int (*fm6_bank_read)(uint32_t k, uint8_t *pk) __attribute__((section(".pool")));   /* voice k -> pk, 0 = read */
@@ -396,7 +406,7 @@ static fm6_note_t *fm6_note_of(track_t *t, voice_t *v)
     if (t < &trk[0] || t >= &trk[NPART])
         return 0;
     i = (uint32_t)(v - t->v);
-    return i < FM6_POLY ? &fm6_note[t - trk][i] : 0;
+    return i < FM6_POLY ? &FM6_NOTES(t - trk)[i] : 0;
 }
 
 static void fm6_note_on(track_t *t, voice_t *v)

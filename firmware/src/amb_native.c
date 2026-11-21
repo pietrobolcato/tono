@@ -340,10 +340,13 @@ static __attribute__((noinline)) int amb_move_release(unsigned k)
     to->xf_on=to->xf=to->xin=0;
     to->p[P_LEVEL]=from->p[P_LEVEL];
     if(from->engine==ENGI_FM6){
-        memcpy(fm6_note[dst],fm6_note[k],sizeof fm6_note[k]);
+        memcpy(FM6_NOTES(dst),FM6_NOTES(k),sizeof FM6_NOTES(k));
         memcpy(fm6_patch[dst],fm6_patch[k],sizeof fm6_patch[k]);
         fm6_pgen[dst]=fm6_pgen[k];fm6_eff[dst]=fm6_eff[k];fm6_lfo[dst]=fm6_lfo[k];
         fm6_slot[dst]=fm6_slot[k];fm6_trim[dst]=fm6_trim[k];fm6_tgen[dst]=fm6_tgen[k];
+    }else if(from->engine==ENGI_AMB_A22){
+        voice_bank[dst].a22=voice_bank[k].a22;
+        memcpy(tf_side[dst],tf_side[k],sizeof tf_side[k]);
     }else if(from->engine==7){
         drw_t[dst]=drw_t[k];memcpy(drw_v[dst],drw_v[k],sizeof drw_v[k]);
     }else if(from->engine==ENGI_DRUM){
@@ -681,30 +684,35 @@ static void amb_global_offset(unsigned id,int offset)
     if(offset)song.g[id]=clamp(amb.global[id]+offset,GP[id].min,GP[id].max);
 }
 static unsigned amb_control_slot=4;
+/* Only one control slot updates the master macros. Keep this occasional
+ * pass in flash and reserve hot RAM for the per-layer audio path. */
+static __attribute__((noinline)) void amb_prepare_master(void)
+{
+    unsigned i;
+    for(i=0;i<G_COUNT;i++)song.g[i]=amb.global[i];
+    for(i=0;i<4;i++){
+        unsigned id=amb_master_macros[i];
+        int target=(amb.global[id]-GP[id].min-amb.master_anchor[i])*256;
+        int diff=target-ambr.master_offset[i];
+        int increment=diff/(amb_control_slot==4?16:4);
+        ambr.master_offset[i]+=increment?increment:diff;
+    }
+    int room=ambr.master_offset[0]/256,echo=ambr.master_offset[1]/256;
+    int motion=ambr.master_offset[2]/256,heat=-ambr.master_offset[3]/256;
+    amb_global_offset(G_DJF,heat*3/4);
+    amb_global_offset(G_CLIP,heat/3);
+    amb_global_offset(G_DCOLOR,-heat/2);
+    amb_global_offset(G_WIDTH,room/3+motion/2);
+    amb_global_offset(G_RMOD,motion/2);
+    if(amb.global[G_RTYPE]!=3)amb_global_offset(G_RDAMP,heat/2);
+    if(echo)song.g[G_DFDBK]=clamp(amb.global[G_DFDBK]+echo/3,0,86);
+}
 static __attribute__((noinline)) void amb_prepare(void)
 {
     unsigned k,i; int32_t desired;
     if(ambr.loading)return;
     if(ambr.piece_transition && !amb_piece_waiting())ambr.piece_transition=0;
-    if(!ambr.piece_transition && (amb_control_slot==4 || !amb_control_slot)){
-        for(i=0;i<G_COUNT;i++)song.g[i]=amb.global[i];
-        for(i=0;i<4;i++){
-            unsigned id=amb_master_macros[i];
-            int target=(amb.global[id]-GP[id].min-amb.master_anchor[i])*256;
-            int diff=target-ambr.master_offset[i];
-            int increment=diff/(amb_control_slot==4?16:4);
-            ambr.master_offset[i]+=increment?increment:diff;
-        }
-        int room=ambr.master_offset[0]/256,echo=ambr.master_offset[1]/256;
-        int motion=ambr.master_offset[2]/256,heat=-ambr.master_offset[3]/256;
-        amb_global_offset(G_DJF,heat*3/4);
-        amb_global_offset(G_CLIP,heat/3);
-        amb_global_offset(G_DCOLOR,-heat/2);
-        amb_global_offset(G_WIDTH,room/3+motion/2);
-        amb_global_offset(G_RMOD,motion/2);
-        if(amb.global[G_RTYPE]!=3)amb_global_offset(G_RDAMP,heat/2);
-        if(echo)song.g[G_DFDBK]=clamp(amb.global[G_DFDBK]+echo/3,0,86);
-    }
+    if(!ambr.piece_transition && (amb_control_slot==4 || !amb_control_slot))amb_prepare_master();
     for(k=0;k<4;k++) {
         amb_layer_t *l=&amb.layer[k]; track_t *t=&trk[k]; int warm,motion,bloom,space;
         if(ambr.overlap[k] && ambr.handoff[k] && ambr.tail_left[k] && amb_move_release(k))amb_apply_patch(k);
@@ -1335,8 +1343,9 @@ static __attribute__((noinline)) void amb_layer_process(unsigned k,int32_t *b,ui
     /* Drum IMAGE and per-lane sends are corrected after the mono mix. Shape
      * those private side buses too, with independent histories and one gain
      * update, so their correction cannot bypass a layer's EQ. */
-    for(c=0;c<(trk[k].engine==ENGI_DRUM && dx_xon?6u:1u);c++){
-        int32_t *buf=c==0?b:c==1?dx_sl:c==2?dx_sr:dx_sb[c-3];
+    unsigned a22=trk[k].engine==ENGI_AMB_A22;
+    for(c=0;c<(a22?2u:trk[k].engine==ENGI_DRUM && dx_xon?6u:1u);c++){
+        int32_t *buf=c==0?b:a22?voice_bank[k].a22.side:c==1?dx_sl:c==2?dx_sr:dx_sb[c-3];
         for(i=0;i<n;i++){
             int32_t x=buf[i];int64_t y;
             low[k][c]+=(int32_t)((((int64_t)x-low[k][c])*26)/1024);
