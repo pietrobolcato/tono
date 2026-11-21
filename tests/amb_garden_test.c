@@ -92,16 +92,18 @@ int main(void)
         AMB_SCENE_LAST_TRAM, AMB_SCENE_FIRST_FERRY, AMB_SCENE_EVENING_ARRAY,
         AMB_SCENE_FUMAROLE, AMB_SCENE_WINDOW_LIGHT, AMB_SCENE_LINEN_AND_BOW,
         AMB_SCENE_UMBRA_MERIDIAN, AMB_SCENE_LONG_LEE, AMB_SCENE_COLD_DESERT,
-        AMB_SCENE_EMBER_MERIDIAN};
+        AMB_SCENE_EMBER_MERIDIAN, AMB_SCENE_303_FELLOWS};
     for(unsigned i=0;i<NELEM(bank);i++){
         assert(amb_next_piece(AMB_SCENE_GARDEN,(int)i)==bank[i]);
         assert(amb_next_piece(bank[i],-(int)i)==AMB_SCENE_GARDEN);
     }
     assert(amb_next_piece(AMB_SCENE_GARDEN,NELEM(bank))==AMB_SCENE_GARDEN);
     turn(EN_PRESET,-1);
-    assert(ambr.piece_preview==AMB_SCENE_EMBER_MERIDIAN);
+    assert(ambr.piece_preview==AMB_SCENE_303_FELLOWS);
     press(B_REC);
-    assert(ambr.preset_position==AMB_SCENE_EMBER_MERIDIAN && amb_valid(&amb));
+    assert(ambr.preset_position==AMB_SCENE_303_FELLOWS && amb_valid(&amb));
+    assert(amb.policy.active[1]==AMB_ACID_PHRASE && amb.global[G_BPM]==74);
+    assert(!strcmp(amb_patch_name(&amb.layer[0]),"Acid Undertow"));
     /* A different arrangement can borrow the conductor without importing sounds or FX. */
     amb_fixture_scene(6);
     amb.layer[0].generated = 0;

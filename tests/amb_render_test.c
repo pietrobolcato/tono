@@ -178,7 +178,7 @@ int main(int argc,char **argv)
     ambr.view=1;ambr.page=6;amb.layer_eq[0][0]=6;amb.layer_eq[0][2]=-3;ar_frame("layer_eq",dir,1);
     ambr.handoff[0]=1;ambr.view=1;ambr.page=1;ar_frame("release_pending",dir,1);ambr.handoff[0]=0;
     ambr.view=0;ambr.proposal=2;ar_frame("chord_proposal",dir,1);ambr.proposal=255;
-    for(style=0;style<NELEM(AMB_SCENE)+AMB_SLOTS;style++){ambr.piece_preview=(uint8_t)style;snprintf(name,sizeof name,"preset_%u",style);ar_frame(name,dir,style==AMB_SCENE_EVENING_ARRAY || style==AMB_SCENE_FUMAROLE || style==AMB_SCENE_EMBER_MERIDIAN || style==AMB_SCENE_COLD_DESERT);}
+    for(style=0;style<NELEM(AMB_SCENE)+AMB_SLOTS;style++){ambr.piece_preview=(uint8_t)style;snprintf(name,sizeof name,"preset_%u",style);ar_frame(name,dir,style==AMB_SCENE_EVENING_ARRAY || style==AMB_SCENE_FUMAROLE || style==AMB_SCENE_EMBER_MERIDIAN || style==AMB_SCENE_COLD_DESERT || style==AMB_SCENE_303_FELLOWS);}
     ambr.piece_preview=255;ambr.view=3;for(style=0;style<8;style++){ambr.slot=(uint8_t)style;ambr.overwrite=style%2;snprintf(name,sizeof name,"save_%u",style);ar_frame(name,dir,1);}
     amb_fixture_scene(7);ambr.view=4;ar_frame("ensemble",dir,1);
     ambr.view=0;ambr.help=1;ar_frame("home_help",dir,1);
