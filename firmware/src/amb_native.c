@@ -2771,10 +2771,12 @@ static void amb_draw(void)
         amb_text(16,44,"PRESET PROPOSAL",ADIM,30);
         if(preview<NELEM(AMB_SCENE)){
             const char *name=AMB_SCENE[preview];
-            const char *line=name+strlen(name)+1;
+            const char *line=name;
+            while(*line++){}
             cv_text(16,64,text_w(&AF_M,name)<=208?&AF_M:&AF_TONO_LABEL,name,AINK);
             amb_text(16,96,line,ADIM,39);
-            amb_text(16,112,line+strlen(line)+1,ADIM,39);
+            while(*line++){}
+            amb_text(16,112,line,ADIM,39);
         }else{
             cv_text(16,64,&AF_M,"USER SLOT",AINK);
             amb_number(113,69,preview-NELEM(AMB_SCENE)+1,AINK);
