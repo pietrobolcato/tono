@@ -16,7 +16,7 @@ static void check_knobs(void)
     __typeof__(ambr) runtime=ambr;
     for(unsigned knob=0;knob<4;knob++){
         char label[16]={0},before[24]={0},after[24]={0};
-        if((ambr.view==1 && ambr.page==4 && !amb.layer[0].generated && amb.layer[0].role!=4 && !amb_acid(&amb.layer[0]) && knob==0) ||
+        if((ambr.view==1 && ambr.page==4 && !amb.layer[0].generated && amb.layer[0].role!=4 && !amb_mono_role(&amb.layer[0]) && knob==0) ||
            (ambr.view==2 && ambr.page==1 && knob==3)){
             amb_knob(knob,2);amb_knob_value(knob,label,after);
             assert(!*label && !*after && !memcmp(&amb,&piece,sizeof amb) && ambr.cursor==runtime.cursor);

@@ -39,7 +39,7 @@ SIZE_FILES = ["amb_native.c", "amb_panel_help.h", "amb_zen.h", "ui.c", "favorite
 # (0.9.14) of what an interrupt reaches, the code that runs once an event (a USB control transfer, a MIDI message, a
 # step, a note, a recorded key), not once a sample or a block: built for size as the main loop is (1.9 KB, the room
 # PROFILE needed in the slot). By prefix; EVENT_KEEP the ones among them that do run every block
-EVENT_PFX = ("ep0_", "e0_", "ep1_", "ep3_", "sysex_", "midi_", "um_", "uart_midi_", "ml_", "mn_", "mo_", "seq_step",
+EVENT_PFX = ("amb_layer_step", "amb_acid_step", "ep0_", "e0_", "ep1_", "ep3_", "sysex_", "midi_", "um_", "uart_midi_", "ml_", "mn_", "mo_", "seq_step",
              "seq_start", "seq_stop", "seq_note", "seq_release", "seq_ratchet", "arp_", "chord_", "cp_", "rec_",
              "motion_", "cin_", "latch_", "key_", "kb_", "keys_", "fm6_note_on", "drum_note_on", "dxo_on", "dxo_off",
              "dxo_rec_hold", "pfx_fire", "seq_lane_rat", "sy_word", "sy_gen_word", "sy_enter", "live_",

@@ -6,8 +6,9 @@
 #include <stdint.h>
 static const char *const AMB_RHYTHMS[] = {
     "AMB DRIFT", "EUCLIDEAN", "ODD LOOPS", "POLYRHYTHM", "SPARSE", "TIDAL", "BROKEN", "SLOW CLOCK","GARDEN"};
-static const char *const AMB_PHRASES[8] = {
-    "AMB BREATHE", "LONG ARC", "WANDER", "BLOOM", "CALL ANSWER", "DRIFT SHIFT", "MEMORY", "MINIMAL"};
+enum { AMB_ACID_PHRASE = 8 };
+static const char *const AMB_PHRASES[] = {
+    "AMB BREATHE", "LONG ARC", "WANDER", "BLOOM", "CALL ANSWER", "DRIFT SHIFT", "MEMORY", "MINIMAL", "ACID LINE"};
 static const char *const AMB_INTERPLAY[6] = {
     "BLEND", "STAGGER", "ALTERNATE", "COMPLEMENT", "SPARSE TALK", "TIDE TOGETHER"};
 typedef struct {
@@ -28,7 +29,7 @@ static void amb_policy_init(amb_policy_t *p, uint32_t seed)
     p->variation = 40;
     for (i = 0; i < 3; i++) { p->active[i] = 0; p->pending[i] = 255; }
 }
-static unsigned amb_style_count(unsigned family){return family==0?9u:family==1?8u:6u;}
+static unsigned amb_style_count(unsigned family){return family<2?9u:6u;}
 static void amb_policy_choose(amb_policy_t *p, unsigned family, unsigned style, int playing)
 {
     unsigned n = amb_style_count(family);
@@ -82,6 +83,7 @@ static int amb_phrase_event(const amb_policy_t *p, uint32_t t, unsigned layer)
     case 4: return (bar / 2u + layer) % 4u < 2u;
     case 5: return (t + bar / 4u + layer * 7u) % 37u < 24u;
     case 6: return (bar % 16u < 4u || (bar % 16u >= 8u && bar % 16u < 12u)) && r < 82u;
+    case AMB_ACID_PHRASE: return 1; /* Rhythm supplies the cues for this line. */
     case 7: return bar % 16u < 2u && t % 8u == 0;
     }
 }

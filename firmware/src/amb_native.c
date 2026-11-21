@@ -185,6 +185,8 @@ static int amb_acid(const amb_layer_t *l)
 {
     return (l->role==3 && l->patch==11) || (l->role==7 && l->patch==1);
 }
+static int amb_mono_role(const amb_layer_t *l){return l->role==3 || l->role==7;}
+static int amb_acid_phrase(const amb_layer_t *l){return amb.policy.active[1]==AMB_ACID_PHRASE && amb_mono_role(l);}
 static const char *const acid_macro[]={"CUTOFF","RES","ENV MOD","DECAY"};
 static void amb_fill_patch(amb_layer_t *l,unsigned key,unsigned k,unsigned role,unsigned patch)
 {
@@ -994,7 +996,7 @@ static void amb_capture_generated(unsigned k)
 {
     amb_layer_t *l=&amb.layer[k];unsigned i,n=0;
     for(i=0;i<16;i++)n+=ambr.recent[k][i]!=0;
-    if(amb_acid(l) && ambr.recent_valid[k])l->drums[3]=ambr.recent_slide[k];
+    if(amb_mono_role(l) && ambr.recent_valid[k])l->drums[3]=amb_acid_phrase(l)?ambr.recent_slide[k]:0;
     if(ambr.recent_valid[k] && (n || amb.policy.active[0]==8)){memcpy(l->notes,ambr.recent[k],16);memcpy(l->velocity,ambr.recent_vel[k],16);}
     else if(amb.policy.active[0]==8 && l->role!=5){
         memset(l->notes,0,sizeof l->notes);
@@ -1038,7 +1040,7 @@ static void amb_layer_step(unsigned k,unsigned step,unsigned mask)
         ambr.grid_cue[k]=(amb_grid_cue_t){0};return;
     }
     if(!(step%(1u<<speed))){ambr.playhead[k]=(uint8_t)((step>>speed)%16);ambr.playhead_valid[k]=1;}
-    if(l->generated && amb.policy.active[0]==8 && l->role!=5 && !amb_acid(l)){garden_step(k,step);return;}
+    if(l->generated && amb.policy.active[0]==8 && l->role!=5 && !amb_acid_phrase(l)){garden_step(k,step);return;}
     if(l->role==4){
         ambr.playhead[k]=(uint8_t)(step%16);ambr.playhead_valid[k]=1;
         static const uint8_t drum[4]={36,38,42,50};
@@ -1051,22 +1053,23 @@ static void amb_layer_step(unsigned k,unsigned step,unsigned mask)
         if(step%(1u<<speed))return;
         unsigned slot=(step>>speed)%16;
         unsigned note=l->notes[slot]?amb_routed(k,ROUTE_NOTE,l->notes[slot],1,127):0;
-        if(!note){if(l->role==5 || amb_acid(l))amb_release(k);return;}
+        int articulated=amb_acid(l) || (amb_mono_role(l) && l->drums[3]);
+        if(!note){if(l->role==5 || articulated)amb_release(k);return;}
         if(l->role<2 || l->role==5){
             gate=FS*(l->role==0?8u+l->macro[2]/4u:12u+l->macro[2]/3u);
             if(amb_carry_note(k,note,gate))return;
         }
         unsigned velocity=amb_routed(k,ROUTE_VEL,l->velocity[slot],1,127);
-        if(amb_acid(l))amb_acid_step(k,note,velocity,speed,(l->drums[3]>>slot)&1u);
+        if(articulated)amb_acid_step(k,note,velocity,speed,(l->drums[3]>>slot)&1u);
         else{amb_release(k);amb_note(k,note,velocity,gate);}return;
     }
     mask=amb_align_cue(l,k,step,mask,&ambr.grid_cue[k]);
-    if(amb_acid(l)){
+    if(amb_acid_phrase(l)){
         if(step% (1u<<speed))return;
         unsigned pulse=step>>speed,slot=pulse%16,bit=1u<<slot;
         /* A conductor cue starts a short answer. Revisit the same cell for
          * four cycles, with a fresh turn at the end of each cycle. */
-        unsigned seed=amb.policy.seed+k*97u+amb.policy.active[1]*53u+pulse/64u;
+        unsigned seed=amb.policy.seed+k*97u+159u+pulse/64u;
         unsigned shape=amb_hash(seed+slot+(slot>=12?pulse/16u:0));
         unsigned mode=amb_routed(k,ROUTE_MODE,l->mode,0,4);
         if(!ambr.recent_valid[k]){ambr.acid_window[k]=0;ambr.recent_slide[k]=0;}
@@ -1570,7 +1573,7 @@ static void amb_remember_edit(unsigned route)
 static void amb_manual_knob(amb_layer_t *l,unsigned knob,int delta)
 {
     unsigned at=ambr.cursor;
-    if(knob==0){if(amb_acid(l)){unsigned bit=1u<<at;if(delta>0)l->drums[3]|=bit;else l->drums[3]&=~bit;}else if(l->role==4)ambr.cursor=(uint8_t)amb_wrap(at+delta,16);}
+    if(knob==0){if(amb_mono_role(l)){unsigned bit=1u<<at;if(delta>0)l->drums[3]|=bit;else l->drums[3]&=~bit;}else if(l->role==4)ambr.cursor=(uint8_t)amb_wrap(at+delta,16);}
     else if(l->role==4){
         if(knob==1)ambr.lane=(uint8_t)amb_wrap(ambr.lane+delta,4);
         if(knob==2){
@@ -2254,7 +2257,7 @@ static void amb_knob_value(unsigned knob,char *label,char *value)
             static const char *const texture[5]={"STEADY","PULSE","DRIFT","BURSTS","SPARSE"};
             id=amb_pattern_param(l,knob);
             if(!l->generated){
-                if(!knob && amb_acid(l)){str_cpy(label,"SLIDE IN",16);str_cpy(value,(l->drums[3]>>ambr.cursor)&1?"ON":"OFF",24);return;}
+                if(!knob && amb_mono_role(l)){str_cpy(label,"SLIDE IN",16);str_cpy(value,(l->drums[3]>>ambr.cursor)&1?"ON":"OFF",24);return;}
                 if(!knob && l->role!=4){label[0]=value[0]=0;return;}
                 static const char *const pitched_manual[]={"","SPEED","NOTE","VELOCITY"};
                 static const char *const drum_manual[]={"STEP","LANE","HIT","SWING"};

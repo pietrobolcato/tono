@@ -60,6 +60,6 @@ int main(void)
         for (step = 0; step < 100000; step++) assert(!(amb_policy_events(&p,step,l) & 5u));
         assert(!memcmp(l,before,sizeof l));
     }
-    puts("AMB+ policies: all 23 distinct/repeatable, phrase queue/cancel, opt-in immutability, Euclid, harmony PASS");
+    puts("AMB+ policies: all 24 distinct/repeatable, phrase queue/cancel, opt-in immutability, Euclid, harmony PASS");
     return 0;
 }
