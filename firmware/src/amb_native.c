@@ -2743,11 +2743,11 @@ static void amb_draw(void)
         amb_guidance(l,&first,&second);
         amb_text(10,8,first,AINK,39);
         amb_text(10,23,second,AINK,39);
-        amb_text(10,44,ambr.view==1 && ambr.page==1?"MASTER controls the edited layer.":"MASTER controls the selected level.",ADIM,39);
+        amb_text(10,ambr.view==1?36:44,ambr.view==1 && ambr.page==1?"MASTER controls the edited layer.":"MASTER controls the selected level.",ADIM,39);
         if(!ambr.view)amb_text(10,57,"HOME + PLAY locks the layer sound",ADIM,39);
-        else if(amb_page_bank())amb_text(10,57,"PRESETS variation / REC apply",ADIM,39);
-        if(ambr.view==1)amb_text(10,69,"HOME + LFO links last knob edit",ADIM,39);
-        amb_text(10,82,"HOME close / HOME + FX bypass",AQUEUE,37);
+        else if(amb_page_bank())amb_text(10,ambr.view==1?49:57,"PRESETS variation / REC apply",ADIM,39);
+        if(ambr.view==1)amb_text(10,62,"HOME + LFO links last knob edit",ADIM,39);
+        amb_text(10,75,"HOME close / HOME + FX bypass",AQUEUE,37);
         cv_blit_cells(0,147);
         return;
     }
