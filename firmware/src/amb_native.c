@@ -2916,11 +2916,20 @@ static void amb_draw(void)
             cv_bg=SCOPE_BG;amb_text(17,112,"NOTE POOL",SCOPE_INK,10);
             cv_bg=ABG;
         } else if(ambr.view==2 && ambr.page>=6){
-            static const char *const hints[]={"Reverse to retrace your sound.","Four travel steps bring a new sound.","Keep one instrument as others change."};
+            static const char *const hints[][2]={
+                {"Drift darker or brighter. Travel", "farther to hear new patches."},
+                {"Every 4 travel steps, one layer", "gets a new patch. Three carry on."},
+                {"Every 3 travel steps, keep one patch.", "The others change on downbeats."}
+            };
             int timing=ambr.page==7;
             amb_text(12,58,timing?"TIMING":"JOURNEY",ADIM,20);
             cv_text(12,77,&AF_M,timing?timing_names[timing_tab]:amb_walk_styles[amb_journey_style()],AINK);
-            amb_text(12,100,timing?"SELECT chooses timing lane":hints[amb_journey_style()],ADIM,40);
+            if(timing)amb_text(12,100,"SELECT chooses timing lane",ADIM,40);
+            else{
+                const char *const *hint=hints[amb_journey_style()];
+                amb_text(12,98,hint[0],ADIM,40);
+                amb_text(12,111,hint[1],ADIM,40);
+            }
             const char *status=!amb_walk_value(0)?"Auto off  /  manual turns only":
                 amb_walk_value(1)==amb_walk_value(2)?"Auto on  /  fixed interval":"Auto on  /  random interval";
             if(timing && timing_tab){
@@ -2928,7 +2937,8 @@ static void amb_draw(void)
                 status=amb_lane_value(lane,1)==LANE_FOLLOW?"Follows the Auto Travel clock":
                     timing_tab==1?"Rotate rhythm, phrase, interplay":"Replace one generated layer";
             }
-            amb_text(12,126,status,AINK,36);
+            if(!timing)status=amb_lane_value(1,0)?"Layer types can change":"Layer types stay fixed";
+            amb_text(12,129,status,AINK,36);
         } else if(ambr.view==2 && ambr.page==4) {
             amb_eq_plot(amb.eq,0);
             amb_text(12,130,"LIVE MIX / MASTER EQ (DB)",ADIM,34);
