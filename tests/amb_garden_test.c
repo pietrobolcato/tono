@@ -91,7 +91,8 @@ int main(void)
     static const uint8_t bank[] = {AMB_SCENE_GARDEN, AMB_SCENE_INN,
         AMB_SCENE_LAST_TRAM, AMB_SCENE_FIRST_FERRY, AMB_SCENE_EVENING_ARRAY,
         AMB_SCENE_FUMAROLE, AMB_SCENE_WINDOW_LIGHT, AMB_SCENE_LINEN_AND_BOW,
-        AMB_SCENE_UMBRA_MERIDIAN, AMB_SCENE_LONG_LEE, AMB_SCENE_EMBER_MERIDIAN};
+        AMB_SCENE_UMBRA_MERIDIAN, AMB_SCENE_LONG_LEE, AMB_SCENE_COLD_DESERT,
+        AMB_SCENE_EMBER_MERIDIAN};
     for(unsigned i=0;i<NELEM(bank);i++){
         assert(amb_next_piece(AMB_SCENE_GARDEN,(int)i)==bank[i]);
         assert(amb_next_piece(bank[i],-(int)i)==AMB_SCENE_GARDEN);

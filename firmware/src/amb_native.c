@@ -103,35 +103,46 @@ static unsigned amb_global_index(unsigned page)
 static const char *const AMB_MOOD[7] = {"homeward","warmer","brighter","suspended","deeper","open","darker"};
 #include "amb_nostalgic.h"
 _Static_assert(sizeof(amb_piece_t)==1440 && AMB_VERSION==5, "upgrade embedded song before changing format");
-enum { AMB_SCENE_GARDEN = 11, AMB_SCENE_INN = 12, AMB_SCENE_TIDE_ATLAS = 14, AMB_SCENE_LAST_TRAM = 16, AMB_SCENE_FIRST_FERRY = 17, AMB_SCENE_EVENING_ARRAY, AMB_SCENE_FUMAROLE, AMB_SCENE_WINDOW_LIGHT, AMB_SCENE_LINEN_AND_BOW, AMB_SCENE_UMBRA_MERIDIAN, AMB_SCENE_LONG_LEE, AMB_SCENE_EMBER_MERIDIAN };
+enum { AMB_SCENE_GARDEN = 11, AMB_SCENE_INN = 12, AMB_SCENE_TIDE_ATLAS = 14, AMB_SCENE_LAST_TRAM = 16, AMB_SCENE_FIRST_FERRY = 17, AMB_SCENE_EVENING_ARRAY, AMB_SCENE_FUMAROLE, AMB_SCENE_WINDOW_LIGHT, AMB_SCENE_LINEN_AND_BOW, AMB_SCENE_UMBRA_MERIDIAN, AMB_SCENE_LONG_LEE, AMB_SCENE_EMBER_MERIDIAN, AMB_SCENE_COLD_DESERT, AMB_SCENE_COUNT };
 /* Each factory title can carry two lines of preview copy. */
 #define AMB_SONG(name, line1, line2) name "\0" line1 "\0" line2
 /* Archived recipes remain addressable by their original IDs in the host
  * regression harness. Their titles never appear on the device. */
 #ifdef AMB_RETAIN_ARCHIVED_SCENES
-#define AMB_ARCHIVED(name) name "\0\0"
+#define AMB_ARCHIVED(name) name "\0\0",
 #else
-#define AMB_ARCHIVED(name) "\0\0"
+#define AMB_ARCHIVED(name)
 #endif
 static const char *const AMB_SCENE[] = {
-    AMB_ARCHIVED("Morning Air"),AMB_ARCHIVED("Rain Study"),AMB_ARCHIVED("Dark Water"),AMB_ARCHIVED("Low Sun"),
-    AMB_ARCHIVED("Glass Room"),AMB_ARCHIVED("Night Garden"),AMB_ARCHIVED("Window Seats"),AMB_ARCHIVED("Stone Cloister"),
-    AMB_ARCHIVED("Tidal Loom"),AMB_ARCHIVED("Kite Strings"),AMB_ARCHIVED("Departure Hall"),
-    AMB_SONG("Garden","Soft Rhodes and bells","over a drifting pedal."),
-    AMB_SONG("Nostalgic New Inn","Cloudy chords, soft echoes","and a quiet beat."),
-    AMB_ARCHIVED("Pear Orchard"),AMB_ARCHIVED("Tide Atlas"),AMB_ARCHIVED("Pocket Orrery"),
-    AMB_SONG("Last Tram","Nocturnal sax and piano","over a low pedal and tape hiss."),
-    AMB_SONG("First Ferry","Dawn flute, cello and tines","over a soft water wake."),
-    AMB_SONG("Berlin Mornings","Berlin School analogue pulse,","warm strings and distant keys."),
-    AMB_SONG("Acid Konichiwa","Beatless acid, suspended chords","and watery stereo echoes."),
-    AMB_SONG("Window Light","Four interlocking voices","of one evolving grand piano."),
-    AMB_SONG("Iceland Memories","Felted piano and its answer","with cello and solo violin."),
-    AMB_SONG("Symphony for Mars","Wordless voice over deep synth","and distant bell echoes."),
-    AMB_SONG("Tales of Sand Dunes","Weathered flute and dry wind","over distant low impacts."),
-    AMB_SONG("Symphony for a Warmer Mars","Warmer synths and more room","between wordless vocal lines.")
+    AMB_ARCHIVED("Morning Air")AMB_ARCHIVED("Rain Study")AMB_ARCHIVED("Dark Water")AMB_ARCHIVED("Low Sun")
+    AMB_ARCHIVED("Glass Room")AMB_ARCHIVED("Night Garden")AMB_ARCHIVED("Window Seats")AMB_ARCHIVED("Stone Cloister")
+    AMB_ARCHIVED("Tidal Loom")AMB_ARCHIVED("Kite Strings")AMB_ARCHIVED("Departure Hall")
+    AMB_SONG("Garden","Soft Rhodes and bells","over a drifting pedal"),
+    AMB_SONG("Nostalgic New Inn","Cloudy chords, soft echoes","and a quiet beat"),
+    AMB_ARCHIVED("Pear Orchard")AMB_ARCHIVED("Tide Atlas")AMB_ARCHIVED("Pocket Orrery")
+    AMB_SONG("Last Tram","Nocturnal sax and piano","over a low pedal and tape hiss"),
+    AMB_SONG("First Ferry","Dawn flute, cello and tines","over a soft water wake"),
+    AMB_SONG("Berlin Mornings","Berlin School analogue pulse,","warm strings and distant keys"),
+    AMB_SONG("Acid Konichiwa","Beatless acid, suspended chords","and watery stereo echoes"),
+    AMB_SONG("Window Light","Four interlocking voices","of one evolving grand piano"),
+    AMB_SONG("Iceland Memories","Felted piano and its answer","with cello and solo violin"),
+    AMB_SONG("Symphony for Mars","Wordless voice over deep synth","and distant bell echoes"),
+    AMB_SONG("Tales of Sand Dunes","Weathered flute and dry wind","over distant low impacts"),
+    AMB_SONG("Symphony for a Warmer Mars","Warmer synths and more room","between wordless vocal lines"),
+    AMB_SONG("Tales of Cold Desert Dunes","Slow FM swells and ice chimes", "over bowed-metal wind")
 };
 #undef AMB_SONG
 #undef AMB_ARCHIVED
+static const char *amb_scene_text(unsigned scene)
+{
+#ifdef AMB_RETAIN_ARCHIVED_SCENES
+    return AMB_SCENE[scene];
+#else
+    if(scene>=AMB_SCENE_LAST_TRAM)
+        return AMB_SCENE[scene-AMB_SCENE_LAST_TRAM+2];
+    return AMB_SCENE[scene==AMB_SCENE_INN];
+#endif
+}
 static const char *const AMB_MACRO[7][4] = {
     {"WARMTH","MOTION","SUSTAIN","SPACE"},{"WARMTH","DRIFT","SUSTAIN","SPACE"},
     {"SOFT","MOTION","SHIMMER","SPACE"},{"ROUND","PULSE","GLIDE","SPACE"},
@@ -392,40 +403,58 @@ static void amb_auto_tick(void)
 #include "amb_three_songs.h"
 #include "amb_linen_and_bow.h"
 #include "amb_umbra_meridian.h"
-#include "amb_long_lee.h"
+#include "amb_desert_songs.h"
 static void amb_make_scene(amb_piece_t *p,unsigned scene)
 {
+#ifdef AMB_RETAIN_ARCHIVED_SCENES
     static const uint8_t roles[6][4]={{0,1,2,4},{0,5,2,4},{1,0,3,5},{0,3,2,5},{2,0,3,4},{5,1,2,4}};
     static const uint8_t roots[6]={0,5,2,7,3,9};
+#else
+    static const uint8_t roles[4]={0,1,2,4};
+#endif
     /* Key, scale, tempo, harmonic interval, conductor, room, echo and four chairs.
      * The last column of each chair is its level in this arrangement. */
     typedef struct {uint8_t key,scale,bpm,auto_index,styles[3],room,echo;
                     uint8_t chair[4][4];} arrangement_t;
     static const arrangement_t arrangements[]={
+#ifdef AMB_RETAIN_ARCHIVED_SCENES
         {2,1,58,4,{1,5,0},96,28,{{2,8,2,93},{0,9,1,73},{1,11,2,56},{2,9,2,67}}},
         {2,2,62,5,{1,5,0},104,12,{{0,10,1,94},{1,8,3,67},{2,9,3,46},{5,0,2,28}}},
         {5,3,80,3,{5,5,3},82,58,{{0,12,1,67},{2,10,0,82},{3,8,2,77},{5,3,1,38}}},
         {9,1,92,2,{1,2,0},64,32,{{2,9,0,91},{0,11,2,75},{3,8,1,75},{4,2,0,50}}},
         {0,1,54,5,{2,5,0},97,22,{{2,8,0,85},{0,9,2,56},{2,8,0,62},{0,14,3,65}}},
+#endif
         {2,2,72,4,{8,0,0},102,57,{{0,16,1,89},{2,11,2,94},{3,9,1,67},{4,8,1,84}}},
+#ifdef AMB_RETAIN_ARCHIVED_SCENES
         /* Pear Orchard: two independent tine voices over a sustained Skylight drone. */
         {5,3,66,4,{8,0,0},87,33,{{0,17,1,87},{2,12,2,81},{1,12,2,48},{2,13,3,59}}},
+#endif
         /* Tide Atlas: bowed bass register, nylon and linen against an ocean drum. */
         {4,2,57,5,{5,3,0},99,25,{{0,18,1,82},{2,9,1,85},{1,13,2,71},{5,12,2,29}}},
+#ifdef AMB_RETAIN_ARCHIVED_SCENES
         /* Pocket Orrery: crossing short pulses, with the shaker as quiet clockwork. */
         {7,1,91,3,{3,2,1},64,39,{{2,12,0,87},{0,14,2,68},{3,10,1,73},{5,15,1,29}}},
+#endif
         /* Last Tram: nocturnal sax, piano and pedal with the air of a tape machine. */
         {9,0,63,4,{2,4,1},96,19,{{0,21,1,100},{2,14,0,91},{3,9,1,53},{5,1,1,16}}},
         {2,0,88,5,{3,2,0},110,42,{{3,1,0,83},{0,4,1,81},{2,12,1,58},{1,7,2,49}}},
         {5,2,70,4,{2,2,1},105,43,{{3,5,1,78},{0,6,2,67},{1,4,2,53},{5,12,2,23}}},
         {3,1,67,3,{1,2,3},72,0,{{2,14,0,90},{2,14,1,67},{2,14,1,67},{2,14,2,37}}}
     };
+#ifdef AMB_RETAIN_ARCHIVED_SCENES
     _Static_assert(AMB_SCENE_LINEN_AND_BOW==8+NELEM(arrangements),"factory catalog");
-    unsigned requested=scene%NELEM(AMB_SCENE);
+#else
+    _Static_assert(NELEM(arrangements)==6,"factory arrangement templates");
+#endif
+    #ifdef AMB_RETAIN_ARCHIVED_SCENES
+    unsigned requested=scene%AMB_SCENE_COUNT;
+#else
+    unsigned requested=scene;
+#endif
     scene=requested;
     if(requested==AMB_SCENE_LINEN_AND_BOW)scene=AMB_SCENE_WINDOW_LIGHT;
     if(requested==AMB_SCENE_UMBRA_MERIDIAN || requested==AMB_SCENE_EMBER_MERIDIAN)scene=AMB_SCENE_TIDE_ATLAS;
-    if(requested==AMB_SCENE_LONG_LEE)scene=0;
+    if(requested==AMB_SCENE_LONG_LEE || requested==AMB_SCENE_COLD_DESERT)scene=0;
     if(scene==AMB_SCENE_INN){
         uint8_t *out=(uint8_t *)p;
         memset(p,0,sizeof *p);
@@ -437,23 +466,42 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
         return;
     }
     unsigned arrangement_scene=scene==AMB_SCENE_FIRST_FERRY?AMB_SCENE_TIDE_ATLAS:scene;
+#ifdef AMB_RETAIN_ARCHIVED_SCENES
     const arrangement_t *arr=scene<6?0:&arrangements[arrangement_scene-6-(arrangement_scene>AMB_SCENE_INN)-(arrangement_scene>AMB_SCENE_FIRST_FERRY)];
+    unsigned root=scene<6?roots[scene]:0;
+    unsigned fallback_bpm=72+scene*5;
+#else
+    /* The production picker never offers the archived arrangement rows. */
+    const arrangement_t *arr=0;
+    if(arrangement_scene==AMB_SCENE_GARDEN)arr=&arrangements[0];
+    else if(arrangement_scene==AMB_SCENE_TIDE_ATLAS)arr=&arrangements[1];
+    else if(arrangement_scene>=AMB_SCENE_LAST_TRAM)
+        arr=&arrangements[arrangement_scene-AMB_SCENE_LAST_TRAM+2-(arrangement_scene>AMB_SCENE_FIRST_FERRY)];
+    unsigned root=0;
+    unsigned fallback_bpm=72;
+#endif
     unsigned i,j;
     memset(p,0,sizeof *p);p->magic=AMB_MAGIC;p->version=AMB_VERSION;
     amb_policy_init(&p->policy,0x414d4200u+requested);p->release_ms=6000;p->master=760;
-    p->key=arr?arr->key:roots[scene];p->scale=arr?arr->scale:0;p->auto_index=arr?arr->auto_index:3;
+    p->key=arr?arr->key:root;p->scale=arr?arr->scale:0;p->auto_index=arr?arr->auto_index:3;
     if(arr)memcpy(p->policy.active,arr->styles,3);
     p->evolve[0]=100;p->evolve[1]=35;p->evolve[2]=20;p->evolve[3]=15;
     for(i=0;i<G_COUNT;i++)p->global[i]=GP[i].def;
-    p->global[G_BPM]=arr?arr->bpm:72+(int)scene*5;p->global[G_RSIZE]=arr?arr->room:94;p->global[G_RDAMP]=arr?62:82;
+    p->global[G_BPM]=arr?arr->bpm:fallback_bpm;p->global[G_RSIZE]=arr?arr->room:94;p->global[G_RDAMP]=arr?62:82;
     p->global[G_DMIX]=arr?arr->echo:45;p->global[G_DFDBK]=55;p->global[G_DTIME]=7;p->global[G_RTYPE]=0;
     p->global[G_CLIP]=14;p->global[G_CDEPTH]=35;p->global[G_CRATE]=17;p->global[G_DMOD]=22;
     for(i=0;i<4;i++){
+#ifdef AMB_RETAIN_ARCHIVED_SCENES
         unsigned role=arr?arr->chair[i][0]:roles[scene][i];
+        unsigned patch=arr?arr->chair[i][1]:(scene+i*2)%8;
+#else
+        unsigned role=arr?arr->chair[i][0]:roles[i];
+        unsigned patch=arr?arr->chair[i][1]:i*2;
+#endif
         amb_layer_t *l=&p->layer[i];l->generated=1;l->mode=role==0?3:2;
         l->density=(uint8_t)(i==3?20:35);l->follow=100;l->speed=arr?arr->chair[i][2]:1;
         for(j=0;j<16;j++)l->velocity[j]=76;
-        amb_fill_patch(l,p->key,i,role,arr?arr->chair[i][1]:(scene+i*2)%8);
+        amb_fill_patch(l,p->key,i,role,patch);
         l->level=arr?arr->chair[i][3]:(uint8_t)l->base[P_LEVEL];
     }
     /* Pitch and timing come from the live conductor for every factory layer. */
@@ -494,7 +542,8 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
     if(requested==AMB_SCENE_LINEN_AND_BOW)amb_linen_and_bow(p);
     if(requested==AMB_SCENE_UMBRA_MERIDIAN || requested==AMB_SCENE_EMBER_MERIDIAN)amb_umbra_meridian(p);
     if(requested==AMB_SCENE_EMBER_MERIDIAN)amb_ember_meridian(p);
-    if(requested==AMB_SCENE_LONG_LEE)amb_finish_long_lee(p);
+    if(requested==AMB_SCENE_LONG_LEE)amb_finish_desert(p,&sand_dunes_recipe);
+    if(requested==AMB_SCENE_COLD_DESERT)amb_finish_desert(p,&cold_desert_recipe);
 }
 typedef struct {amb_piece_t piece;amb_take_t take;} amb_take_song_t;
 _Static_assert(sizeof(amb_take_song_t)<=ST_PAYLOAD_MAX,"voice take fits an existing song");
@@ -538,7 +587,7 @@ static void amb_start_factory(unsigned scene)
     trk_live=4;song.sel=0;ambr.target=ambr.edit_layer=0;ambr.phase=ambr.step=0;ambr.last_play=0;
     ambr.local_preset=0;ambr.piece_preview=255;ambr.preset_position=(uint8_t)scene;
     for(i=0;i<4;i++)for(j=0;j<4;j++)ambr.macro_smooth[i][j]=64*256;
-    amb_say(AMB_SCENE[scene%NELEM(AMB_SCENE)]);
+    amb_say(amb_scene_text(scene));
 }
 static void amb_factory(unsigned scene)
 {
@@ -1260,23 +1309,36 @@ static void amb_scan_slots(void)
             amb_occupied(i)?AMB_UNREADABLE:AMB_EMPTY;
     }
 }
+/* Swap these positions when browsing so the two desert pieces sit together.
+ * Recipe IDs still determine the factory seeds. */
+static unsigned amb_bank_order(unsigned scene)
+{
+    _Static_assert(AMB_SCENE_COLD_DESERT==(AMB_SCENE_EMBER_MERIDIAN^1u),"adjacent bank IDs");
+    if(scene-AMB_SCENE_EMBER_MERIDIAN<2u)return scene^1u;
+    return scene;
+}
 static unsigned amb_next_piece(unsigned p,int clicks)
 {
+    p=amb_bank_order(p);
     /* Recipes keep their IDs for reproducible playback. These recipes
      * appear in the factory bank before the existing user slots. */
-    _Static_assert(NELEM(AMB_SCENE)<=32,"factory bank mask");
+    _Static_assert(AMB_SCENE_COUNT<=32,"factory bank mask");
     const uint32_t factory_bank=(1u<<AMB_SCENE_GARDEN)|(1u<<AMB_SCENE_INN)|
         (1u<<AMB_SCENE_LAST_TRAM)|(1u<<AMB_SCENE_FIRST_FERRY)|
         (1u<<AMB_SCENE_EVENING_ARRAY)|(1u<<AMB_SCENE_FUMAROLE)|(1u<<AMB_SCENE_WINDOW_LIGHT)|(1u<<AMB_SCENE_LINEN_AND_BOW)|
-        (1u<<AMB_SCENE_UMBRA_MERIDIAN)|(1u<<AMB_SCENE_LONG_LEE)|(1u<<AMB_SCENE_EMBER_MERIDIAN);
+        (1u<<AMB_SCENE_UMBRA_MERIDIAN)|(1u<<AMB_SCENE_LONG_LEE)|(1u<<AMB_SCENE_EMBER_MERIDIAN)|(1u<<AMB_SCENE_COLD_DESERT);
     int dir=clicks<0?-1:1;
     while(clicks){
-        do {p=amb_wrap((int)p+dir,NELEM(AMB_SCENE)+AMB_SLOTS);}
-        while(p<NELEM(AMB_SCENE) ? !(factory_bank&(1u<<p)) :
-              amb_slot_state[p-NELEM(AMB_SCENE)]!=AMB_SAVED);
+        do {
+            p+=dir;
+            if(p>=AMB_SCENE_COUNT+AMB_SLOTS)
+                p=dir>0?0:AMB_SCENE_COUNT+AMB_SLOTS-1;
+        }
+        while(p<AMB_SCENE_COUNT ? !(factory_bank&(1u<<p)) :
+              amb_slot_state[p-AMB_SCENE_COUNT]!=AMB_SAVED);
         clicks-=dir;
     }
-    return p;
+    return amb_bank_order(p);
 }
 static void amb_commit_snapshot(void)
 {
@@ -1699,14 +1761,14 @@ static void amb_rec(void)
     }
     if(ambr.piece_preview!=255) {
         unsigned p=ambr.piece_preview;ambr.preset_position=(uint8_t)p;
-        if(p<NELEM(AMB_SCENE)){
+        if(p<AMB_SCENE_COUNT){
             amb_load_take=0;amb_pending_ready=0;amb_make_scene(&amb_pending,p);
             /* A confirmed factory recall is a new take. A slot recall keeps
              * its stored seed. The default at power-on remains reproducible. */
             if(p!=AMB_SCENE_INN)amb_pending.policy.seed=amb_hash(amb_pending.policy.seed+fm1_ms+0x9e3779b9u*(++ambr.factory_take));
             if(song.playing){RING_PUBLISH();amb_pending_ready=1;amb_say("RECALL QUEUED TO NEXT BAR");}
             else amb_start_factory(p);
-        }else amb_recall(p-NELEM(AMB_SCENE));
+        }else amb_recall(p-AMB_SCENE_COUNT);
         ambr.piece_preview=255;return;
     }
     if(amb_mic_page() && ambr.proposal==255 && !amb_pending_ready){
@@ -2778,18 +2840,18 @@ static void amb_draw(void)
     }else if(!ambr.help && ambr.piece_preview!=255) {
         GFX_HOOK_COVER(8,29,232,145);cv_bg=ASEL;cv_rect(8,29,224,116,cv_bg);
         unsigned preview=ambr.piece_preview;
-        amb_text(16,44,"PRESET PROPOSAL",ADIM,30);
-        if(preview<NELEM(AMB_SCENE)){
-            const char *name=AMB_SCENE[preview];
+        amb_text(16,44,"PRESET",ADIM,30);
+        if(preview<AMB_SCENE_COUNT){
+            const char *name=amb_scene_text(preview);
             const char *line=name;
             while(*line++){}
-            cv_text(16,64,text_w(&AF_M,name)<=208?&AF_M:&AF_TONO_LABEL,name,AINK);
+            cv_text(16,64,&AF_M,name,AINK);
             amb_text(16,96,line,ADIM,39);
             while(*line++){}
             amb_text(16,112,line,ADIM,39);
         }else{
             cv_text(16,64,&AF_M,"USER SLOT",AINK);
-            amb_number(113,69,preview-NELEM(AMB_SCENE)+1,AINK);
+            amb_number(113,69,preview-AMB_SCENE_COUNT+1,AINK);
         }
     } else if(!ambr.help && ambr.view==0 && ambr.proposal!=255) {
         GFX_HOOK_COVER(8,86,232,146);cv_bg=ASEL;cv_rect(8,86,224,60,cv_bg);amb_text(18,91,"NEXT HARMONY",ADIM,24);
