@@ -127,7 +127,7 @@ static const char *const AMB_SCENE[] = {
     AMB_SONG("Window Light","Four interlocking voices","of one evolving grand piano."),
     AMB_SONG("Iceland Memories","Felted piano and its answer","with cello and solo violin."),
     AMB_SONG("Symphony for Mars","Wordless voice over deep synth","and distant bell echoes."),
-    AMB_SONG("Tales of Sand Dunes","Wind, low impacts and a warm","lead on a desert horizon."),
+    AMB_SONG("Tales of Sand Dunes","Weathered flute and dry wind","over distant low impacts."),
     AMB_SONG("Symphony for a Warmer Mars","Warmer synths and more room","between wordless vocal lines.")
 };
 #undef AMB_SONG
