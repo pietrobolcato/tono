@@ -103,8 +103,8 @@ static unsigned amb_global_index(unsigned page)
 static const char *const AMB_MOOD[7] = {"homeward","warmer","brighter","suspended","deeper","open","darker"};
 #include "amb_nostalgic.h"
 _Static_assert(sizeof(amb_piece_t)==1440 && AMB_VERSION==5, "upgrade embedded song before changing format");
-enum { AMB_SCENE_GARDEN = 11, AMB_SCENE_INN = 12, AMB_SCENE_TIDE_ATLAS = 14, AMB_SCENE_LAST_TRAM = 16, AMB_SCENE_FIRST_FERRY = 17, AMB_SCENE_EVENING_ARRAY, AMB_SCENE_FUMAROLE, AMB_SCENE_WINDOW_LIGHT, AMB_SCENE_LINEN_AND_BOW, AMB_SCENE_UMBRA_MERIDIAN, AMB_SCENE_LONG_LEE };
-static const char *const AMB_SCENE[] = {"Morning Air","Rain Study","Dark Water","Low Sun","Glass Room","Night Garden","Window Seats","Stone Cloister","Tidal Loom","Kite Strings","Departure Hall","Garden","Nostalgic New Inn","Pear Orchard","Tide Atlas","Pocket Orrery","Last Tram","First Ferry","Evening Array","Fumarole","Window Light","Linen and Bow","Umbra Meridian","Long Lee"};
+enum { AMB_SCENE_GARDEN = 11, AMB_SCENE_INN = 12, AMB_SCENE_TIDE_ATLAS = 14, AMB_SCENE_LAST_TRAM = 16, AMB_SCENE_FIRST_FERRY = 17, AMB_SCENE_EVENING_ARRAY, AMB_SCENE_FUMAROLE, AMB_SCENE_WINDOW_LIGHT, AMB_SCENE_LINEN_AND_BOW, AMB_SCENE_UMBRA_MERIDIAN, AMB_SCENE_LONG_LEE, AMB_SCENE_EMBER_MERIDIAN };
+static const char *const AMB_SCENE[] = {"Morning Air","Rain Study","Dark Water","Low Sun","Glass Room","Night Garden","Window Seats","Stone Cloister","Tidal Loom","Kite Strings","Departure Hall","Garden","Nostalgic New Inn","Pear Orchard","Tide Atlas","Pocket Orrery","Last Tram","First Ferry","Evening Array","Fumarole","Window Light","Linen and Bow","Umbra Meridian","Long Lee","Ember Meridian"};
 static const char *const AMB_MACRO[7][4] = {
     {"WARMTH","MOTION","SUSTAIN","SPACE"},{"WARMTH","DRIFT","SUSTAIN","SPACE"},
     {"SOFT","MOTION","SHIMMER","SPACE"},{"ROUND","PULSE","GLIDE","SPACE"},
@@ -397,7 +397,7 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
     unsigned requested=scene%NELEM(AMB_SCENE);
     scene=requested;
     if(requested==AMB_SCENE_LINEN_AND_BOW)scene=AMB_SCENE_WINDOW_LIGHT;
-    if(requested==AMB_SCENE_UMBRA_MERIDIAN)scene=AMB_SCENE_TIDE_ATLAS;
+    if(requested==AMB_SCENE_UMBRA_MERIDIAN || requested==AMB_SCENE_EMBER_MERIDIAN)scene=AMB_SCENE_TIDE_ATLAS;
     if(requested==AMB_SCENE_LONG_LEE)scene=0;
     if(scene==AMB_SCENE_INN){
         uint8_t *out=(uint8_t *)p;
@@ -463,7 +463,8 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
     if(scene==AMB_SCENE_FIRST_FERRY)amb_first_ferry(p);
     else if(scene>=AMB_SCENE_EVENING_ARRAY)amb_finish_new_song(p,scene);
     if(requested==AMB_SCENE_LINEN_AND_BOW)amb_linen_and_bow(p);
-    if(requested==AMB_SCENE_UMBRA_MERIDIAN)amb_umbra_meridian(p);
+    if(requested==AMB_SCENE_UMBRA_MERIDIAN || requested==AMB_SCENE_EMBER_MERIDIAN)amb_umbra_meridian(p);
+    if(requested==AMB_SCENE_EMBER_MERIDIAN)amb_ember_meridian(p);
     if(requested==AMB_SCENE_LONG_LEE)amb_finish_long_lee(p);
 }
 typedef struct {amb_piece_t piece;amb_take_t take;} amb_take_song_t;
@@ -1238,7 +1239,7 @@ static unsigned amb_next_piece(unsigned p,int clicks)
     const uint32_t factory_bank=(1u<<AMB_SCENE_GARDEN)|(1u<<AMB_SCENE_INN)|
         (1u<<AMB_SCENE_LAST_TRAM)|(1u<<AMB_SCENE_FIRST_FERRY)|
         (1u<<AMB_SCENE_EVENING_ARRAY)|(1u<<AMB_SCENE_FUMAROLE)|(1u<<AMB_SCENE_WINDOW_LIGHT)|(1u<<AMB_SCENE_LINEN_AND_BOW)|
-        (1u<<AMB_SCENE_UMBRA_MERIDIAN)|(1u<<AMB_SCENE_LONG_LEE);
+        (1u<<AMB_SCENE_UMBRA_MERIDIAN)|(1u<<AMB_SCENE_LONG_LEE)|(1u<<AMB_SCENE_EMBER_MERIDIAN);
     int dir=clicks<0?-1:1;
     while(clicks){
         do {p=amb_wrap((int)p+dir,NELEM(AMB_SCENE)+AMB_SLOTS);}

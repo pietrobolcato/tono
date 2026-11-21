@@ -39,3 +39,25 @@ static void amb_umbra_meridian(amb_piece_t *p)
     echo->base[P_FCUT]=105;echo->base[P_ATK]=3;echo->base[P_REL]=84;
     amb_anchor_master(p);
 }
+
+/* Apply to the original Umbra Meridian recipe after constructing it. */
+static void amb_ember_meridian(amb_piece_t *piece)
+{
+    amb_layer_t *bed = &piece->layer[1];
+    amb_layer_t *pedal = &piece->layer[2];
+    piece->layer[0].density = 68;
+
+    bed->level = 102;
+    bed->base[P_E1] = 12;
+    bed->base[P_E4] = 46;
+    bed->base[P_E5] = 19;
+    bed->base[P_E6] = 14;
+    bed->base[P_FCUT] = 67;
+    bed->base[P_REV] = 63;
+    bed->base[P_DLY] = 37;
+    bed->lfo_depth = 52;
+    bed->base[P_LRATE] = 10;
+
+    pedal->level = 77;
+    pedal->base[P_E6] = 16;
+}
