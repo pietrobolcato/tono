@@ -1879,7 +1879,9 @@ static void amb_rec(void)
     if(ambr.proposal==255) {if(amb_pending_ready){amb_pending_ready=0;amb_say("QUEUED RECALL CANCELLED");}else if(ambr.chord_q!=255){ambr.chord_q=255;amb_say("QUEUED CHORD CANCELLED");}return;}
 
     if(ambr.view==1 && ambr.page==0) {
-        amb_patch(ambr.edit_layer,ambr.proposal,0);
+        ambr.loading=1;
+        amb_replace_role(ambr.edit_layer,ambr.proposal,0);
+        ambr.loading=0;
     } else if(amb_sound_picker()){
         amb_layer_t *l=&amb.layer[ambr.edit_layer];
         if(l->role==6){
@@ -1891,7 +1893,7 @@ static void amb_rec(void)
         if(song.playing) ambr.chord_q=ambr.proposal;
         else {amb.chord=ambr.proposal;amb_revoice();}
     }
-    if(ambr.view==1 && (ambr.page==0 || amb_sound_picker()))amb_travel_rebase(ambr.edit_layer);
+    if(amb_sound_picker())amb_travel_rebase(ambr.edit_layer);
     ambr.proposal=255;ambr.dirty=1;
 }
 static void amb_browse_proposal(int delta)
