@@ -90,17 +90,17 @@ int main(void)
     assert(!strcmp(amb_patch_name(&amb.layer[1]), "Garden Bell"));
     static const uint8_t bank[] = {AMB_SCENE_GARDEN, AMB_SCENE_INN,
         AMB_SCENE_LAST_TRAM, AMB_SCENE_FIRST_FERRY, AMB_SCENE_EVENING_ARRAY,
-        AMB_SCENE_FUMAROLE, AMB_SCENE_WINDOW_LIGHT};
+        AMB_SCENE_FUMAROLE, AMB_SCENE_WINDOW_LIGHT, AMB_SCENE_LINEN_AND_BOW,
+        AMB_SCENE_UMBRA_MERIDIAN, AMB_SCENE_LONG_LEE};
     for(unsigned i=0;i<NELEM(bank);i++){
         assert(amb_next_piece(AMB_SCENE_GARDEN,(int)i)==bank[i]);
         assert(amb_next_piece(bank[i],-(int)i)==AMB_SCENE_GARDEN);
     }
     assert(amb_next_piece(AMB_SCENE_GARDEN,NELEM(bank))==AMB_SCENE_GARDEN);
     turn(EN_PRESET,-1);
-    assert(ambr.piece_preview==AMB_SCENE_WINDOW_LIGHT);
+    assert(ambr.piece_preview==AMB_SCENE_LONG_LEE);
     press(B_REC);
-    assert(ambr.preset_position==AMB_SCENE_WINDOW_LIGHT &&
-           amb.layer[2].reserved==AMB_PIANO_PHRASING);
+    assert(ambr.preset_position==AMB_SCENE_LONG_LEE && amb_valid(&amb));
     /* A different arrangement can borrow the conductor without importing sounds or FX. */
     amb_fixture_scene(6);
     amb.layer[0].generated = 0;

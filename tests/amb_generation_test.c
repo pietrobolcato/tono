@@ -41,7 +41,7 @@ static void catalog(void)
             assert(amb.layer[k].generated);
             trk[k].engine=amb.layer[k].engine;
         }
-        if(amb.policy.active[0]==8 || scene==AMB_SCENE_WINDOW_LIGHT){timed_catalog(scene);continue;}
+        if(amb.policy.active[0]==8 || amb.layer[2].reserved==AMB_PIANO_PHRASING){timed_catalog(scene);continue;}
         /* The actual sequencer writes its emitted pitched notes to PATTERN. */
         for(unsigned step=0;step<1024;step++){
             amb_participation_t parts[4];amb_participation(parts,step);

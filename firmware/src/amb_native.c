@@ -103,8 +103,8 @@ static unsigned amb_global_index(unsigned page)
 static const char *const AMB_MOOD[7] = {"homeward","warmer","brighter","suspended","deeper","open","darker"};
 #include "amb_nostalgic.h"
 _Static_assert(sizeof(amb_piece_t)==1440 && AMB_VERSION==5, "upgrade embedded song before changing format");
-enum { AMB_SCENE_GARDEN = 11, AMB_SCENE_INN = 12, AMB_SCENE_TIDE_ATLAS = 14, AMB_SCENE_LAST_TRAM = 16, AMB_SCENE_FIRST_FERRY = 17, AMB_SCENE_EVENING_ARRAY, AMB_SCENE_FUMAROLE, AMB_SCENE_WINDOW_LIGHT };
-static const char *const AMB_SCENE[] = {"Morning Air","Rain Study","Dark Water","Low Sun","Glass Room","Night Garden","Window Seats","Stone Cloister","Tidal Loom","Kite Strings","Departure Hall","Garden","Nostalgic New Inn","Pear Orchard","Tide Atlas","Pocket Orrery","Last Tram","First Ferry","Evening Array","Fumarole","Window Light"};
+enum { AMB_SCENE_GARDEN = 11, AMB_SCENE_INN = 12, AMB_SCENE_TIDE_ATLAS = 14, AMB_SCENE_LAST_TRAM = 16, AMB_SCENE_FIRST_FERRY = 17, AMB_SCENE_EVENING_ARRAY, AMB_SCENE_FUMAROLE, AMB_SCENE_WINDOW_LIGHT, AMB_SCENE_LINEN_AND_BOW, AMB_SCENE_UMBRA_MERIDIAN, AMB_SCENE_LONG_LEE };
+static const char *const AMB_SCENE[] = {"Morning Air","Rain Study","Dark Water","Low Sun","Glass Room","Night Garden","Window Seats","Stone Cloister","Tidal Loom","Kite Strings","Departure Hall","Garden","Nostalgic New Inn","Pear Orchard","Tide Atlas","Pocket Orrery","Last Tram","First Ferry","Evening Array","Fumarole","Window Light","Linen and Bow","Umbra Meridian","Long Lee"};
 static const char *const AMB_MACRO[7][4] = {
     {"WARMTH","MOTION","SUSTAIN","SPACE"},{"WARMTH","DRIFT","SUSTAIN","SPACE"},
     {"SOFT","MOTION","SHIMMER","SPACE"},{"ROUND","PULSE","GLIDE","SPACE"},
@@ -363,6 +363,9 @@ static void amb_auto_tick(void)
 
 #include "amb_first_ferry.h"
 #include "amb_three_songs.h"
+#include "amb_linen_and_bow.h"
+#include "amb_umbra_meridian.h"
+#include "amb_long_lee.h"
 static void amb_make_scene(amb_piece_t *p,unsigned scene)
 {
     static const uint8_t roles[6][4]={{0,1,2,4},{0,5,2,4},{1,0,3,5},{0,3,2,5},{2,0,3,4},{5,1,2,4}};
@@ -390,8 +393,12 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
         {5,2,70,4,{2,2,1},105,43,{{3,5,1,78},{0,6,2,67},{1,4,2,53},{5,12,2,23}}},
         {3,1,67,3,{1,2,3},72,0,{{2,14,0,90},{2,14,1,67},{2,14,1,67},{2,14,2,37}}}
     };
-    _Static_assert(NELEM(AMB_SCENE)==8+NELEM(arrangements),"factory catalog");
-    scene%=NELEM(AMB_SCENE);
+    _Static_assert(AMB_SCENE_LINEN_AND_BOW==8+NELEM(arrangements),"factory catalog");
+    unsigned requested=scene%NELEM(AMB_SCENE);
+    scene=requested;
+    if(requested==AMB_SCENE_LINEN_AND_BOW)scene=AMB_SCENE_WINDOW_LIGHT;
+    if(requested==AMB_SCENE_UMBRA_MERIDIAN)scene=AMB_SCENE_TIDE_ATLAS;
+    if(requested==AMB_SCENE_LONG_LEE)scene=0;
     if(scene==AMB_SCENE_INN){
         uint8_t *out=(uint8_t *)p;
         memset(p,0,sizeof *p);
@@ -406,7 +413,7 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
     const arrangement_t *arr=scene<6?0:&arrangements[arrangement_scene-6-(arrangement_scene>AMB_SCENE_INN)-(arrangement_scene>AMB_SCENE_FIRST_FERRY)];
     unsigned i,j;
     memset(p,0,sizeof *p);p->magic=AMB_MAGIC;p->version=AMB_VERSION;
-    amb_policy_init(&p->policy,0x414d4200u+scene);p->release_ms=6000;p->master=760;
+    amb_policy_init(&p->policy,0x414d4200u+requested);p->release_ms=6000;p->master=760;
     p->key=arr?arr->key:roots[scene];p->scale=arr?arr->scale:0;p->auto_index=arr?arr->auto_index:3;
     if(arr)memcpy(p->policy.active,arr->styles,3);
     p->evolve[0]=100;p->evolve[1]=35;p->evolve[2]=20;p->evolve[3]=15;
@@ -455,6 +462,9 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
     }
     if(scene==AMB_SCENE_FIRST_FERRY)amb_first_ferry(p);
     else if(scene>=AMB_SCENE_EVENING_ARRAY)amb_finish_new_song(p,scene);
+    if(requested==AMB_SCENE_LINEN_AND_BOW)amb_linen_and_bow(p);
+    if(requested==AMB_SCENE_UMBRA_MERIDIAN)amb_umbra_meridian(p);
+    if(requested==AMB_SCENE_LONG_LEE)amb_finish_long_lee(p);
 }
 typedef struct {amb_piece_t piece;amb_take_t take;} amb_take_song_t;
 _Static_assert(sizeof(amb_take_song_t)<=ST_PAYLOAD_MAX,"voice take fits an existing song");
@@ -1222,11 +1232,13 @@ static void amb_scan_slots(void)
 }
 static unsigned amb_next_piece(unsigned p,int clicks)
 {
-    /* Recipes keep their IDs for reproducible playback. Only these seven
+    /* Recipes keep their IDs for reproducible playback. These recipes
      * appear in the factory bank before the existing user slots. */
+    _Static_assert(NELEM(AMB_SCENE)<=32,"factory bank mask");
     const uint32_t factory_bank=(1u<<AMB_SCENE_GARDEN)|(1u<<AMB_SCENE_INN)|
         (1u<<AMB_SCENE_LAST_TRAM)|(1u<<AMB_SCENE_FIRST_FERRY)|
-        (1u<<AMB_SCENE_EVENING_ARRAY)|(1u<<AMB_SCENE_FUMAROLE)|(1u<<AMB_SCENE_WINDOW_LIGHT);
+        (1u<<AMB_SCENE_EVENING_ARRAY)|(1u<<AMB_SCENE_FUMAROLE)|(1u<<AMB_SCENE_WINDOW_LIGHT)|(1u<<AMB_SCENE_LINEN_AND_BOW)|
+        (1u<<AMB_SCENE_UMBRA_MERIDIAN)|(1u<<AMB_SCENE_LONG_LEE);
     int dir=clicks<0?-1:1;
     while(clicks){
         do {p=amb_wrap((int)p+dir,NELEM(AMB_SCENE)+AMB_SLOTS);}
