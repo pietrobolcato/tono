@@ -104,7 +104,26 @@ static const char *const AMB_MOOD[7] = {"homeward","warmer","brighter","suspende
 #include "amb_nostalgic.h"
 _Static_assert(sizeof(amb_piece_t)==1440 && AMB_VERSION==5, "upgrade embedded song before changing format");
 enum { AMB_SCENE_GARDEN = 11, AMB_SCENE_INN = 12, AMB_SCENE_TIDE_ATLAS = 14, AMB_SCENE_LAST_TRAM = 16, AMB_SCENE_FIRST_FERRY = 17, AMB_SCENE_EVENING_ARRAY, AMB_SCENE_FUMAROLE, AMB_SCENE_WINDOW_LIGHT, AMB_SCENE_LINEN_AND_BOW, AMB_SCENE_UMBRA_MERIDIAN, AMB_SCENE_LONG_LEE, AMB_SCENE_EMBER_MERIDIAN };
-static const char *const AMB_SCENE[] = {"Morning Air","Rain Study","Dark Water","Low Sun","Glass Room","Night Garden","Window Seats","Stone Cloister","Tidal Loom","Kite Strings","Departure Hall","Garden","Nostalgic New Inn","Pear Orchard","Tide Atlas","Pocket Orrery","Last Tram","First Ferry","Evening Array","Fumarole","Window Light","Linen and Bow","Umbra Meridian","Long Lee","Ember Meridian"};
+/* Each factory title can carry two lines of preview copy. */
+#define AMB_SONG(name, line1, line2) name "\0" line1 "\0" line2
+static const char *const AMB_SCENE[] = {
+    "Morning Air\0\0","Rain Study\0\0","Dark Water\0\0","Low Sun\0\0",
+    "Glass Room\0\0","Night Garden\0\0","Window Seats\0\0","Stone Cloister\0\0",
+    "Tidal Loom\0\0","Kite Strings\0\0","Departure Hall\0\0",
+    AMB_SONG("Garden","Soft Rhodes and bells","over a drifting pedal."),
+    AMB_SONG("Nostalgic New Inn","Cloudy chords, soft echoes","and a quiet beat."),
+    "Pear Orchard\0\0","Tide Atlas\0\0","Pocket Orrery\0\0",
+    AMB_SONG("Last Tram","Nocturnal sax and piano","over a low pedal and tape hiss."),
+    AMB_SONG("First Ferry","Dawn flute, cello and tines","over a soft water wake."),
+    AMB_SONG("Berlin Mornings","Berlin School analogue pulse,","warm strings and distant keys."),
+    AMB_SONG("Acid Konichiwa","Beatless acid, suspended chords","and watery stereo echoes."),
+    AMB_SONG("Window Light","Four interlocking voices","of one evolving grand piano."),
+    AMB_SONG("Iceland Memories","Felted piano and its answer","with cello and solo violin."),
+    AMB_SONG("Symphony for Mars","Wordless voice over deep synth","and distant bell echoes."),
+    AMB_SONG("Tales of Sand Dunes","Wind, low impacts and a warm","lead on a desert horizon."),
+    AMB_SONG("Symphony for a Warmer Mars","Warmer synths and more room","between wordless vocal lines.")
+};
+#undef AMB_SONG
 static const char *const AMB_MACRO[7][4] = {
     {"WARMTH","MOTION","SUSTAIN","SPACE"},{"WARMTH","DRIFT","SUSTAIN","SPACE"},
     {"SOFT","MOTION","SHIMMER","SPACE"},{"ROUND","PULSE","GLIDE","SPACE"},
@@ -2747,9 +2766,19 @@ static void amb_draw(void)
         amb_text(16,81,"LAST LOADED PIECE VERSION",ADIM,31);
         amb_text(16,101,"SOUND / MACROS / PATTERN",ADIM,31);
     }else if(!ambr.help && ambr.piece_preview!=255) {
-        GFX_HOOK_COVER(8,29,232,145);cv_bg=ASEL;cv_rect(8,29,224,116,cv_bg);amb_text(16,67,"PRESET PROPOSAL",ADIM,30);
-        cv_text(16,85,&AF_M,ambr.piece_preview<NELEM(AMB_SCENE)?AMB_SCENE[ambr.piece_preview]:"USER SLOT",AINK);
-        if(ambr.piece_preview>=NELEM(AMB_SCENE)) amb_number(113,90,ambr.piece_preview-NELEM(AMB_SCENE)+1,AINK);
+        GFX_HOOK_COVER(8,29,232,145);cv_bg=ASEL;cv_rect(8,29,224,116,cv_bg);
+        unsigned preview=ambr.piece_preview;
+        amb_text(16,44,"PRESET PROPOSAL",ADIM,30);
+        if(preview<NELEM(AMB_SCENE)){
+            const char *name=AMB_SCENE[preview];
+            const char *line=name+strlen(name)+1;
+            cv_text(16,64,text_w(&AF_M,name)<=208?&AF_M:&AF_TONO_LABEL,name,AINK);
+            amb_text(16,96,line,ADIM,39);
+            amb_text(16,112,line+strlen(line)+1,ADIM,39);
+        }else{
+            cv_text(16,64,&AF_M,"USER SLOT",AINK);
+            amb_number(113,69,preview-NELEM(AMB_SCENE)+1,AINK);
+        }
     } else if(!ambr.help && ambr.view==0 && ambr.proposal!=255) {
         GFX_HOOK_COVER(8,86,232,146);cv_bg=ASEL;cv_rect(8,86,224,60,cv_bg);amb_text(18,91,"NEXT HARMONY",ADIM,24);
         amb_chord_label(ambr.proposal,b);amb_text(18,112,b,AINK,16);amb_text(115,112,AMB_MOOD[ambr.proposal],ADIM,16);
