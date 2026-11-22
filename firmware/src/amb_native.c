@@ -2678,7 +2678,7 @@ static void amb_draw_home(void)
             amb_number(left+4,y+2,k+1,ABG);cv_bg=ABG;
             amb_text(left+19,y,AMB_ROLE[l->role],AINK,8);
         }
-        amb_text(left+19,y+13,l->role==6?N_AS_SOURCE[l->base[P_E0]]:amb_patch_name(l),ADIM,14);
+        amb_text(left+19,y+13,l->role==6?N_AS_SOURCE[l->base[P_E0]]:amb_patch_name(l),ADIM,l->engine==ENGI_AMB_A22?20:14);
         if(locks&(1u<<k)){
             cv_frame(left+91,y+1,5,6,AQUEUE);
             cv_rect(left+90,y+5,7,5,AQUEUE);

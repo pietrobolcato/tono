@@ -8,7 +8,7 @@ typedef struct {
 #define AR(n,e,p,a,r,l,v,d,c) {n,e,p,a,r,l,v,d,c}
 /* A22 articulation comes from its engine preset. Start with dry sends so
  * the original voicing comes through. Layer and master FX remain editable. */
-#define A22(n,p) AR("A22 " n,ENGI_AMB_A22,p,0,40,89,0,0,102)
+#define A22(n,p) AR(((p)<8?"A22 Electric " n:"A22 Analog " n),ENGI_AMB_A22,p,0,40,89,0,0,102)
 static const amb_recipe_t amb_pad_patches[] = {
   AR("Cloud Bloom",0,1,86,108,92,83,29,51),AR("Soft Choir",2,8,78,112,88,76,36,64),
   AR("Velvet Saw",0,15,71,100,90,68,26,45),AR("Glass Haze",2,9,84,116,84,75,19,58),

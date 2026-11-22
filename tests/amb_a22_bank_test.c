@@ -41,6 +41,9 @@ int main(int argc,char **argv)
             assert(!l->generated && l->notes[7]==69 && l->velocity[7]==84);
             unsigned model=amb_recipe(role,patch)->preset;
             assert(model<16 && !(models&(1u<<model)));
+            const char *prefix=model<8?"A22 Electric ":"A22 Analog ";
+            assert(!strncmp(amb_patch_name(l),prefix,strlen(prefix)));
+            assert(!strcmp(amb_patch_name(l)+strlen(prefix),ENG_AMB_A22.presets[model].name));
             assert(l->base[P_E0]==(int)model);
             models|=1u<<model;
             const preset_t *preset=&ENG_AMB_A22.presets[model];
