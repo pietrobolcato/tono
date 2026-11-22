@@ -94,7 +94,7 @@ static const amb_recipe_t amb_texture_patches[] = {
   AR("Moon Address",15,0,9,94,89,54,16,101),
   AR("Rail Crossing",11,3,15,93,84,54,16,55),
   AR("Concourse",5,3,39,90,80,58,13,61),AR("Passing Cars",11,4,44,85,92,14,0,62),
-  AR("Brussels Rail",15,0,13,85,92,16,0,123),AR("Canvas Rain",15,0,17,85,92,14,0,127),
+  AR("Kiel Harbour",15,0,13,85,92,16,0,123),
   AR("Subway Voice",15,0,5,80,93,10,0,124)
 };
 #undef A22

@@ -1,72 +1,172 @@
 #!/usr/bin/env python3
-"""Encode CC0 ten-second field cuts. Each bit traces one recorded sample."""
+"""Compile two fixed-duration field WAVs or the original CC0 downloads."""
+
+import argparse
 import array
 import hashlib
 import json
 from pathlib import Path
 import subprocess
 import sys
-import wave
+import numpy as np
+from scipy.signal import resample_poly
 
-from dataclasses import dataclass
+HERE = Path(__file__).resolve().parent
+SCALES = [2 * round(16 * 2 ** (i / 8)) for i in range(64)]
+SCALES_ARRAY = np.array(SCALES)
+CUTS = [("harbour", 0, 3300, 8, 3, 0.23), ("subway", 1.25, 5250, 6.5, 2, 0)]
 
-@dataclass
-class Cut:
-    symbol: str
-    start: float
-    rate: int
 
-cuts = (Cut("rail",117.,3200), Cut("rain",9.,3200), Cut("subway",0.,4900))
-directory = Path(__file__).resolve().parent
-manifest = json.loads((directory / "manifest.json").read_text())
-input_dir = Path(sys.argv[1])
-preview_dir = Path(sys.argv[2])
-preview_dir.mkdir(parents=True,exist_ok=True)
+def compress(x, bits, threshold):
+    """Fit independently seekable groups at full rate or quarter rate.
 
-def compress(x):
-    data = bytearray()
-    decoded = []
-    for at in range(0,len(x),64):
-        frame = list(x[at:at+64])
-        frame.extend([frame[-1]]*(64-len(frame)))
-        # Per-block anchors make arbitrary loop/trim reads bounded.
-        pred = max(-127,min(127,round(frame[0]/256)))
-        strength=max(1,min(255,round(sum(abs(b-a) for a,b in zip(frame,frame[1:]))/(63*16))))
-        data.extend((pred&255,strength))
-        pred*=256
-        step=strength*16
-        prev=1
-        bits=0
-        for j,value in enumerate(frame):
-            sign=int(value>=pred)
-            pred=max(-32767,min(32767,pred+(step if sign else -step)))
-            step=max(16,min(16384,step+(step//3+1 if prev==sign else -(step//4))))
-            prev=sign
-            decoded.append(pred)
-            bits|=sign<<(j%8)
-            if j%8==7:
-                data.append(bits);bits=0
-    return data,decoded[:len(x)]
+    Each loud foreground block tests four predictors and twelve residual scales.
+    Quiet intervals retain their own recorded waveform at quarter rate.
+    """
+    x = x * (24000 / (np.max(abs(x)) + 1))
+    y = np.pad(x, (0, -len(x) % 64))
+    f = y.reshape(-1, 64)
+    sf = resample_poly(y, 1, 4).reshape(-1, 16)
+    pwr = np.sqrt(np.mean(f * f, 1))
+    active = pwr >= threshold * np.max(pwr)
+    active = np.convolve(active.astype(int), [1, 1, 1], "same") > 0
+    sizes = np.where(active, 2 + 8 * bits, 4)
+    offs = np.r_[0, np.cumsum(sizes)]
+    blob = np.zeros(offs[-1], np.uint8)
 
-header=directory.parents[1]/"firmware/src/amb_field_pcm.h"
-with header.open('w') as out:
-    out.write('/* SPDX-License-Identifier: CC0-1.0. Excerpt provenance in tools/field/manifest.json. */\n')
-    for rec,cut in zip(manifest,cuts):
-        source=input_dir/(rec['name']+'.mp3')
-        assert hashlib.sha256(source.read_bytes()).hexdigest()==rec['sha256']
-        raw=subprocess.check_output(['ffmpeg','-v','error','-ss',str(cut.start),'-i',str(source),'-t','10',
-                                    '-ac','1','-ar',str(cut.rate),'-f','s16le','-'])
-        pcm=array.array('h',raw)
-        peak=max(abs(v) for v in pcm);pcm=array.array('h',(round(v*23500/peak) for v in pcm))
-        assert len(pcm)==10*cut.rate
-        data, decoded=compress(pcm)
-        out.write(f'enum {{ field_{cut.symbol}_frames = {len(pcm)}, field_{cut.symbol}_rate = {round(cut.rate*65536/44100)} }};\n')
-        out.write(f'static const uint8_t field_{cut.symbol}[]={{\n')
-        for j in range(0,len(data),32):
-            out.write('    '+','.join(str(v) for v in data[j:j+32])+',\n')
-        out.write('};\n')
-        for name,values in [('source',pcm),('coded',decoded)]:
-            with wave.open(str(preview_dir/(rec['name']+'-'+name+'.wav')),'wb') as w:
-                w.setparams((1,2,cut.rate,len(values),'NONE','uncompressed'))
-                w.writeframes(array.array('h',values).tobytes())
-        print(rec['name'],cut.start,cut.rate,len(data))
+    for is_full, nb in [(True, bits), (False, 1)]:
+        select = active == is_full
+        frames = f[select] if is_full else sf[select]
+        n = len(frames)
+        if not n:
+            continue
+        anchor = np.clip(np.rint(frames[:, 0] / 256), -127, 127).astype(int)
+        best = np.ones(n) * np.inf
+        chosen = np.zeros((n, sizes[select][0]), np.uint8)
+        root = np.arange(n)
+        maxmag = (1 << (nb - 1)) - 1
+        for mode in range(4):
+            a, b = [(0, 0), (0.5, 0), (1.75, -0.8125), (1, 0)][mode]
+            dif = frames[:, 2:] - a * frames[:, 1:-1] - b * frames[:, :-2]
+            rms = np.sqrt(np.mean(dif * dif, 1))
+            nom = np.rint(8 * np.log2(np.maximum(rms, 16) / 16)).astype(int)
+            for offset in [-35, -30, -26, -23, -20, -17, -14, -11, -8, -5, -2, 1]:
+                quant = np.clip(nom + offset, 0, 63)
+                s = SCALES_ARRAY[quant]
+                prev = anchor * 256
+                old = prev.copy()
+                decoded = np.zeros_like(frames)
+                codes = np.zeros((n, frames.shape[1] * nb // 8 + 1), int)
+                for j, smp in enumerate(frames.T):
+                    pred = [0, prev >> 1, (prev * 28 - old * 13) >> 4, prev][mode]
+                    dif = smp - pred
+                    index = np.clip(np.floor(abs(dif) / (2 * s)).astype(int), 0, maxmag)
+                    sgn = dif < 0
+                    old = prev
+                    prev = np.clip(
+                        pred + (1 - 2 * sgn.astype(int)) * s * (1 + 2 * index),
+                        -32767,
+                        32767,
+                    )
+                    decoded[:, j] = prev
+                    bit = j * nb
+                    code = (index + (sgn.astype(int) << (nb - 1))) << (bit % 8)
+                    codes[:, bit // 8] |= code & 255
+                    codes[:, bit // 8 + 1] |= code >> 8
+                err = np.sum((decoded - frames) ** 2, 1)
+                take = err < best
+                best[take] = err[take]
+                chosen[take, 0] = anchor[take] % 256
+                chosen[take, 1] = mode * 64 + quant[take]
+                chosen[take, 2:] = codes[take, :-1]
+        for row, bid in enumerate(np.flatnonzero(select)):
+            blob[offs[bid] : offs[bid + 1]] = chosen[row]
+    flags = (
+        np.packbits(
+            np.pad(active, (0, -len(active) % 16)).reshape(-1, 16),
+            axis=1,
+            bitorder="little",
+        )
+        .copy()
+        .view("<u2")
+        .ravel()
+    )
+    return blob, offs[:-1:16], flags
+
+
+def c_array(kind, name, values):
+    rows = [",".join(map(str, values[i : i + 32])) for i in range(0, len(values), 32)]
+    return f"static const {kind} {name}[]={{\n    " + ",\n    ".join(rows) + ",\n};\n"
+
+
+def main():
+    args = argparse.ArgumentParser(description=__doc__)
+    args.add_argument(
+        "sources", type=Path, help="Folder containing the two named source MP3 files"
+    )
+    args.add_argument(
+        "--wav",
+        nargs=2,
+        action="append",
+        default=[],
+        metavar=("SLOT", "FILE"),
+        help="Use the opening of a custom WAV for new slot 1 or 2",
+    )
+    args.add_argument(
+        "--output", type=Path, default=HERE.parents[1] / "firmware/src/amb_field_pcm.h"
+    )
+    parsed = args.parse_args()
+    custom = {int(slot): Path(filename) for slot, filename in parsed.wav}
+    if any(slot not in (1, 2) for slot in custom):
+        args.error("--wav accepts only the two new factory slots")
+    records = json.loads((HERE / "manifest.json").read_text())
+    content = [
+        "/* Generated field recording data. Source provenance in tools/field/manifest.json. */",
+        c_array("uint16_t", "field_scale", SCALES),
+    ]
+    for slot, (rec, cut) in enumerate(zip(records, CUTS), 1):
+        sym, begin, rate, duration, bits, threshold = cut
+        path = custom.get(slot, parsed.sources / (rec["name"] + ".mp3"))
+        if slot in custom:
+            begin = 0
+        elif hashlib.sha256(path.read_bytes()).hexdigest() != rec["sha256"]:
+            raise ValueError(f"Original source checksum mismatch: {path}")
+        raw = subprocess.check_output(
+            [
+                "ffmpeg",
+                "-v",
+                "error",
+                "-ss",
+                str(begin),
+                "-i",
+                str(path),
+                "-t",
+                str(duration),
+                "-ac",
+                "1",
+                "-ar",
+                str(rate),
+                "-f",
+                "s16le",
+                "-",
+            ]
+        )
+        pcm = array.array("h", raw)
+        if sys.byteorder != "little":
+            pcm.byteswap()
+        if len(pcm) != round(duration * rate):
+            raise ValueError(f"{path} needs at least {duration} seconds after {begin}s")
+        samples = np.asarray(pcm, dtype=float)
+        encoded, offsets, flags = compress(samples, bits, threshold)
+        content.append(
+            f"enum {{ field_{sym}_frames = {len(samples)}, field_{sym}_rate = {round(rate * 65536 / 44100)} }};"
+        )
+        content.append(c_array("uint8_t", "field_" + sym, encoded))
+        content.append(c_array("uint16_t", "field_" + sym + "_offs", offsets))
+        content.append(c_array("uint16_t", "field_" + sym + "_flags", flags))
+        print(f"{slot}: {rec['name']}, {duration:g}s, {rate} Hz, {len(encoded)} bytes")
+    parsed.output.write_text("\n".join(content))
+
+
+if __name__ == "__main__":
+    main()

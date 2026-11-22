@@ -8,7 +8,7 @@
 #include "amb_field_pcm.h"
 #include "amb_take.h"
 enum { AMB_TEXTURE_SOURCE = 7, AMB_FIELD_SOURCE = AMB_MIC_SOURCE+1 };
-static const char *const N_AS_SOURCE[]={"SOFT CHIME","TAPE VOWEL","SOLO VIOLIN","BOWED CELLO","KAWAI GRAND","TENOR SAX","CONCERT FLUTE","OCEAN DRUM","CABASA RUB","GUIRO SCRAPE","SEED SHAKER","RATCHET","BOWED CYMBAL","EAGLE LANDED","RADIO CHECK","MOON SPEECH","MIC TAKE","BRUSSELS RAIL","CANVAS RAIN","SUBWAY VOICE"};
+static const char *const N_AS_SOURCE[]={"SOFT CHIME","TAPE VOWEL","SOLO VIOLIN","BOWED CELLO","KAWAI GRAND","TENOR SAX","CONCERT FLUTE","OCEAN DRUM","CABASA RUB","GUIRO SCRAPE","SEED SHAKER","RATCHET","BOWED CYMBAL","EAGLE LANDED","RADIO CHECK","MOON SPEECH","MIC TAKE","KIEL HARBOUR","SUBWAY VOICE"};
 typedef struct {const uint8_t *pcm;unsigned length,root,rate_q16,loop_percent;} amb_recording_t;
 static const amb_recording_t amb_recordings[]={
     {amb_oct_chime,amb_oct_chime_length,60,2972,24},{amb_oct_vowel,amb_oct_vowel_length,60,2972,24},
@@ -23,8 +23,7 @@ static const amb_recording_t amb_recordings[]={
     {amb_texture_frames[4],24576,60,8025,8},{amb_texture_frames[5],24576,60,8025,12},
     {speech_eagle,SPEECH_EAGLE_FRAMES,60,7280,0},{speech_radio,SPEECH_RADIO_FRAMES,60,7280,0},
     {speech_moon,SPEECH_MOON_FRAMES,60,7280,0},{0,0,60,7280,12},
-    {field_rail,field_rail_frames,60,field_rail_rate,0},
-    {field_rain,field_rain_frames,60,field_rain_rate,0},
+    {field_harbour,field_harbour_frames,60,field_harbour_rate,0},
     {field_subway,field_subway_frames,60,field_subway_rate,0}
 };
 /* Factory speech omits redundant predictor bytes in flash. Reconstruct
@@ -100,18 +99,37 @@ static __attribute__((noinline)) int amb_texture_read(unsigned bank,unsigned at)
     }
     return x;
 }
-/* Each independently seekable 64-sample block carries a predictor and innovation scale. */
-static void amb_field_decode(const uint8_t *src,unsigned id,int16_t out[32])
+/* A group directory permits fast seeks in either direction. Quiet background
+ * frames carry 16 samples, the foreground carries all 64. */
+static void amb_field_decode(unsigned bank,const uint8_t *src,unsigned id,int16_t out[32])
 {
-    const uint8_t *block=src+(id>>1)*18;
-    int level=(int8_t)block[0]*256, step=field_scale[block[1]&63];
-    unsigned mode=block[1]>>6, end=(id&1)?64:32;
+    static const uint16_t *const offsets[]={field_harbour_offs,field_subway_offs};
+    static const uint16_t *const flags[]={field_harbour_flags,field_subway_flags};
+    unsigned group=id>>5,within=(id>>1)&15,mask=flags[bank][group];
+    unsigned previous=mask&((1u<<within)-1u);
+    previous-=((previous>>1)&0x5555u);
+    previous=(previous&0x3333u)+((previous>>2)&0x3333u);
+    previous=(previous+(previous>>4))&0x0f0fu;
+    unsigned count=(previous+(previous>>8))&31u;
+    unsigned full=(mask>>within)&1u,wide=bank==1?2:3;
+    unsigned bits=full?wide:1, magnitude=(1u<<(bits-1))-1u;
+    const uint8_t *block=src+offsets[bank][group]+within*4+(wide*8-2)*count;
+    int value=(int8_t)block[0]*256,old=value,step=field_scale[block[1]&63];
+    unsigned mode=block[1]>>6,start=(id&1)*32,end=full?start+32:16;
+    int16_t low[16];
     for(unsigned i=0;i<end;i++){
-        unsigned code=(block[2+(i>>2)]>>(2*(i&3)))&3;
-        int base=mode==3?level:mode==2?level-(level>>3):mode==1?level>>1:0;
-        int delta=(code&1)?step*3:step;
-        level=clamp(base+((code&2)?-delta:delta),-32767,32767);
-        if(i>=end-32)out[i&31]=(int16_t)level;
+        unsigned bit=i*bits, byte=bit>>3;
+        unsigned code=block[2+byte]>>(bit&7);
+        if((bit&7)+bits>8)code|=(unsigned)block[3+byte]<<(8-(bit&7));
+        int pred=mode==3?value:mode==2?(28*value-13*old)>>4:mode==1?value>>1:0;
+        int delta=(1+2*(int)(code&magnitude))*step;
+        old=value;value=clamp(pred+((code&(magnitude+1))?-delta:delta),-32767,32767);
+        if(!full)low[i]=value;
+        else if(i>=start)out[i-start]=value;
+    }
+    if(!full)for(unsigned j=0;j<32;j++){
+        unsigned i=start+j,k=i>>2;int a=low[k],b=low[k+(k<15)];
+        out[j]=a+((b-a)*(int)(i&3))/4;
     }
 }
 static const char *const N_AS_STYLE[]={"PAD","DRONE","TEXTURE","ONE-SHOT","ORIGINAL"};
@@ -176,7 +194,7 @@ static void amb_sample_render(track_t *t,voice_t *v,int32_t *out,uint32_t n,cons
                     unsigned pos=positions[j];
                     unsigned id=pos/32,slot=id&1;
                     if(block_id[slot]!=id){
-                        if(source>=AMB_FIELD_SOURCE)amb_field_decode(src,id,decoded[slot]);
+                        if(source>=AMB_FIELD_SOURCE)amb_field_decode(source-AMB_FIELD_SOURCE,src,id,decoded[slot]);
                         else if(source==AMB_MIC_SOURCE)amb_take_decode(take->block[id],decoded[slot]);
                         else {
                             const uint8_t *block=src+9*id;

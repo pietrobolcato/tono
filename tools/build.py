@@ -275,7 +275,7 @@ def build_app():
     voice_compiles = []
     if os.environ.get("AMBPLUS") == "1":
         obj = OUT / "a22_dsp.o"
-        voice_compiles.append(("cc", "-Oz", "-mcpu=r3", "-mfprev1", "-ffp-contract=off",
+        voice_compiles.append(("cc", "-Os", "-mcpu=r3", "-mfprev1", "-ffp-contract=off",
                                "-ffunction-sections", "-fdata-sections", "-fno-builtin",
                                "-c", FW / "src" / "a22" / "a22_dsp.c", "-o", obj))
         voice_objects.append(obj)

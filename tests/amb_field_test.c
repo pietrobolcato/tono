@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* Re-open each ten-second factory take and audition it through the shared mixer. */
+/* Re-open each new factory take and audition it through the shared mixer. */
 #define AMB_MAIN other_amb_main
 #include "amb_native_test.c"
 
@@ -7,7 +7,7 @@ int main(int argc,char **argv)
 {
     if(argc!=3)return 2;
     unsigned which=(unsigned)atoi(argv[1]);
-    if(which>=3)return 2;
+    if(which>=2)return 2;
     memset(amb_nor,255,sizeof amb_nor);
     ui_power_on();amb_init();amb_fixture_scene(AMB_SCENE_GARDEN);
     amb_patch(0,5,28+which);
