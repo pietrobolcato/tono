@@ -880,7 +880,11 @@ static __attribute__((noinline)) void amb_prepare(void)
         if(l->lfo_dest>=ROUTE_PARAM && l->lfo_dest<ROUTE_MACRO){
             unsigned id=amb_route_param[l->lfo_dest-ROUTE_PARAM];
             const param_desc_t *d=amb_param_desc(l,id);
-            t->p[id]=amb_routed(k,l->lfo_dest,t->p[id],d->min,d->max);
+            int upper=d->max;
+            /* Preserve the span of SOURCE sweeps saved before the field bank. */
+            if(id==P_E0 && l->engine==ENGI_AMB_SAMPLE && l->base[P_E0]<AMB_FIELD_SOURCE)
+                upper=AMB_FIELD_SOURCE-1;
+            t->p[id]=amb_routed(k,l->lfo_dest,t->p[id],d->min,upper);
             ambr.last_routed_param[k]=(uint8_t)(id+1);
         }
     }

@@ -28,5 +28,12 @@ int main(int argc,char **argv)
         int32_t out[CTL*2];mix_block(out,CTL);amb_output(out,CTL);
         for(unsigned i=0;i<CTL;i++)wav_put(f,out[2*i],out[2*i+1]);
     }
+    /* An old SOURCE sweep must land on the same IDs after the bank grows. */
+    l->lfo_dest=ROUTE_PARAM;l->lfo_depth=100;l->base[P_E0]=10;
+    trk[0].lfo_val=32767;amb_base_revision[0]++;amb_prepare();
+    assert(trk[0].p[P_E0]==AMB_MIC_SOURCE);
+    l->base[P_E0]=AMB_FIELD_SOURCE;trk[0].lfo_val=-32767;
+    amb_base_revision[0]++;amb_prepare();
+    assert(trk[0].p[P_E0]==AMB_FIELD_SOURCE-(int)(NELEM(N_AS_SOURCE)-1)/2);
     return fclose(f)!=0;
 }
