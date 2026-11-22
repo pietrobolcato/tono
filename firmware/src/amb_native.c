@@ -123,7 +123,7 @@ static unsigned amb_global_index(unsigned page)
 static const char *const AMB_MOOD[7] = {"homeward","warmer","brighter","suspended","deeper","open","darker"};
 #include "amb_nostalgic.h"
 _Static_assert(sizeof(amb_piece_t)==1440 && AMB_VERSION==5, "upgrade embedded song before changing format");
-enum { AMB_SCENE_GARDEN = 11, AMB_SCENE_INN = 12, AMB_SCENE_TIDE_ATLAS = 14, AMB_SCENE_LAST_TRAM = 16, AMB_SCENE_FIRST_FERRY = 17, AMB_SCENE_EVENING_ARRAY, AMB_SCENE_FUMAROLE, AMB_SCENE_WINDOW_LIGHT, AMB_SCENE_LINEN_AND_BOW, AMB_SCENE_UMBRA_MERIDIAN, AMB_SCENE_LONG_LEE, AMB_SCENE_EMBER_MERIDIAN, AMB_SCENE_COLD_DESERT, AMB_SCENE_303_FELLOWS, AMB_SCENE_ANALOG_DAYS, AMB_SCENE_COUNT };
+enum { AMB_SCENE_GARDEN = 11, AMB_SCENE_INN = 12, AMB_SCENE_TIDE_ATLAS = 14, AMB_SCENE_LAST_TRAM = 16, AMB_SCENE_FIRST_FERRY = 17, AMB_SCENE_EVENING_ARRAY, AMB_SCENE_FUMAROLE, AMB_SCENE_WINDOW_LIGHT, AMB_SCENE_LINEN_AND_BOW, AMB_SCENE_UMBRA_MERIDIAN, AMB_SCENE_LONG_LEE, AMB_SCENE_EMBER_MERIDIAN, AMB_SCENE_COLD_DESERT, AMB_SCENE_303_FELLOWS, AMB_SCENE_ANALOG_DAYS, AMB_SCENE_ANALOG_WARM, AMB_SCENE_COUNT };
 /* Each factory title can carry two lines of preview copy. */
 #define AMB_SONG(name, line1, line2) name "\0" line1 "\0" line2
 /* Archived recipes remain addressable by their original IDs in the host
@@ -151,7 +151,8 @@ static const char *const AMB_SCENE[] = {
     AMB_SONG("Symphony for a Warmer Mars","Warmer synths and more room","between wordless vocal lines"),
     AMB_SONG("Tales of Cold Desert Dunes","Slow FM swells and ice chimes", "over bowed-metal wind"),
     AMB_SONG("303 Fellows","Soft acid bass and linen chords","with harp and ocean beads"),
-    AMB_SONG("Analog Days","Wurli and felt piano trade lines","over a soft pad and a low pulse")
+    AMB_SONG("Analog Days Quartet","Wurli and felt piano trade lines","over a soft pad and a low pulse"),
+    AMB_SONG("Analog Days Warm","Electric keys with warm brass","and rounded analog sub bass")
 };
 #undef AMB_SONG
 #undef AMB_ARCHIVED
@@ -520,7 +521,7 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
     scene=requested;
     if(requested==AMB_SCENE_LINEN_AND_BOW)scene=AMB_SCENE_WINDOW_LIGHT;
     if(requested==AMB_SCENE_UMBRA_MERIDIAN || requested==AMB_SCENE_EMBER_MERIDIAN)scene=AMB_SCENE_TIDE_ATLAS;
-    if(requested==AMB_SCENE_LONG_LEE || requested==AMB_SCENE_COLD_DESERT || requested==AMB_SCENE_303_FELLOWS || requested==AMB_SCENE_ANALOG_DAYS)scene=0;
+    if(requested==AMB_SCENE_LONG_LEE || requested==AMB_SCENE_COLD_DESERT || requested==AMB_SCENE_303_FELLOWS || requested==AMB_SCENE_ANALOG_DAYS || requested==AMB_SCENE_ANALOG_WARM)scene=0;
     if(scene==AMB_SCENE_INN){
         uint8_t *out=(uint8_t *)p;
         memset(p,0,sizeof *p);
@@ -611,7 +612,8 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
     if(requested==AMB_SCENE_LONG_LEE)amb_finish_desert(p,&sand_dunes_recipe);
     if(requested==AMB_SCENE_COLD_DESERT)amb_finish_desert(p,&cold_desert_recipe);
     if(requested==AMB_SCENE_303_FELLOWS)amb_303_fellows(p);
-    if(requested==AMB_SCENE_ANALOG_DAYS)amb_analog_days(p);
+    if(requested==AMB_SCENE_ANALOG_DAYS || requested==AMB_SCENE_ANALOG_WARM)
+        amb_analog_days(p,requested==AMB_SCENE_ANALOG_WARM);
 }
 typedef struct {amb_piece_t piece;amb_take_t take;} amb_take_song_t;
 _Static_assert(sizeof(amb_take_song_t)<=ST_PAYLOAD_MAX,"voice take fits an existing song");
@@ -673,7 +675,7 @@ static void amb_stage_factory(unsigned scene)
     amb_load_take=0;amb_load_controls=1;
     amb_make_scene(&amb_pending,scene);
     amb_pending_song.compact=amb_factory_controls;
-    if(scene==AMB_SCENE_ANALOG_DAYS)
+    if(scene==AMB_SCENE_ANALOG_DAYS || scene==AMB_SCENE_ANALOG_WARM)
         amb_pending_song.compact.walk[4]=1; /* New Chapters: one player hands off at a time. */
 }
 static void amb_start_factory(unsigned scene)
@@ -1526,7 +1528,7 @@ static unsigned amb_next_piece(unsigned p,int clicks)
     const uint32_t factory_bank=(1u<<AMB_SCENE_GARDEN)|(1u<<AMB_SCENE_INN)|
         (1u<<AMB_SCENE_LAST_TRAM)|(1u<<AMB_SCENE_FIRST_FERRY)|
         (1u<<AMB_SCENE_EVENING_ARRAY)|(1u<<AMB_SCENE_FUMAROLE)|(1u<<AMB_SCENE_WINDOW_LIGHT)|(1u<<AMB_SCENE_LINEN_AND_BOW)|
-        (1u<<AMB_SCENE_UMBRA_MERIDIAN)|(1u<<AMB_SCENE_LONG_LEE)|(1u<<AMB_SCENE_EMBER_MERIDIAN)|(1u<<AMB_SCENE_COLD_DESERT)|(1u<<AMB_SCENE_303_FELLOWS)|(1u<<AMB_SCENE_ANALOG_DAYS);
+        (1u<<AMB_SCENE_UMBRA_MERIDIAN)|(1u<<AMB_SCENE_LONG_LEE)|(1u<<AMB_SCENE_EMBER_MERIDIAN)|(1u<<AMB_SCENE_COLD_DESERT)|(1u<<AMB_SCENE_303_FELLOWS)|(1u<<AMB_SCENE_ANALOG_DAYS)|(1u<<AMB_SCENE_ANALOG_WARM);
     int dir=clicks<0?-1:1;
     while(clicks){
         do {
