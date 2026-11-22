@@ -1,15 +1,14 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 static void amb_analog_days(amb_piece_t *p)
 {
-    /* The Wurli leads, felt piano answers, and brass holds the harmony.
-     * The sub plays one octave higher to stay audible on small speakers. */
+    /* Two electric pianos trade phrases above a sustained pad and a low pulse. */
     static const struct {
         uint8_t role, patch, level, density, speed, mode, room, delay;
         int8_t pan, transpose;
     } chairs[AMB_LAYERS] = {
         {2,16,114,72,0,2,35,15,-12,-12}, /* Electric Wurli */
-        {0,26,108,75,1,2,48, 5, 12,-12}, /* Analog Brass */
-        {3,18,110,50,2,2,15, 0,  0, 12}, /* Analog Sub */
+        {0,18,101,75,1,2,48, 5, 12,-12}, /* Linen Pad */
+        {3,10, 93,50,2,2,15, 0,  0,  0}, /* Linden Bass */
         {2,19,103,44,1,1,55,20, 24,-12}  /* Electric Felt */
     };
     amb_policy_init(&p->policy,0x41444159u);
@@ -32,8 +31,7 @@ static void amb_analog_days(amb_piece_t *p)
     p->layer[0].base[P_E1]=33;p->layer[0].base[P_E2]=23;
     p->layer[0].base[P_E3]=14;p->layer[0].base[P_E4]=57;
     p->layer[0].base[P_FCUT]=92;p->layer[0].base[P_ATK]=5;
-    p->layer[1].base[P_ATK]=26;p->layer[1].base[P_REL]=57;
-    p->layer[1].base[P_E3]=42;p->layer[1].base[P_E4]=15;
+    p->layer[1].base[P_ATK]=34;p->layer[1].base[P_REL]=62;
     p->layer[2].base[P_ATK]=7;p->layer[2].base[P_REL]=45;
     p->layer[3].base[P_E2]=15;p->layer[3].base[P_FCUT]=82;
     p->layer[3].base[P_REL]=52;p->eq[2]=-3;

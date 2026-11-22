@@ -101,8 +101,9 @@ int main(void)
     turn(EN_PRESET,-1);
     assert(ambr.piece_preview==AMB_SCENE_ANALOG_DAYS);
     press(B_REC);
+    const uint8_t analog_days_engines[]={ENGI_AMB_A22, ENGI_SINEFM, ENGI_SINEFM, ENGI_AMB_A22};
     for(unsigned k=0;k<4;k++){
-        assert(amb.layer[k].generated && amb.layer[k].engine==ENGI_AMB_A22);
+        assert(amb.layer[k].generated && amb.layer[k].engine==analog_days_engines[k]);
         for(unsigned j=0;j<16;j++)assert(!amb.layer[k].notes[j]);
     }
     turn(EN_PRESET,-1);
