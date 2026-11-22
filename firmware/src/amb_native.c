@@ -89,7 +89,11 @@ static struct {
     uint16_t recent_slide[4];
     uint8_t acid_window[4],recent[4][16], recent_vel[4][16], recent_valid[4], reset_pending, detail, foundation_pending[4];
     uint8_t zen,zen_train;
-    uint8_t evolve_open,evolve_queued,evolve_role,evolve_patch,evolve_layer;
+    uint8_t evolve_open,evolve_queued,evolve_role,evolve_patch,evolve_layer,evolve_mode;
+    int8_t evolve_direction;
+    uint8_t evolve_previous,evolve_anchor;
+    uint32_t evolve_serial,evolve_chapter,evolve_destination;
+    uint8_t evolve_sounds[2],evolve_roles[2];
     uint8_t help, local_preset, preset_position;
     uint8_t loading, last_play, target, edit_layer, view, page, bank, fx, lane, cursor, recording;
     uint8_t proposal, chord_q, piece_preview, slot, overwrite, dirty, panic, play_used, home_used;
@@ -416,13 +420,13 @@ static void amb_patch(unsigned k,unsigned role,unsigned patch)
 /* UI scheduler. BARS publishes during the final sixteenth before the due
  * downbeat; the existing music engine applies both colour and harmony there.
  * Seconds use elapsed transport time and the same musical handoff as a turn. */
-static int amb_auto_move(unsigned dice)
+static int amb_plan_move(unsigned dice,int *goal,uint8_t *heading)
 {
     unsigned style=amb_journey_style();
     int reach=(int)amb_walk_value(3),pos=travel.wanted;
-    int target=auto_walk.goal;
-    if(style==0 && auto_walk.heading && target==pos){auto_walk.heading=0;return 0;}
-    if(!auto_walk.heading || target==pos || (style==2 && (dice&7)==0)){
+    int target=*goal;
+    if(style==0 && *heading && target==pos){*heading=0;return 0;}
+    if(!*heading || target==pos || (style==2 && (dice&7)==0)){
         int distance=1+(int)((dice>>7)%(unsigned)reach);
         if(!style && (dice&8))distance=(distance+reach+1)/2;
         int sign=dice&1?1:-1;
@@ -430,11 +434,15 @@ static int amb_auto_move(unsigned dice)
         if(!amb_endless() && (pos<=-18 || pos>=18))sign=pos>0?-1:1;
         target=pos+distance*sign;
         if(!amb_endless())target=clamp(target,-18,18);
-        auto_walk.goal=target;auto_walk.heading=1;
+        *goal=target;*heading=1;
     }
     int remaining=target-pos;
     int stride=style==2?1+(int)((dice>>17)%3):1+(int)((dice>>17)&1);
     return clamp(remaining,-stride,stride);
+}
+static int amb_auto_move(unsigned dice)
+{
+    return amb_plan_move(dice,&auto_walk.goal,&auto_walk.heading);
 }
 static void amb_auto_tick(void)
 {
@@ -2068,19 +2076,31 @@ static void amb_input(void)
     }
     if(home && algo && !ambr.view && ambr.target && !ambr.zen && !ambr.evolve_queued && !ambr.evolve_open){
         ambr.evolve_layer=ambr.target-1;ambr.evolve_open=1;ambr.home_used=1;
-        ambr.evolve_role=amb.layer[ambr.evolve_layer].role;
-        ambr.evolve_patch=amb_evolution_current();amb_evolution_turn(1);
+        ambr.evolve_mode=0;
+        unsigned seat=ambr.evolve_layer;
+        ambr.evolve_serial=lane_clock[1].serial+travel.focused_role[seat];
+        ambr.evolve_chapter=travel.chapter>travel.focused_chapter[seat]?travel.chapter:travel.focused_chapter[seat];
+        ambr.evolve_previous=travel.previous_sound[seat];ambr.evolve_anchor=travel.anchor;
+        int goal=auto_walk.goal;
+        uint8_t heading=auto_walk.heading;
+        unsigned serial=auto_walk.serial+travel.focused_moves[seat]+1;
+        int move=amb_plan_move(amb_hash(amb.policy.seed+serial*65537u),&goal,&heading);
+        if(!move)move=amb_plan_move(amb_hash(amb.policy.seed+(serial+1)*65537u),&goal,&heading);
+        ambr.evolve_direction=move<0?-1:1;
+        amb_evolution_preview();
+        ambr.evolve_roles[0]=ambr.evolve_role;ambr.evolve_sounds[0]=ambr.evolve_patch;
+        if(!amb_role_proposal(seat,amb_hash(amb.policy.seed+ambr.evolve_serial+1),
+                              &ambr.evolve_roles[1],&ambr.evolve_sounds[1]))ambr.evolve_roles[1]=255;
         ambr.piece_preview=ambr.proposal=255;algo=0;
     }
     if(ambr.evolve_open){
         if(!home && home0 && !ambr.home_used){ambr.evolve_open=0;ambr.evolve_queued=0;}
-        if(sel && !ambr.evolve_queued){
-            ambr.evolve_role=amb_wrap(ambr.evolve_role+sel,NELEM(AMB_ROLE));
-            ambr.evolve_patch=0;
-            if(ambr.evolve_role==amb.layer[ambr.evolve_layer].role && !amb_evolution_current())amb_evolution_turn(1);
+        if(algo && !ambr.evolve_queued){
+            ambr.evolve_mode=algo>0;
+            ambr.evolve_role=ambr.evolve_roles[ambr.evolve_mode];
+            ambr.evolve_patch=ambr.evolve_sounds[ambr.evolve_mode];
         }
-        if(algo && !ambr.evolve_queued)amb_evolution_turn(algo);
-        if(pressed&(1u<<panel.btn[B_REC])){
+        if((pressed&(1u<<panel.btn[B_REC])) && ambr.evolve_role<8){
             ambr.evolve_queued=1;
             if(!song.playing)amb_commit_evolution();
         }
@@ -3060,13 +3080,17 @@ static void amb_draw(void)
         }
     }
     if(ambr.evolve_open){
-        GFX_HOOK_COVER(8,50,232,145);cv_bg=ASEL;cv_rect(8,50,224,95,cv_bg);
+        GFX_HOOK_COVER(8,29,232,145);cv_bg=ASEL;cv_rect(8,29,224,116,cv_bg);
+        amb_text(15,34,"LAYER",ADIM,8);amb_number(48,34,ambr.evolve_layer+1,AINK);
+        amb_text(66,34,AMB_ROLE[amb.layer[ambr.evolve_layer].role],AINK,15);
         unsigned role=ambr.evolve_role;
-        amb_text(15,55,role==amb.layer[ambr.evolve_layer].role?"KEEP ROLE / CHANGE PATCH":"CHANGE LAYER TYPE",AINK,32);
-        amb_text(15,72,AMB_ROLE[role],ADIM,20);
-        cv_text(15,87,&AF_M,role==6?N_AS_SOURCE[ambr.evolve_patch]:amb_recipe(role,ambr.evolve_patch)->name,AINK);
-        amb_text(15,113,"SELECT Role / ALGO Patch",ADIM,35);
-        amb_text(15,128,ambr.evolve_queued?"Queued for next bar":"REC Apply / HOME Close",AQUEUE,32);
+        amb_text(15,53,"1  Keep layer / change sound",ambr.evolve_mode?ADIM:AINK,34);
+        amb_text(15,68,"2  Change layer",ambr.evolve_mode?AINK:ADIM,24);
+        cv_rect(10,ambr.evolve_mode?69:54,2,8,AQUEUE);
+        amb_text(15,84,role<8?AMB_ROLE[role]:"No eligible role",ADIM,22);
+        if(role<8)amb_text(15,98,role==6?N_AS_SOURCE[ambr.evolve_patch]:amb_recipe(role,ambr.evolve_patch)->name,AINK,33);
+        amb_text(15,114,"ALGO Choose action",ADIM,35);
+        amb_text(15,128,ambr.evolve_queued?"Queued for next bar":role==255?"HOME Close":"REC Apply / HOME Close",AQUEUE,32);
     }else if(!ambr.help && ambr.local_preset && amb_page_bank()){
         GFX_HOOK_COVER(8,50,232,145);cv_bg=ASEL;cv_rect(8,50,224,95,cv_bg);
         const char *subject=ambr.page==1 && ambr.view==1?(l->role==6?N_AS_SOURCE[l->base[P_E0]]:amb_patch_name(l)):"PROPOSED VARIATION";
