@@ -13,13 +13,18 @@ void tono_a22_block(A22Track *t, const int16_t *engine, const int16_t *adsr,int 
 {
     a22_Blk *b=&t->b;
     int model=a22_iclamp(engine[0],0,15);
+    int reset=t->env_rate!=rate || t->model!=model ||
+        __builtin_memcmp(t->knob_values,engine+1,sizeof t->knob_values)!=0;
     b->algo=model&7;
     t->model=model;
     b->sr=(float)rate;
     b->isr=1.f/b->sr;
     b->step=A22_CTRL*b->isr;
     b->time+=b->step;
-    for(int i=0;i<4;i++) b->k[i]=(float)a22_iclamp(engine[i+1],0,100)*.01f;
+    if(reset){
+        __builtin_memcpy(t->knob_values,engine+1,sizeof t->knob_values);
+        for(int i=0;i<4;i++)b->k[i]=(float)a22_iclamp(engine[i+1],0,100)*.01f;
+    }
     b->menv_amt=(model<8?55.f:62.f)*.01f;
     b->vel_sens=(model<8?75.f:65.f)*.01f;
     b->punch=(model<8?15.f:18.f)*.01f;
@@ -34,7 +39,7 @@ void tono_a22_block(A22Track *t, const int16_t *engine, const int16_t *adsr,int 
         t->kr=a22_onepole_k(.015f*a22_exp2fx(adsr[3]*.088f),control);
         t->mkd=a22_onepole_k(.014f*a22_exp2fx(34.f*.078f),control);
     }
-    if(model<8) elec_block(t,b); else pulse_block(t,b);
+    if(model<8) elec_block(t,b,reset); else pulse_block(t,b,reset);
 }
 
 void tono_a22_note(a22_Voice *v,int index,int model,int note,int velocity,uint32_t random)

@@ -31,7 +31,7 @@ static const a22_EAlgo a22_EA[a22_NALGO] = {
 
 
 
-static void elec_block(A22Track *track, const a22_Blk *b)
+static void elec_block(A22Track *track, const a22_Blk *b, int controls_changed)
 {
     a22_f32 dt = b->step;
     a22_f32 rate = (b->algo == 4) ? (1.2f + 5.6f * b->k[2]) : (2.6f + 3.8f * b->k[2]);
@@ -53,7 +53,11 @@ static void elec_block(A22Track *track, const a22_Blk *b)
     track->electric.trem_l = 1.0f - dp * (0.5f + 0.5f * tr);
     track->electric.trem_r = 1.0f - dp * (0.5f - 0.5f * tr);
     track->electric.wow = (track->electric.algo == 7) ? (0.04f + 0.35f * track->electric.warmth) * (0.65f * a22_tsin(track->wow_ph) + 0.2f * a22_tsin(track->flut_ph)) : 0.0f;
-    track->electric.kd = a22_EA[track->electric.algo].dec > 0.0f ? 1.0f - a22_onepole_k(a22_EA[track->electric.algo].dec, b->sr / (a22_f32)a22_CTRL) : 1.0f;
+    if (controls_changed) {
+        track->electric.kd = a22_EA[track->electric.algo].dec > 0.0f ? 1.0f - a22_onepole_k(a22_EA[track->electric.algo].dec, b->sr / (a22_f32)a22_CTRL) : 1.0f;
+        a22_f32 cut = 14000.0f * a22_exp2fx(-track->electric.warmth * 3.8f);
+        track->electric.lpk = a22_onepole_k(1.0f / (a22_H1_TAU * cut), b->sr);
+    }
 }
 
 static void elec_note(a22_Voice *v, const a22_Blk *b)
@@ -84,8 +88,7 @@ static void elec_render(A22Track *track, a22_Voice *v, const a22_Blk *b, a22_f32
     a22_f32 p0 = v->ph[0], p1 = v->ph[1], p2 = v->ph[2], p3 = v->ph[3], p4 = v->ph[4];
     a22_f32 d1 = d0, d2 = d0, d3 = d0, d4 = d0;
     a22_f32 amp = a->att > 0.0f ? a22_sat(v->age / a->att) : 1.0f;
-    a22_f32 cut = 14000.0f * a22_exp2fx(-track->electric.warmth * 3.8f);
-    a22_f32 lpk = a22_onepole_k(1.0f / (a22_H1_TAU * cut), b->sr);
+    a22_f32 lpk = track->electric.lpk;
     a22_f32 lpl = v->s[4], lpr = v->s[5];
     int algo = track->electric.algo, i;
 

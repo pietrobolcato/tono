@@ -15,13 +15,13 @@ typedef struct {
 typedef struct {
     a22_Blk b;
     union {
-        struct {int algo; float bark,tine,trem,warmth,trem_l,trem_r,rot_ph,wow,kd;} electric;
-        struct {int algo; float shape,tzfm,cut,reso,drive,pwm_lfo;} analog;
+        struct {int algo; float bark,tine,trem,warmth,trem_l,trem_r,rot_ph,wow,kd,lpk;} electric;
+        struct {int algo; float shape,tzfm,cut,reso,drive,pwm_lfo,detune[4],comp;} analog;
     };
     float trem_ph,wow_ph,flut_ph,elec_t_was,pwm_ph,pulse_t_was;
     float att,kd,sus,kr,mkd;
     int model,env_rate;
-    int16_t env_values[4];
+    int16_t env_values[4],knob_values[4];
 } A22Track;
 typedef struct {
     a22_Voice voices[A22_POLY];

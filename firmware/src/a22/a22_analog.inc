@@ -23,14 +23,22 @@ static const a22_f32 a22_CHORD_SEMI[6][3] = {
 
 
 
-static void pulse_block(A22Track *track, const a22_Blk *b)
+static void pulse_block(A22Track *track, const a22_Blk *b, int controls_changed)
 {
-    track->analog.algo  = b->algo & 7;
-    track->analog.shape = b->k[0];
-    track->analog.tzfm  = b->k[1];
-    track->analog.cut   = 75.0f * a22_exp2fx(b->k[2] * 7.6f);          /* 75 Hz .. 14.5 kHz */
-    track->analog.reso  = b->k[3] * 3.55f;
-    track->analog.drive = 1.0f + 2.4f * b->k[3] * b->k[3];
+    if (controls_changed) {
+        track->analog.algo  = b->algo & 7;
+        track->analog.shape = b->k[0];
+        track->analog.tzfm  = b->k[1];
+        track->analog.cut   = 75.0f * a22_exp2fx(b->k[2] * 7.6f);          /* 75 Hz .. 14.5 kHz */
+        track->analog.reso  = b->k[3] * 3.55f;
+        track->analog.drive = 1.0f + 2.4f * b->k[3] * b->k[3];
+        a22_f32 det = 0.04f + 0.36f * track->analog.tzfm;
+        track->analog.detune[0] = a22_exp2fx(det * (1.0f / 12.0f));
+        track->analog.detune[1] = a22_exp2fx(-det * 0.9f * (1.0f / 12.0f));
+        track->analog.detune[2] = a22_exp2fx(det * 1.85f * (1.0f / 12.0f));
+        track->analog.detune[3] = a22_exp2fx(-det * 1.75f * (1.0f / 12.0f));
+        track->analog.comp = 1.0f / (1.0f + 0.45f * (track->analog.drive - 1.0f));
+    }
     if (b->time < track->pulse_t_was) track->pwm_ph = 0.0f;
     track->pulse_t_was = b->time;
     track->pwm_ph = a22_fractf(track->pwm_ph + 0.45f * b->step);
@@ -55,10 +63,9 @@ static void pulse_render(A22Track *track, a22_Voice *v, const a22_Blk *b, a22_f3
     a22_f32 vel = a22_lerpf(1.0f, 0.35f + 0.85f * v->vel_f, b->vel_sens);
     a22_f32 f, d0, d1, d2, d3, d4, fc;
     a22_f32 pw = a22_clampf(0.5f - 0.42f * track->analog.shape + track->analog.pwm_lfo, 0.06f, 0.94f);
-    a22_f32 det = 0.04f + 0.36f * track->analog.tzfm;
     a22_f32 p0 = v->ph[0], p1 = v->ph[1], p2 = v->ph[2], p3 = v->ph[3], p4 = v->ph[4];
     a22_f32 tz_amt = track->analog.tzfm * track->analog.tzfm * 3.2f * a22_lerpf(1.0f, 0.3f + 1.1f * v->menv, b->menv_amt);
-    a22_f32 comp = 1.0f / (1.0f + 0.45f * (track->analog.drive - 1.0f));
+    a22_f32 comp = track->analog.comp;
     a22_Ladder fl;
 
     if (algo == 3 || algo == 5) pitch -= 12.0f;        /* SUB / ACID sit an octave lower */
@@ -67,10 +74,10 @@ static void pulse_render(A22Track *track, a22_Voice *v, const a22_Blk *b, a22_f3
 
     f = a22_mtof(pitch);
     d0 = a22_minf(f * b->isr, 0.42f);
-    d1 = a22_minf(d0 * a22_exp2fx(det * (1.0f / 12.0f)), 0.42f);
-    d2 = a22_minf(d0 * a22_exp2fx(-det * 0.9f * (1.0f / 12.0f)), 0.42f);
-    d3 = a22_minf(d0 * a22_exp2fx(det * 1.85f * (1.0f / 12.0f)), 0.42f);
-    d4 = a22_minf(d0 * a22_exp2fx(-det * 1.75f * (1.0f / 12.0f)), 0.42f);
+    d1 = a22_minf(d0 * track->analog.detune[0], 0.42f);
+    d2 = a22_minf(d0 * track->analog.detune[1], 0.42f);
+    d3 = a22_minf(d0 * track->analog.detune[2], 0.42f);
+    d4 = a22_minf(d0 * track->analog.detune[3], 0.42f);
 
     if (algo == 1) { /* TZFM modulator ratio on Osc B */
         static const a22_f32 TRAT[5] = {0.5f, 1.0f, 1.5f, 2.0f, 3.0f};
