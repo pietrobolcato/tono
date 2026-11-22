@@ -92,6 +92,11 @@ static void pulse_render(A22Track *track, a22_Voice *v, const a22_Blk *b, a22_f3
                       + (pitch - 60.0f) * (1.0f / 36.0f));
     a22_ladder_set(&fl, a22_clampf(fc, 45.0f, 17000.0f), algo == 5 ? a22_minf(3.75f, track->analog.reso + 1.2f) : track->analog.reso, b->isr);
 
+    /* SUB and ACID drive both channels with the same oscillator sample. A
+     * live model change can leave different filter histories; in that case
+     * keep filtering the two channels independently. */
+    int shared_ladder = (algo == 3 || algo == 5) &&
+        __builtin_memcmp(&v->s[0], &v->s[4], 4 * sizeof(v->s[0])) == 0;
     for (i = 0; i < n; i++) {
         a22_f32 xl = 0.0f, xr = 0.0f;
         switch (algo) {
@@ -162,7 +167,7 @@ static void pulse_render(A22Track *track, a22_Voice *v, const a22_Blk *b, a22_f3
         {
             a22_f32 rl = xl, rr = xr;
             xl = a22_ladder_tick(&fl, &v->s[0], xl * track->analog.drive) * comp * vel;
-            xr = a22_ladder_tick(&fl, &v->s[4], xr * track->analog.drive) * comp * vel;
+            xr = shared_ladder ? xl : a22_ladder_tick(&fl, &v->s[4], xr * track->analog.drive) * comp * vel;
             if (algo == 2) {
                 a22_f32 air = 0.11f * track->analog.tzfm * vel;
                 xl += (rl - xl) * air;
@@ -187,6 +192,8 @@ static void pulse_render(A22Track *track, a22_Voice *v, const a22_Blk *b, a22_f3
         p4 += d4; if (p4 >= 1.0f) p4 -= 1.0f;
     }
 
+    if (shared_ladder)
+        __builtin_memcpy(&v->s[4], &v->s[0], 4 * sizeof(v->s[0]));
     v->ph[0] = p0; v->ph[1] = p1; v->ph[2] = p2; v->ph[3] = p3; v->ph[4] = p4;
     v->s[8] *= 1.0f - a22_onepole_k(0.030f, b->sr / (a22_f32)n);
 }
