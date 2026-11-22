@@ -42,3 +42,7 @@ for vals in rows:
     text += '{\n' + '\n'.join(','.join(map(str,vals[i:i+24]))+',' for i in range(0,OUTPUT,24)) + '\n},\n'
 out.write_text(text+'};\n')
 print(out, '10000 bytes companded PCM; 2.5 seconds per source; flash only')
+
+# Keep the target's random-access representation in sync with the canonical source.
+from amb_pcm_octets import main as write_octets
+write_octets()

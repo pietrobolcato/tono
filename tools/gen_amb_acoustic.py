@@ -80,3 +80,7 @@ for name, (repo, revision), path, count, rate in SOURCES:
     write_pcm(out, name, values)
     print(name, hashlib.sha256(pcm).hexdigest(), flush=True)
 Path(__file__).resolve().parents[1].joinpath("firmware/src/amb_acoustic_pcm.h").write_text(out.getvalue())
+
+# Keep the target's random-access representation in sync with the canonical source.
+from amb_pcm_octets import main as write_octets
+write_octets()

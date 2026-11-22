@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Bounded read-only PCM playback; sources are original offline examples.
  * Uses voice-local existing phase/filter state, no sample RAM or flash writes. */
-#include "amb_samples.h"
+#include "amb_pcm_octets.h"
 #include "amb_acoustic_pcm.h"
 #include "amb_texture_pcm.h"
 #include "amb_speech.h"
@@ -11,11 +11,11 @@ enum { AMB_TEXTURE_SOURCE = 7, AMB_FIELD_SOURCE = AMB_MIC_SOURCE+1 };
 static const char *const N_AS_SOURCE[]={"SOFT CHIME","TAPE VOWEL","SOLO VIOLIN","BOWED CELLO","KAWAI GRAND","TENOR SAX","CONCERT FLUTE","OCEAN DRUM","CABASA RUB","GUIRO SCRAPE","SEED SHAKER","RATCHET","BOWED CYMBAL","EAGLE LANDED","RADIO CHECK","MOON SPEECH","MIC TAKE","BRUSSELS RAIL","CANVAS RAIN","SUBWAY VOICE"};
 typedef struct {const uint8_t *pcm;unsigned length,root,rate_q16,loop_percent;} amb_recording_t;
 static const amb_recording_t amb_recordings[]={
-    {AMB_SAMPLES[0],AMB_SAMPLE_N,60,2972,24},{AMB_SAMPLES[1],AMB_SAMPLE_N,60,2972,24},
-    {amb_pcm_violin,NELEM(amb_pcm_violin),60,14861,29},
+    {amb_oct_chime,amb_oct_chime_length,60,2972,24},{amb_oct_vowel,amb_oct_vowel_length,60,2972,24},
+    {amb_oct_violin,amb_oct_violin_length,60,14861,29},
     {amb_pcm_cello,amb_pcm_cello_length,60,17833,12},
     {amb_pcm_piano,amb_pcm_piano_length,72,17833,29},
-    {amb_pcm_tenor,NELEM(amb_pcm_tenor),72,14861,29},
+    {amb_oct_tenor,amb_oct_tenor_length,72,14861,29},
     {amb_pcm_flute,amb_pcm_flute_length,72,14861,15},
     /* Six phrase maps, each addressing grains of its own percussion take. */
     {amb_texture_frames[0],24576,60,8025,9},{amb_texture_frames[1],24576,60,8025,11},
@@ -72,8 +72,12 @@ static int amb_recorded_at(unsigned source,const uint8_t *src,unsigned at)
 {
     unsigned code;
     switch(source){
+    case 0: code=amb_octet_code(src,amb_oct_chime_offsets,amb_oct_chime_widths,at,amb_oct_chime_period);break;
+    case 1: code=amb_octet_code(src,amb_oct_vowel_offsets,amb_oct_vowel_widths,at,amb_oct_vowel_period);break;
+    case 2: code=amb_octet_code(src,amb_oct_violin_offsets,amb_oct_violin_widths,at,amb_oct_violin_period);break;
     case 3: code=amb_packed_code(src,amb_pcm_cello_offsets,amb_pcm_cello_widths,at,amb_pcm_cello_period);break;
     case 4: code=amb_packed_code(src,amb_pcm_piano_offsets,amb_pcm_piano_widths,at,amb_pcm_piano_period);break;
+    case 5: code=amb_octet_code(src,amb_oct_tenor_offsets,amb_oct_tenor_widths,at,amb_oct_tenor_period);break;
     case 6: code=amb_packed_code(src,amb_pcm_flute_offsets,amb_pcm_flute_widths,at,amb_pcm_flute_period);break;
     default: return amb_pcm_at(src,at);
     }
