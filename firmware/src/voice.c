@@ -134,6 +134,24 @@ static uint8_t tf_xb[NTRK], tf_fo[NTRK];        /* (0.6.81) a TYPE's crossfade: 
 /* the filter of TYPE ft on a part's block; fo (not TF_DRY, an SVF TYPE): from fo's output to ft's, w0 + (i + 1) dw
  * (Q12) of the way (the SVF's three outputs from one state); own: the engine filters its notes itself (ANALOG, LOFI):
  * only the COMB here, at cut / res */
+#if AMBPLUS
+/* A settled low pass has no change-of-type or fade work. Filter A22's mid
+ * and side with identical coefficients; only the mid uses the output knee. */
+static inline __attribute__((always_inline)) void tf_steady_lowpass(int32_t *samples, uint32_t n,
+        const tsvf_t *c, int32_t *state1, int32_t *state2, int knee)
+{
+    int32_t ic1=*state1, ic2=*state2;
+    for(uint32_t i=0;i<n;i++){
+        int32_t v3=samples[i]-ic2;
+        int32_t v1=(c->a1*ic1+c->a2*v3)>>13;
+        int32_t v2=ic2+((c->a2*ic1+c->a3*v3)>>13);
+        ic1=clamp(2*v1-ic1,-150000,150000);
+        ic2=clamp(2*v2-ic2,-150000,150000);
+        samples[i]=knee && (v2>30000 || v2< -30000) ? soft_knee(v2,30000) : v2;
+    }
+    *state1=ic1;*state2=ic2;
+}
+#endif
 static __attribute__((noinline)) void tf_run(track_t *t, int32_t *out, uint32_t n, uint32_t ft, uint32_t fo, int32_t w0,
                                              int32_t dw, uint32_t own, int32_t ccut, int32_t cres)
 {
@@ -169,6 +187,14 @@ static __attribute__((noinline)) void tf_run(track_t *t, int32_t *out, uint32_t 
             ic2 = out[0];
         }
         tsvf_coef(&c, cut, p[P_FRES]);
+#if AMBPLUS
+        if(t->engine==ENGI_AMB_A22 && on && was && ft==FT_LP && fo==TF_DRY){
+            tf_steady_lowpass(out,n,&c,&tf_ic1[ti],&tf_ic2[ti],1);
+            tf_steady_lowpass(voice_bank[ti].a22.side,n>CTL?CTL:n,&c,
+                              &tf_side[ti][0],&tf_side[ti][1],0);
+            return;
+        }
+#endif
         k = 8192 - p[P_FRES] * 7600 / 127;
         for (i = 0; i < n; i++) {
             int32_t x = out[i], y, w = (int32_t)((i + 1u) << (12 - CTL_LOG2));   /* 0 .. 1 over the block, Q12 */
