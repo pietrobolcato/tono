@@ -16,12 +16,12 @@ static void check_volume_depth(unsigned depth)
         int32_t output[CTL*2];mix_block(output,CTL);
         int phase=trk[0].lfo_val;
         if(i<FS || abs(phase)<29000)continue;
-        unsigned band=phase>0;
+        unsigned band=phase<0;
         for(unsigned j=0;j<CTL;j++){double x=stem_buf[0][j];sum[band]+=x*x;cnt[band]++;}
     }
     assert(cnt[0] && cnt[1]);
     double loud=sqrt(sum[0]/cnt[0]),quiet=sqrt(sum[1]/cnt[1]);
-    printf("Depth %u: loud-phase RMS %.1f, quiet-phase RMS %.1f\n",depth,loud,quiet);
+    printf("Depth %u: crest RMS %.1f, trough RMS %.1f\n",depth,loud,quiet);
     assert(loud>10 && (l->lfo_depth?quiet<loud*.12:quiet>loud*.65));
 }
 

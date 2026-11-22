@@ -127,7 +127,7 @@ On Sample → Sound → Source, select MIC TAKE with ALGORITHM + REC. REC now st
 
 EDIT opens Playback. STYLE chooses keyboard tracking or ORIGINAL speed. PITCH transposes in semitones. LOOP selects Off, Forward, Reverse or Bounce. XFADE blends forward or reverse loop seams. One-shot ends at the trim boundary. The source page sets Start, End, Gain and Fade. Existing layer EQ, delay, reverb and granular controls process the sample. Save a song using MIC TAKE to store its audio inside its existing user slot.
 
-With a layer selected on HOME, move MASTER to set its level, then press HOME + LFO to route its LFO to VOLUME. The same shortcut works after adjusting the layer level in SOUND.
+With a layer selected on HOME, move MASTER to set its level, then press HOME + LFO to route its LFO to VOLUME. The same shortcut works after adjusting the layer level in SOUND. At full VOLUME depth the displayed crest reaches the saved level and the trough reaches silence.
 
 ### Lead and Bass
 
