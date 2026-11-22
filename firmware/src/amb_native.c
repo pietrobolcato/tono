@@ -151,7 +151,7 @@ static const char *const AMB_SCENE[] = {
     AMB_SONG("Symphony for a Warmer Mars","Warmer synths and more room","between wordless vocal lines"),
     AMB_SONG("Tales of Cold Desert Dunes","Slow FM swells and ice chimes", "over bowed-metal wind"),
     AMB_SONG("303 Fellows","Soft acid bass and linen chords","with harp and ocean beads"),
-    AMB_SONG("Analog Days","Reedy keys and brass swells","with low bass and far-off vibes")
+    AMB_SONG("Analog Days","Wurli and felt piano trade lines","over warm brass and a low pulse")
 };
 #undef AMB_SONG
 #undef AMB_ARCHIVED
