@@ -264,6 +264,10 @@ static void amb_fill_patch(amb_layer_t *l,unsigned key,unsigned k,unsigned role,
         l->base[P_E7]=58;l->lfo_dest=3;l->lfo_depth=83;l->base[P_LRATE]=32;
     }else if(role==5 && patch==27){
         l->base[P_E1]=62;l->base[P_E3]=36;l->base[P_LRATE]=24;
+    }else if(role==5 && patch>=28){
+        l->base[P_E0]=AMB_FIELD_SOURCE+patch-28;l->base[P_E1]=4;
+        l->base[P_E6]=3;l->base[P_E7]=r->color;l->base[P_LN6]=2;
+        l->base[P_CHOR]=0;l->lfo_depth=0;
     }else if(role==5 && patch>=22){
         l->base[P_E0]=13+(patch-22);l->base[P_E1]=4;l->base[P_E6]=4;
         if(patch==23){l->base[P_E1]=2;l->base[P_E2]=-9;l->base[P_E6]=76;}
@@ -2446,7 +2450,7 @@ static void amb_sound_preview(const amb_layer_t *current,unsigned next)
     if(sample){
         static const char *const character[]={"Soft struck harmonic","Taped vowel sustain","Bowed string and vibrato","Low bowed string section","Hammer attack, long decay","Breathy reed sustain","Airy flute sustain",
             "Rolling beads and surf","Soft metallic brushing","Ridged wooden scrape",
-            "Dry shifting seeds","A ticking wooden rattle","Bowed metal shimmer","Apollo landing radio","Orbiter radio check","Kennedy at Rice University","Your voice or instrument"};
+            "Dry shifting seeds","A ticking wooden rattle","Bowed metal shimmer","Apollo landing radio","Orbiter radio check","Kennedy at Rice University","Your voice or instrument","A passing train in Brussels","Rain pattering on a tent","A New York subway announcement"};
         _Static_assert(NELEM(character)==NELEM(N_AS_SOURCE),"Describe every sample source");
         amb_text(12,96,character[current->base[P_E0]],ADIM,34);
         amb_text(12,112,character[next],AINK,34);

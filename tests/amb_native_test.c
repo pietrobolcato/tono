@@ -171,9 +171,11 @@ int AMB_MAIN(int argc,char **argv)
         assert(energy>1000000);printf("scene %u energy %lld PASS\n",scene,(long long)energy);seq_stop();amb_render(FS*2);
     }
     for(scene=0;scene<7;scene++) {
-        uint64_t hashes[NELEM(amb_pad_patches)]={0};unsigned patch;
+        unsigned count=scene==6?NELEM(N_AS_SOURCE):amb_patch_count(scene),patch;
+        uint64_t hashes[count];
         /* The personal source is empty on boot and exercised with input in amb_take_test. */
-        for(patch=0;patch<(scene==6?AMB_MIC_SOURCE:amb_patch_count(scene));patch++) {
+        for(patch=0;patch<count;patch++) {
+            if(scene==6 && patch==AMB_MIC_SOURCE)continue;
             int32_t mono[CTL];uint64_t hash=1469598103934665603ull;
             amb_fixture_scene(0);song.playing=0;
             for(k=0;k<NTRK;k++)memset(&trk[k],0,sizeof trk[k]);
@@ -187,7 +189,7 @@ int AMB_MAIN(int argc,char **argv)
                 for(k=0;k<CTL;k++){energy+=(int64_t)mono[k]*mono[k];hash^=(uint32_t)mono[k];hash*=1099511628211ull;}
             }
             assert(energy>100000);hashes[patch]=hash;
-            for(k=0;k<patch;k++)assert(hashes[k]!=hash);
+            for(k=0;k<patch;k++)if(scene!=6 || k!=AMB_MIC_SOURCE)assert(hashes[k]!=hash);
             printf("role %u patch/source %u isolated PCM energy %lld hash %016llx PASS\n",scene,patch,(long long)energy,(unsigned long long)hash);
         }
     }

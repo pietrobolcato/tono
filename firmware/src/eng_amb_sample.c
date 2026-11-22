@@ -5,9 +5,10 @@
 #include "amb_acoustic_pcm.h"
 #include "amb_texture_pcm.h"
 #include "amb_speech.h"
+#include "amb_field_pcm.h"
 #include "amb_take.h"
-enum { AMB_TEXTURE_SOURCE = 7 };
-static const char *const N_AS_SOURCE[]={"SOFT CHIME","TAPE VOWEL","SOLO VIOLIN","BOWED CELLO","KAWAI GRAND","TENOR SAX","CONCERT FLUTE","OCEAN DRUM","CABASA RUB","GUIRO SCRAPE","SEED SHAKER","RATCHET","BOWED CYMBAL","EAGLE LANDED","RADIO CHECK","MOON SPEECH","MIC TAKE"};
+enum { AMB_TEXTURE_SOURCE = 7, AMB_FIELD_SOURCE = AMB_MIC_SOURCE+1 };
+static const char *const N_AS_SOURCE[]={"SOFT CHIME","TAPE VOWEL","SOLO VIOLIN","BOWED CELLO","KAWAI GRAND","TENOR SAX","CONCERT FLUTE","OCEAN DRUM","CABASA RUB","GUIRO SCRAPE","SEED SHAKER","RATCHET","BOWED CYMBAL","EAGLE LANDED","RADIO CHECK","MOON SPEECH","MIC TAKE","BRUSSELS RAIL","CANVAS RAIN","SUBWAY VOICE"};
 typedef struct {const uint8_t *pcm;unsigned length,root,rate_q16,loop_percent;} amb_recording_t;
 static const amb_recording_t amb_recordings[]={
     {AMB_SAMPLES[0],AMB_SAMPLE_N,60,2972,24},{AMB_SAMPLES[1],AMB_SAMPLE_N,60,2972,24},
@@ -21,7 +22,10 @@ static const amb_recording_t amb_recordings[]={
     {amb_texture_frames[2],24576,60,8025,7},{amb_texture_frames[3],24576,60,8025,13},
     {amb_texture_frames[4],24576,60,8025,8},{amb_texture_frames[5],24576,60,8025,12},
     {speech_eagle,SPEECH_EAGLE_FRAMES,60,7280,0},{speech_radio,SPEECH_RADIO_FRAMES,60,7280,0},
-    {speech_moon,SPEECH_MOON_FRAMES,60,7280,0},{0,0,60,7280,12}
+    {speech_moon,SPEECH_MOON_FRAMES,60,7280,0},{0,0,60,7280,12},
+    {field_rail,field_rail_frames,60,field_rail_rate,0},
+    {field_rain,field_rain_frames,60,field_rain_rate,0},
+    {field_subway,field_subway_frames,60,field_subway_rate,0}
 };
 /* Factory speech omits redundant predictor bytes in flash. Reconstruct
  * them once at boot so random seeks have the same cost as a personal take. */
@@ -50,24 +54,27 @@ static inline int32_t amb_pcm_at(const uint8_t *pcm,unsigned at)
  * bit width. The two adjacent offsets encode the width as 1 + 2*width
  * bytes per group. A lookup never decodes preceding audio. */
 static inline unsigned amb_packed_code(const uint8_t *data,const uint16_t *offsets,
-                                       unsigned at,unsigned period)
+                                       const uint32_t *widths,unsigned at,unsigned period)
 {
     unsigned cycle=at/period;
     unsigned group=(cycle>>4)*period+(at-cycle*period);
-    unsigned offset=offsets[group];
-    unsigned width=(offsets[group+1]-offset-1)>>1;
+    unsigned slot=group&7u, word=widths[group>>3];
+    unsigned width=(word>>(4*slot))&15u;
+    unsigned before=word & ~(~0u<<(4*slot));
+    unsigned pairs=(before&0x0f0f0f0fu)+((before>>4)&0x0f0f0f0fu);
+    unsigned offset=offsets[group>>3]+slot+2*((pairs*0x01010101u)>>24);
     unsigned bit=(cycle&15)*width;
     const uint8_t *bytes=data+offset+1+(bit>>3);
-    unsigned word=bytes[0] | ((unsigned)bytes[1]<<8);
-    return data[offset]+((word>>(bit&7))&((1u<<width)-1));
+    unsigned bits=bytes[0] | ((unsigned)bytes[1]<<8);
+    return data[offset]+((bits>>(bit&7))&((1u<<width)-1));
 }
 static int amb_recorded_at(unsigned source,const uint8_t *src,unsigned at)
 {
     unsigned code;
     switch(source){
-    case 3: code=amb_packed_code(src,amb_pcm_cello_offsets,at,amb_pcm_cello_period);break;
-    case 4: code=amb_packed_code(src,amb_pcm_piano_offsets,at,amb_pcm_piano_period);break;
-    case 6: code=amb_packed_code(src,amb_pcm_flute_offsets,at,amb_pcm_flute_period);break;
+    case 3: code=amb_packed_code(src,amb_pcm_cello_offsets,amb_pcm_cello_widths,at,amb_pcm_cello_period);break;
+    case 4: code=amb_packed_code(src,amb_pcm_piano_offsets,amb_pcm_piano_widths,at,amb_pcm_piano_period);break;
+    case 6: code=amb_packed_code(src,amb_pcm_flute_offsets,amb_pcm_flute_widths,at,amb_pcm_flute_period);break;
     default: return amb_pcm_at(src,at);
     }
     return amb_pcm_decode[code];
@@ -88,6 +95,20 @@ static __attribute__((noinline)) int amb_texture_read(unsigned bank,unsigned at)
         x=last+(x-last)*(int)(pos+1)/7;
     }
     return x;
+}
+/* Each independently seekable 64-sample block carries a predictor and innovation scale. */
+static void amb_field_decode(const uint8_t *src,unsigned id,int16_t out[32])
+{
+    const uint8_t *block=src+(id>>1)*18;
+    int level=(int8_t)block[0]*256, step=field_scale[block[1]&63];
+    unsigned mode=block[1]>>6, end=(id&1)?64:32;
+    for(unsigned i=0;i<end;i++){
+        unsigned code=(block[2+(i>>2)]>>(2*(i&3)))&3;
+        int base=mode==3?level:mode==2?level-(level>>3):mode==1?level>>1:0;
+        int delta=(code&1)?step*3:step;
+        level=clamp(base+((code&2)?-delta:delta),-32767,32767);
+        if(i>=end-32)out[i&31]=(int16_t)level;
+    }
 }
 static const char *const N_AS_STYLE[]={"PAD","DRONE","TEXTURE","ONE-SHOT","ORIGINAL"};
 static const char *const N_AS_LOOP[]={"OFF","FORWARD","REVERSE","BOUNCE"};
@@ -151,7 +172,8 @@ static void amb_sample_render(track_t *t,voice_t *v,int32_t *out,uint32_t n,cons
                     unsigned pos=positions[j];
                     unsigned id=pos/32,slot=id&1;
                     if(block_id[slot]!=id){
-                        if(source==AMB_MIC_SOURCE)amb_take_decode(take->block[id],decoded[slot]);
+                        if(source>=AMB_FIELD_SOURCE)amb_field_decode(src,id,decoded[slot]);
+                        else if(source==AMB_MIC_SOURCE)amb_take_decode(take->block[id],decoded[slot]);
                         else {
                             const uint8_t *block=src+9*id;
                             amb_decode_codes(block+1,speech_predict[speech_offset[source-13]+id],block[0],decoded[slot]);

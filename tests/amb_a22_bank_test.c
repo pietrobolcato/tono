@@ -30,6 +30,7 @@ int main(int argc,char **argv)
         unsigned first=old_counts[role];
         for(unsigned j=0;j<first;j++)assert(amb_recipe(role,j)->engine!=ENGI_AMB_A22);
         for(unsigned patch=first;patch<amb_patch_count(role);patch++){
+            if(amb_recipe(role,patch)->engine!=ENGI_AMB_A22)continue;
             amb_patch(0,role,patch-1);
             amb_target(1);ambr.view=1;ambr.page=1;ambr.bank=0;
             amb_layer_t *l=&amb.layer[0];

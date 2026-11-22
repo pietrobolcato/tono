@@ -201,9 +201,10 @@ static unsigned amb_evolution_current(void)
 }
 static void amb_evolution_turn(int movement)
 {
-    unsigned role=ambr.evolve_role,count=role==6?AMB_MIC_SOURCE:amb_patch_count(role);
+    unsigned role=ambr.evolve_role,count=role==6?NELEM(N_AS_SOURCE):amb_patch_count(role);
     unsigned next=amb_wrap(ambr.evolve_patch+movement,count);
-    if(role==amb.layer[ambr.evolve_layer].role && next==amb_evolution_current())
+    while((role==6 && next==AMB_MIC_SOURCE) ||
+          (role==amb.layer[ambr.evolve_layer].role && next==amb_evolution_current()))
         next=amb_wrap(next+(movement<0?-1:1),count);
     ambr.evolve_patch=next;
 }

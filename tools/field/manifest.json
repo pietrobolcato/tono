@@ -1,0 +1,26 @@
+[
+  {
+    "name": "Brussels Rail",
+    "user": "felix.blume",
+    "url": "https://freesound.org/people/felix.blume/sounds/159445/",
+    "preview": "https://cdn.freesound.org/previews/159/159445_1661766-hq.mp3",
+    "sha256": "d9681a7bce1ac03e8d2fc8bb3364777f7f158ccf44d3d097d50f6307ba7399ed",
+    "license": "CC0-1.0"
+  },
+  {
+    "name": "Canvas Rain",
+    "user": "soundmary",
+    "url": "https://freesound.org/people/soundmary/sounds/117625/",
+    "preview": "https://cdn.freesound.org/previews/117/117625_1160789-hq.mp3",
+    "sha256": "3d49276c26a6464ce761094ac2c37ceec213cc807184dde0ddafef5faa0bdc8d",
+    "license": "CC0-1.0"
+  },
+  {
+    "name": "Subway Voice",
+    "user": "swelltoe77",
+    "url": "https://freesound.org/people/swelltoe77/sounds/160538/",
+    "preview": "https://cdn.freesound.org/previews/160/160538_764466-hq.mp3",
+    "sha256": "862777100e0d63f6c7fac2f3572496f52cec86042f62c281bc9d6aaf499bc646",
+    "license": "CC0-1.0"
+  }
+]
