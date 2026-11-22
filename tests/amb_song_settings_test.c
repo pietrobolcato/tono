@@ -96,5 +96,13 @@ int main(void)
     amb_saved_song.extended.octave[0]=7;
     assert(!st_save(amb_object(6),&amb_saved_song,sizeof amb_saved_song));
     assert(!amb_recall(6) && amb_bar_octave[0]==2 && ambr.zen_train);
+    song.playing=0;recall_factory(AMB_SCENE_ANALOG_DAYS);
+    assert(amb_journey_style()==1 && amb_walk_value(0)==WALK_BARS);
+    amb_walk_adjust(4,1);ambr.slot=7;amb_save();
+    recall_factory(AMB_SCENE_GARDEN);check_defaults();
+    song.playing=1;recall_factory(AMB_SCENE_ANALOG_DAYS);
+    assert(amb_pending_ready && amb_journey_style()==2);
+    ambr.step=16;amb_step();assert(amb_journey_style()==1);
+    song.playing=0;assert(amb_recall(7) && amb_journey_style()==2);
     puts("PASS song-specific controls, gains, all 4 layers, factory defaults, queued/cold recall, independent theme, old raw saves and maximum-length takes.");
 }

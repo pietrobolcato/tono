@@ -666,6 +666,16 @@ static void amb_install(const amb_piece_t *p)
     if(amb.policy.active[0]==8)for(k=0;k<4;k++)ambr.voicing[k]=50+(int)k*7;
     amb_revoice();ambr.loading=0;ambr.dirty=1;
 }
+/* Factory arrangements can start with their own editable Travel choices.
+ * The same staged control record is used for immediate and bar-boundary recalls. */
+static void amb_stage_factory(unsigned scene)
+{
+    amb_load_take=0;amb_load_controls=1;
+    amb_make_scene(&amb_pending,scene);
+    amb_pending_song.compact=amb_factory_controls;
+    if(scene==AMB_SCENE_ANALOG_DAYS)
+        amb_pending_song.compact.walk[4]=1; /* New Chapters: one player hands off at a time. */
+}
 static void amb_start_factory(unsigned scene)
 {
     unsigned i,j;amb_install(&amb_pending);amb_pending_ready=0;
@@ -676,7 +686,7 @@ static void amb_start_factory(unsigned scene)
 }
 static void amb_factory(unsigned scene)
 {
-    amb_load_take=amb_load_controls=0;amb_make_scene(&amb_pending,scene);amb_start_factory(scene);
+    amb_stage_factory(scene);amb_start_factory(scene);
 }
 static void amb_scan_slots(void);
 static void amb_init(void)
@@ -1973,7 +1983,7 @@ static void amb_rec(void)
     if(ambr.piece_preview!=255) {
         unsigned p=ambr.piece_preview;ambr.preset_position=(uint8_t)p;
         if(p<AMB_SCENE_COUNT){
-            amb_load_take=amb_load_controls=0;amb_pending_ready=0;amb_make_scene(&amb_pending,p);
+            amb_pending_ready=0;amb_stage_factory(p);
             /* A confirmed factory recall is a new take. A slot recall keeps
              * its stored seed. The default at power-on remains reproducible. */
             if(p!=AMB_SCENE_INN)amb_pending.policy.seed=amb_hash(amb_pending.policy.seed+fm1_ms+0x9e3779b9u*(++ambr.factory_take));
