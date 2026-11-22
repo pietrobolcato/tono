@@ -741,6 +741,15 @@ static void amb_global_offset(unsigned id,int offset)
 {
     if(offset)song.g[id]=clamp(amb.global[id]+offset,GP[id].min,GP[id].max);
 }
+/* Ride the shared fader, including dry sound and sends. Keep the unrouted
+ * path in fast RAM small and the saved manual level untouched. */
+static __attribute__((noinline)) void amb_volume_lfo(track_t *t,unsigned depth)
+{
+    int phase=(t->lfo_val+32768)>>1;
+    int amount=mulq15(phase,t->lfo_fade)*(int)depth/100;
+    int level=t->p[P_LEVEL];
+    t->p[P_LEVEL]=level-((level*amount+16384)>>15);
+}
 static unsigned amb_control_slot=4;
 /* Only one control slot updates the master macros. Keep this occasional
  * pass in flash and reserve hot RAM for the per-layer audio path. */
@@ -822,7 +831,6 @@ static __attribute__((noinline)) void amb_prepare(void)
         t->p[P_LD_FLT]=t->p[P_LD_PIT]=t->p[P_LD_AMP]=0;
         if(l->lfo_dest==0)t->p[P_LD_FLT]=l->lfo_depth/2;
         else if(l->lfo_dest==1)t->p[P_LD_PIT]=l->lfo_depth/12;
-        else if(l->lfo_dest==3)t->p[P_LD_AMP]=l->lfo_depth/2;
         t->p[P_LEVEL]=l->level;
         t->p[P_MUTE]=l->base[P_MUTE] || (ambr.solo>=0 && (unsigned)ambr.solo!=k);
         t->p[P_FCUT]=(int16_t)clamp(l->base[P_FCUT]-tone,8,127);
@@ -894,6 +902,7 @@ static __attribute__((noinline)) void amb_prepare(void)
                 t->p[P_E2]=53+distance/6;
             }
         }
+        if(l->lfo_dest==3 && l->lfo_depth)amb_volume_lfo(t,l->lfo_depth);
         if(amb_acid(l)){
             int accent=ambr.accent[k];
             t->p[P_E4]=clamp(l->base[P_E4]+warm+accent,0,127);

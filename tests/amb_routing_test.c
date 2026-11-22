@@ -37,6 +37,15 @@ static void check_layer_shortcut(void)
 
     ambr.view=0;amb_master(512,1);amb_master(100,0);link_last_edit();
     assert(l->lfo_dest==3 && l->lfo_depth==31);
+    /* The shortcut targets the actual layer fader, also used by percussion
+     * and the wet sends. Depth zero must reproduce the manual level. */
+    int saved_level=l->level;assert(saved_level>0);trk[0].lfo_fade=32767;
+    l->lfo_depth=100;
+    trk[0].lfo_val=32767;amb_prepare();assert(trk[0].p[P_LEVEL]==0);
+    trk[0].lfo_val=-32768;amb_prepare();assert(trk[0].p[P_LEVEL]==saved_level);
+    trk[0].lfo_val=0;amb_prepare();assert(abs(2*trk[0].p[P_LEVEL]-saved_level)<=1);
+    l->lfo_depth=0;amb_prepare();assert(trk[0].p[P_LEVEL]==saved_level);
+    assert(l->level==saved_level && trk[0].p[P_LD_AMP]==0);
 
     held_turn(B_HOME,1);
     assert(ambr.edit_layer==1);
