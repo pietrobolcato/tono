@@ -1,4 +1,4 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #ifndef TONO_RELEASE_VERSION
-#define TONO_RELEASE_VERSION "0.51-dev"
+#define TONO_RELEASE_VERSION "0.51-opt"
 #endif
