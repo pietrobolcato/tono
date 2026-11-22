@@ -65,7 +65,7 @@ void tono_a22_note(a22_Voice *v,int index,int model,int note,int velocity,uint32
 int tono_a22_render(A22Track *t,a22_Voice *v,int pitch16,int fine,int gate,
                     int *left,int *right,int n)
 {
-    float l[A22_CTRL],r[A22_CTRL],e=v->env;
+    float e=v->env;
     if(!gate) v->stage=4;
     if(v->stage==1) {
         v->env+=t->att;
@@ -78,13 +78,9 @@ int tono_a22_render(A22Track *t,a22_Voice *v,int pitch16,int fine,int gate,
     v->menv-=v->menv*t->mkd;
     if(v->menv<.0002f)v->menv=0.f;
     v->pitch=(float)pitch16*(1.f/16.f)+(float)fine*(17.31234f/4096.f);
-    if(t->model<8)elec_render(t,v,&t->b,l,r,n);
-    else pulse_render(t,v,&t->b,l,r,n);
     float de=(v->env-e)*(1.f/(float)A22_CTRL);
-    for(int i=0;i<n;i++,e+=de) {
-        left[i]=(int)(l[i]*e*v->gain_l*32768.f);
-        right[i]=(int)(r[i]*e*v->gain_r*32768.f);
-    }
+    if(t->model<8)elec_render(t,v,&t->b,left,right,n,e,de);
+    else pulse_render(t,v,&t->b,left,right,n,e,de);
     v->age+=t->b.step;
     return v->stage==4 && v->env==0.f;
 }

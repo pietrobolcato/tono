@@ -74,7 +74,7 @@ static void elec_note(a22_Voice *v, const a22_Blk *b)
     v->s[2] = 0.0f;   /* feedback reed */
 }
 
-static void elec_render(A22Track *track, a22_Voice *v, const a22_Blk *b, a22_f32 *out_l, a22_f32 *out_r, int n)
+static void elec_render(A22Track *track, a22_Voice *v, const a22_Blk *b, int *out_l, int *out_r, int n, float e, float de)
 {
     const a22_EAlgo *a = &a22_EA[track->electric.algo];
     a22_f32 pitch = v->pitch + b->bend + track->electric.wow;
@@ -201,8 +201,9 @@ static void elec_render(A22Track *track, a22_Voice *v, const a22_Blk *b, a22_f32
         xr = xr * 0.65f * amp * (a->dec > 0.0f ? body : 1.0f) * track->electric.trem_r;
         lpl += (xl - lpl) * lpk;
         lpr += (xr - lpr) * lpk;
-        out_l[i] = lpl;
-        out_r[i] = lpr;
+        out_l[i] = (int)(lpl * e * v->gain_l * 32768.f);
+        out_r[i] = (int)(lpr * e * v->gain_r * 32768.f);
+        e += de;
 
         p0 += d0; if (p0 >= 1.0f) p0 -= 1.0f;
         p1 += d1; if (p1 >= 1.0f) p1 -= 1.0f;
