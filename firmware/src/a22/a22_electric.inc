@@ -135,8 +135,8 @@ static void elec_render(A22Track *track, a22_Voice *v, const a22_Blk *b, a22_f32
         switch (algo) {
         case 0: /* RHODES */
         case 7: /* TAPE */ {
-            a22_f32 mod = bark * key * (0.20f + 0.80f * body) * 0.55f * a22_tsin(p0);
-            a22_f32 bell = tine * hit * (0.55f * a22_tsin(p2) + 0.45f * hit * a22_tsin(p3));
+            a22_f32 mod = bark * key * (0.20f + 0.80f * body) * 0.55f * a22_phase_sin(p0);
+            a22_f32 bell = tine * hit * (0.55f * a22_phase_sin(p2) + 0.45f * hit * a22_phase_sin(p3));
             xl = a22_tsin(p0 + mod) + bell;
             xr = a22_tsin(p1 + mod * 0.96f) + bell * 0.92f;
             if (algo == 7) {
@@ -149,30 +149,30 @@ static void elec_render(A22Track *track, a22_Voice *v, const a22_Blk *b, a22_f32
         case 1: /* WURLI: asymmetric reed bite + 4x/9x metallic attack ping */ {
             a22_f32 m = bark * (0.18f + 0.82f * hit) * 0.38f;
             a22_f32 reed;
-            fb = a22_tsin(p0 + m * fb + 0.30f * body * bark * a22_tsin(p1));
-            reed = fb + 0.16f * track->electric.bark * fb * fb + tine * 0.35f * hit * a22_tsin(p2) + 0.14f * hit * hit * a22_tsin(p3);
+            fb = a22_tsin(p0 + m * fb + 0.30f * body * bark * a22_phase_sin(p1));
+            reed = fb + 0.16f * track->electric.bark * fb * fb + tine * 0.35f * hit * a22_phase_sin(p2) + 0.14f * hit * hit * a22_phase_sin(p3);
             xl = a22_softclip(reed * (1.0f + 0.82f * track->electric.bark));
-            xr = a22_softclip((reed - 0.08f * hit * a22_tsin(p2)) * (1.0f + 0.78f * track->electric.bark));
+            xr = a22_softclip((reed - 0.08f * hit * a22_phase_sin(p2)) * (1.0f + 0.78f * track->electric.bark));
             break;
         }
         case 2: /* DX-EP */ {
             a22_f32 m = bark * key * (0.28f + 0.72f * body) * 0.55f;
-            xl = 0.72f * a22_tsin(p0 + m * a22_tsin(p2)) + 0.32f * tine * hit * a22_tsin(p3 + 0.25f * a22_tsin(p2));
-            xr = 0.72f * a22_tsin(p1 + m * a22_tsin(p2)) + 0.32f * tine * hit * a22_tsin(p4 + 0.25f * a22_tsin(p2));
+            xl = 0.72f * a22_tsin(p0 + m * a22_phase_sin(p2)) + 0.32f * tine * hit * a22_tsin(p3 + 0.25f * a22_phase_sin(p2));
+            xr = 0.72f * a22_tsin(p1 + m * a22_phase_sin(p2)) + 0.32f * tine * hit * a22_tsin(p4 + 0.25f * a22_phase_sin(p2));
             break;
         }
         case 3: /* CLAV */ {
-            a22_f32 x = a22_tsin(p0 + bark * (0.35f + 0.95f * body) * a22_tsin(p1))
-                  + 0.42f * body * a22_tsin(p2 + 0.5f * bark * a22_tsin(p0))
-                  + 0.28f * tine * hit * a22_tsin(p3);
+            a22_f32 x = a22_tsin(p0 + bark * (0.35f + 0.95f * body) * a22_phase_sin(p1))
+                  + 0.42f * body * a22_tsin(p2 + 0.5f * bark * a22_phase_sin(p0))
+                  + 0.28f * tine * hit * a22_phase_sin(p3);
             xl = a22_softclip(x * 1.45f) * 0.78f;
             xr = xl;
             break;
         }
         case 4: /* ORGAN (B3 Drawbar + Key Click + Stereo Rotary) */ {
             a22_f32 click = hit * hit * a22_noise_s(&v->u[0]) * 0.25f * tine;
-            a22_f32 drw = 0.45f * a22_tsin(p1) + 0.55f * a22_tsin(p0) + (0.22f + 0.38f * track->electric.bark) * a22_tsin(p2)
-                    + (0.18f + 0.35f * track->electric.tine) * a22_tsin(p3) + 0.22f * track->electric.tine * a22_tsin(p4) + click;
+            a22_f32 drw = 0.45f * a22_phase_sin(p1) + 0.55f * a22_phase_sin(p0) + (0.22f + 0.38f * track->electric.bark) * a22_phase_sin(p2)
+                    + (0.18f + 0.35f * track->electric.tine) * a22_phase_sin(p3) + 0.22f * track->electric.tine * a22_phase_sin(p4) + click;
             drw = a22_softclip(drw * (1.0f + 1.2f * track->electric.bark)) * 0.72f;
             xl = drw * (0.85f + 0.15f * a22_tsin(track->electric.rot_ph + 0.15f));
             xr = drw * (0.85f - 0.15f * a22_tsin(track->electric.rot_ph + 0.15f));
@@ -181,15 +181,15 @@ static void elec_render(A22Track *track, a22_Voice *v, const a22_Blk *b, a22_f32
         case 5: /* FELT: low-passed wooden felt hammer thud + stretched partials */ {
             a22_f32 h_lp = v->s[3] + 0.16f * (a22_noise_s(&v->u[0]) - v->s[3]);
             a22_f32 thump = hit * hit * h_lp * 0.44f * (0.35f + track->electric.tine);
-            a22_f32 hi = (0.38f + 0.18f * track->electric.bark) * body * a22_tsin(p1) + 0.20f * body * body * a22_tsin(p2) + 0.10f * hit * a22_tsin(p3);
+            a22_f32 hi = (0.38f + 0.18f * track->electric.bark) * body * a22_phase_sin(p1) + 0.20f * body * body * a22_phase_sin(p2) + 0.10f * hit * a22_phase_sin(p3);
             v->s[3] = h_lp;
-            xl = 0.76f * a22_tsin(p0) + hi + thump;
-            xr = 0.76f * a22_tsin(p4) + hi * 0.94f + thump;
+            xl = 0.76f * a22_phase_sin(p0) + hi + thump;
+            xr = 0.76f * a22_phase_sin(p4) + hi * 0.94f + thump;
             break;
         }
         default: /* 6 VIBES: resonant aluminum bar + 4x/10x overtone + stereo motor shimmer */ {
-            a22_f32 ov = 0.34f * tine * hit * a22_tsin(p1) + 0.14f * tine * hit * hit * a22_tsin(p2);
-            xl = a22_tsin(p0) + ov;
+            a22_f32 ov = 0.34f * tine * hit * a22_phase_sin(p1) + 0.14f * tine * hit * hit * a22_phase_sin(p2);
+            xl = a22_phase_sin(p0) + ov;
             xr = a22_tsin(p0 + 0.015f * track->electric.trem) + ov * 0.92f;
             break;
         }

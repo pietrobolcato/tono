@@ -15,14 +15,26 @@ static inline a22_f32 a22_sine_entry(int i) {
  * scaling by a22_SIN_N is exact and the mask drops the whole turns, with one float-to-int conversion where there were
  * two. For t >= 0 that is the same to the bit as taking it off; for t < 0 it is a little more exact (t + 1 rounded
  * away some of a small negative t's bits). */
-static inline a22_f32 a22_tsin(a22_f32 t)
+static inline a22_f32 a22_sine_interp(a22_f32 x, int32_t i)
 {
-    a22_f32 x = t * (a22_f32)a22_SIN_N;
-    int32_t i = a22_ifloor(x);
     x -= (a22_f32)i;
     i &= a22_SIN_N - 1;
     a22_f32 a = a22_sine_entry(i);
     return a + (a22_sine_entry(i + 1) - a) * x;
+}
+
+static inline a22_f32 a22_tsin(a22_f32 t)
+{
+    a22_f32 x = t * (a22_f32)a22_SIN_N;
+    return a22_sine_interp(x, a22_ifloor(x));
+}
+
+/* Each oscillator wraps its unmodulated phase into [0, 1). For that
+ * phase truncation already is floor. Keep signed FM offsets on a22_tsin. */
+static inline a22_f32 a22_phase_sin(a22_f32 ph)
+{
+    a22_f32 x = ph * (a22_f32)a22_SIN_N;
+    return a22_sine_interp(x, ph < 0 ? a22_ifloor(x) : (int32_t)x);
 }
 
 static inline a22_f32 a22_tcos(a22_f32 t) { return a22_tsin(t + 0.25f); }

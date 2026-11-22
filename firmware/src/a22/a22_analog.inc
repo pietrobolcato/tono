@@ -131,7 +131,7 @@ static void pulse_render(A22Track *track, a22_Voice *v, const a22_Blk *b, a22_f3
             break;
         }
         case 3: /* SUB: fat bass + clean sub-octave sine */ {
-            a22_f32 sub = a22_tsin(p3);
+            a22_f32 sub = a22_phase_sin(p3);
             a22_f32 main = a22_lerpf(a22_saw_bl(p0, d0), a22_pulse_bl(p0, d0, pw), track->analog.shape) * 0.62f + a22_saw_bl(p1, d1) * 0.38f;
             xl = main * 0.7f + sub * (0.35f + 0.4f * track->analog.tzfm);
             xr = xl;
