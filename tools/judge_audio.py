@@ -26,7 +26,14 @@ register and tonal character where relevant. Suggest a patch change only where
 the sound itself seems to need it. State what is hard to judge in a full mix.
 What should we preserve? What feels less convincing? Suggest two specific musical
 experiments, most promising first. Separate what you hear from guesses about its cause.
-Say when the excerpt is too short to judge. If you cannot access the audio, say so."""
+For a song mix, describe the actual musical phrase and who carries it into the next
+phrase. Identify the most exposed high attack and the weakest stretch of continuity,
+with times. Does the pause create anticipation, or does the music lose you?
+Could the prominent sound become tiring after repeated listening? Give a verdict:
+KEEP, REVISE, or INSUFFICIENT AUDIO. If the music repeatedly loses its thread or
+the tone hurts at the shared listening level, choose REVISE even if the mix is clean.
+If comparing clips, neither may work; name the least convincing passage in the
+preferred clip too. Say when the excerpt is too short or the audio is unavailable."""
 
 
 def excerpt(path, start, seconds):
@@ -89,14 +96,14 @@ def main():
         parser.exit(1, "Set GEMINI_API_KEY in the environment to run a listening review.\n")
     parts = [{"type": "text", "text": PROMPT + "\n" + args.focus}]
     provenance = [f"# Tono listening review ({MODEL})"]
-    for label, path in [("Candidate", args.candidate), ("Reference", args.reference)]:
+    for label, path, clip in [("Candidate", args.candidate, "A"), ("Reference", args.reference, "B")]:
         if path is None:
             continue
         audio, duration = excerpt(path, args.start, args.seconds)
-        parts.extend([{"type": "text", "text": f"{label}: {path.name}. The next audio clip is this file."},
+        parts.extend([{"type": "text", "text": f"Clip {clip}."},
                       {"type": "audio", "mime_type": "audio/wav",
                        "data": base64.b64encode(audio).decode("ascii")}])
-        provenance.append(f"- {label}: {path.resolve()} ({args.start:g}s + {duration:g}s), "
+        provenance.append(f"- Clip {clip} ({label}): {path.resolve()} ({args.start:g}s + {duration:g}s), "
                           f"excerpt SHA256 {hashlib.sha256(audio).hexdigest()}")
     answer = review(parts, key)
     print("\n".join(provenance), answer, sep="\n\n")
