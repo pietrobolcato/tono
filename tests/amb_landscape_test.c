@@ -106,6 +106,7 @@ int main(void)
     for(unsigned k=0;k<4;k++)assert(!memcmp(&amb.layer[k],&initial[k],sizeof initial[k]));
     assert(amb.chord==chord && amb_valid(&amb));
     amb_fixture_scene(0);assert(!travel.ready && !travel.wanted);
+    memset(amb_walk_config(),0,6); /* exercise Long Journeys in Endless mode next */
     song.playing=0;ambr.view=2;ambr.page=6;
     amb_knob(0,1);assert(amb_endless());
     ambr.view=0;
