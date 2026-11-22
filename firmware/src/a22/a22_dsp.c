@@ -23,12 +23,17 @@ void tono_a22_block(A22Track *t, const int16_t *engine, const int16_t *adsr,int 
     b->menv_amt=(model<8?55.f:62.f)*.01f;
     b->vel_sens=(model<8?75.f:65.f)*.01f;
     b->punch=(model<8?15.f:18.f)*.01f;
-    const float control=b->sr/(float)A22_CTRL;
-    t->att=adsr[0] ? a22_minf(1.f,b->step/(.001f+.002f*a22_exp2fx(adsr[0]*.095f))) : 1.f;
-    t->kd=a22_onepole_k(.025f*a22_exp2fx(adsr[1]*.075f),control);
-    t->sus=a22_minf((float)adsr[2]*.01f,1.f);
-    t->kr=a22_onepole_k(.015f*a22_exp2fx(adsr[3]*.088f),control);
-    t->mkd=a22_onepole_k(.014f*a22_exp2fx(34.f*.078f),control);
+    if(t->env_rate!=rate || t->env_values[0]!=adsr[0] || t->env_values[1]!=adsr[1] ||
+       t->env_values[2]!=adsr[2] || t->env_values[3]!=adsr[3]){
+        t->env_rate=rate;
+        for(int i=0;i<4;i++)t->env_values[i]=adsr[i];
+        const float control=b->sr/(float)A22_CTRL;
+        t->att=adsr[0] ? a22_minf(1.f,b->step/(.001f+.002f*a22_exp2fx(adsr[0]*.095f))) : 1.f;
+        t->kd=a22_onepole_k(.025f*a22_exp2fx(adsr[1]*.075f),control);
+        t->sus=a22_minf((float)adsr[2]*.01f,1.f);
+        t->kr=a22_onepole_k(.015f*a22_exp2fx(adsr[3]*.088f),control);
+        t->mkd=a22_onepole_k(.014f*a22_exp2fx(34.f*.078f),control);
+    }
     if(model<8) elec_block(t,b); else pulse_block(t,b);
 }
 

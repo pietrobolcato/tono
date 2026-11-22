@@ -20,7 +20,8 @@ typedef struct {
     };
     float trem_ph,wow_ph,flut_ph,elec_t_was,pwm_ph,pulse_t_was;
     float att,kd,sus,kr,mkd;
-    int model;
+    int model,env_rate;
+    int16_t env_values[4];
 } A22Track;
 typedef struct {
     a22_Voice voices[A22_POLY];

@@ -1251,7 +1251,9 @@ static __attribute__((noinline)) void amb_clock(uint32_t n)
         ambr.tail_left[k]=ambr.tail_left[k]>n?ambr.tail_left[k]-n:0;
         if(!ambr.tail_total[k]){ambr.tail_gain[k]=0;continue;}
         elapsed=ambr.tail_total[k]-ambr.tail_left[k];
-        p=(unsigned)(((uint64_t)elapsed<<15)/ambr.tail_total[k]);q=(p*p)>>15;
+        /* Every nonzero tail length is rounded to CTL; cancel that factor
+         * before dividing. Even 65535 ms fits the reduced numerator. */
+        p=(elapsed<<(15-CTL_LOG2))/(ambr.tail_total[k]>>CTL_LOG2);q=(p*p)>>15;
         q=(q*(98304u-2u*p))>>15;ambr.tail_gain[k]=(int32_t)(32768u-q);
     }
     for(k=4;k<NTRK;k++)if(ambr.handoff[k] && !ambr.tail_left[k] && !amb_track_active(k)){
