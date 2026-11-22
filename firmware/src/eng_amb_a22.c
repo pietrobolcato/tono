@@ -28,6 +28,12 @@ static inline int32_t amb_a22_half(int32_t sample)
 {
     return (sample + (int32_t)((uint32_t)sample >> 31)) >> 1;
 }
+static inline void amb_a22_mix_stereo(int left,int right,int gain,int32_t *out,int *side)
+{
+    int mid=amb_a22_half(left+right),diff=amb_a22_half(left-right);
+    *out+=mulq15(mulq15(mid,gain),VOICE_FS);
+    *side+=mulq15(mulq15(diff,gain),VOICE_FS);
+}
 static void amb_a22_render(track_t *t,voice_t *v,int32_t *out,uint32_t n,const vmod_t *m)
 {
     A22Part *a=&voice_bank[t-trk].a22;
@@ -38,11 +44,11 @@ static void amb_a22_render(track_t *t,voice_t *v,int32_t *out,uint32_t n,const v
      * body level for sustained sounds while the old track fades away. */
     v->s[0]=tono_a22_render(&a->track,&a->voices[i],m->pitch16,m->fine,
                             v->gate || amb_tail_releasing((unsigned)(t-trk)),l,r,(int)n);
-    for(i=0;i<n;i++){
-        int mid=amb_a22_half(l[i]+r[i]),side=amb_a22_half(l[i]-r[i]);
-        int gain=amp_at(m,i);
-        out[i]+=mulq15(mulq15(mid,gain),VOICE_FS);
-        a->side[i]+=mulq15(mulq15(side,gain),VOICE_FS);
+    if(m->amp0==m->amp1){
+        int gain=m->amp0;
+        for(i=0;i<n;i++)amb_a22_mix_stereo(l[i],r[i],gain,&out[i],&a->side[i]);
+    }else{
+        for(i=0;i<n;i++)amb_a22_mix_stereo(l[i],r[i],amp_at(m,i),&out[i],&a->side[i]);
     }
 }
 #define A22_E(name,id,a,b,c,d,tag) {name,{id,a,b,c,d,0,0,0},{0,50,72,36},0,TAG(tag),FX(0,0,0,0),0,0}
