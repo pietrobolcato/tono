@@ -28,6 +28,7 @@ typedef struct {
     A22Track track;
     int side[A22_CTRL];
 } A22Part;
+void tono_a22_init(void);
 void tono_a22_block(A22Track *, const int16_t *engine, const int16_t *adsr,int rate);
 void tono_a22_note(a22_Voice *, int index, int model, int note, int velocity, uint32_t random);
 int tono_a22_render(A22Track *, a22_Voice *, int pitch16, int fine, int gate,

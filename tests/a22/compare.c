@@ -76,6 +76,7 @@ static int compare(int mode,int rate,int note,int velocity)
 }
 int main(void)
 {
+    tono_a22_init();
     int difference=0;
     for(int i=0;i<=SIN_N;i++)sin_tab[i]=sin_turns((float)i/(float)SIN_N);
     for(int mode=0;mode<16;mode++){

@@ -693,6 +693,7 @@ static void amb_factory(unsigned scene)
 static void amb_scan_slots(void);
 static void amb_init(void)
 {
+    tono_a22_init();
 #if defined(USB_DUPLEX) && FELUCCA_UAC
     usb_duplex_switch(1);
 #endif
