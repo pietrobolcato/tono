@@ -93,14 +93,14 @@ int AMB_MAIN(int argc,char **argv)
     /* Same small turn at either end of the pot must adjust the stored
      * layer level by that distance, even on the first turn after selection. */
     for(unsigned pos=160;pos<=800;pos+=640){
-        amb_target(0);amb_master(pos,1);amb.layer[0].level=89; /* 70% */
+        amb_target(0);unsigned song_gain=amb.master;amb_master(pos,1);amb.layer[0].level=89; /* 70% */
         unsigned sibling=amb.layer[1].level;
         amb_target(1);amb_master(pos,0);amb_master(pos+2,0);
         assert(amb.layer[0].level==89);
         amb_master(pos-32,0);assert(amb.layer[0].level==85);
         amb_master(pos+32,0);assert(amb.layer[0].level==93);
         amb_master(pos,0);assert(amb.layer[0].level==89);
-        assert(amb.master==pos && amb.layer[1].level==sibling);
+        assert(amb.master==song_gain && amb.layer[1].level==sibling);
     }
     amb_master(1023,0);amb.layer[0].level=1;
     amb_master(600,0);assert(amb.layer[0].level==0);

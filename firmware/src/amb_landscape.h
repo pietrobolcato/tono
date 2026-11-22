@@ -25,8 +25,8 @@ static struct {uint32_t due,serial;uint8_t armed;} lane_clock[2];
 static uint8_t role_pending,pattern_pending;
 static unsigned amb_lane_value(unsigned lane,unsigned knob)
 {
-    if(!knob)return !!(favorites.factory[15][13]&(4u<<lane));
-    unsigned raw=favorites.factory[14][24+3*lane+knob-1];
+    if(!knob)return !!(amb_controls.walk[5]&(4u<<lane));
+    unsigned raw=amb_controls.lanes[3*lane+knob-1];
     if(knob==1){
         // Old Move tick and Journey records both follow the automatic clock.
         if(raw==2 || raw==3 || raw==5 || raw==6)return raw-1;
@@ -42,8 +42,8 @@ static unsigned amb_travel_guard(void)
 {
     return ((ambr.evolve_open || ambr.evolve_queued)?1u<<ambr.evolve_layer:0)|amb_sound_locks()|(ambr.view==1?1u<<ambr.edit_layer:0);
 }
-static int amb_endless(void){return (favorites.factory[15][13]&2)!=0;}
-static int amb_vary_patterns(void){return (favorites.factory[15][13]&4)!=0;}
+static int amb_endless(void){return (amb_controls.walk[5]&2)!=0;}
+static int amb_vary_patterns(void){return (amb_controls.walk[5]&4)!=0;}
 static void amb_lane_adjust(unsigned lane,unsigned knob,int delta)
 {
     unsigned old=amb_lane_value(lane,knob);
@@ -51,17 +51,17 @@ static void amb_lane_adjust(unsigned lane,unsigned knob,int delta)
     if(knob>=2 && unit==LANE_FOLLOW)return;
     unsigned v=knob==1?amb_clock_turn(old,delta,LANE_FOLLOW):knob?(unsigned)clamp((int)old+delta,1,120):(unsigned)(delta>0);
     if(v==old)return;
-    uint8_t *cfg=&favorites.factory[14][24+3*lane];
+    uint8_t *cfg=&amb_controls.lanes[3*lane];
     ambr.loading=1;
     if(!knob){
         cfg[0]=unit+1;
-        favorites.factory[15][13]^=4u<<lane;
+        amb_controls.walk[5]^=4u<<lane;
     }else cfg[knob-1]=knob==1?v+1:v;
     if(knob==2 && amb_lane_value(lane,3)<v)cfg[2]=v;
     if(knob==3 && amb_lane_value(lane,2)>v)cfg[1]=v;
     lane_clock[lane].armed=0;
     if(lane)role_pending=0;else pattern_pending=0;
-    ambr.loading=0;settings_save();ambr.dirty=1;
+    ambr.loading=0;ambr.dirty=1;
 }
 static int amb_lane_due(unsigned lane)
 {

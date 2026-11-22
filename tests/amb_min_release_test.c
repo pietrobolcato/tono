@@ -4,14 +4,14 @@
 int main(void)
 {
     unsigned i,k,t,cap[]={250,500,3000,6000,30000};int32_t out[CTL*2];
-    memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();favorites.factory[15][13]=1;
+    memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();
     /* Q24 envelope x Q15 gain must retain full precision, without 32-bit
      * multiplication overflow that would collapse the audible release. */
     ambr.tail_env[0][0]=1<<24;ambr.tail_gain[0]=32768;assert(amb_tail_envelope(0,0)==1<<24);
     ambr.tail_gain[0]=16384;assert(amb_tail_envelope(0,0)==1<<23);
 
     for(t=0;t<NELEM(cap);t++){
-        song.playing=0;amb_fixture_scene(0);ambr.view=2;ambr.page=6;amb_knob(1,((int)cap[t]-amb.release_ms)/250);assert(amb.release_ms==cap[t] && amb_valid(&amb));
+        song.playing=0;amb_fixture_scene(0);amb_controls.walk[5]=1;ambr.view=2;ambr.page=6;amb_knob(1,((int)cap[t]-amb.release_ms)/250);assert(amb.release_ms==cap[t] && amb_valid(&amb));
         amb_patch(0,3,0);amb_prepare();trk[0].engine=trk[0].eng_req;panic_req=0;
         trk_note_on(&trk[0],60,100);for(i=0;i<FS/5u/CTL;i++)mix_block(out,CTL);
         assert(amb_track_active(0));amb_target(1);ambr.view=1;ambr.page=0;
@@ -35,19 +35,19 @@ int main(void)
         }
     }
     /* Fast internal FM envelopes must not end the outgoing voice early. */
-    song.playing=0;amb_fixture_scene(0);amb.release_ms=3000;amb_patch(0,2,0);
+    song.playing=0;amb_fixture_scene(0);amb_controls.walk[5]=1;amb.release_ms=3000;amb_patch(0,2,0);
     amb_prepare();trk[0].engine=trk[0].eng_req;panic_req=0;trk_note_on(&trk[0],60,100);
     for(i=0;i<FS/5u/CTL;i++)mix_block(out,CTL);assert(amb_track_active(0));amb_patch(0,0,0);
     for(i=0;i<FS*29u/10u/CTL;i++)mix_block(out,CTL);
     assert(ambr.handoff[0] && amb_track_active(0));
     for(i=0;i<FS/5u/CTL;i++)mix_block(out,CTL);assert(!ambr.handoff[0]);
     /* Ordinary musical note-off keeps its original short release. */
-    amb_fixture_scene(0);amb_patch(0,3,0);amb_prepare();trk[0].engine=trk[0].eng_req;panic_req=0;
+    amb_fixture_scene(0);amb_controls.walk[5]=1;amb_patch(0,3,0);amb_prepare();trk[0].engine=trk[0].eng_req;panic_req=0;
     trk[0].p[P_REL]=0;trk_note_on(&trk[0],60,100);for(i=0;i<FS/5u/CTL;i++)track_render(&trk[0],out,CTL);
     trk_note_off(&trk[0],60);for(i=0;i<FS/2u/CTL;i++)track_render(&trk[0],out,CTL);
     assert(!amb_track_active(0) && !ambr.handoff[0]);
     /* A user PHRASE commits on four bars and releases only generated parts. */
-    song.playing=0;amb_fixture_scene(0);amb.layer[2].generated=0;amb.layer[2].notes[3]=61;
+    song.playing=0;amb_fixture_scene(0);amb_controls.walk[5]=1;amb.layer[2].generated=0;amb.layer[2].notes[3]=61;
     {amb_layer_t manual=amb.layer[2];
         amb_prepare();for(k=0;k<4;k++)trk[k].engine=trk[k].eng_req;panic_req=0;
         trk_note_on(&trk[0],60,100);for(i=0;i<FS/5u/CTL;i++)mix_block(out,CTL);
@@ -56,7 +56,7 @@ int main(void)
         assert(!memcmp(&manual,&amb.layer[2],sizeof manual));}
     /* Whole-song recalls hold old FX, output EQ and master until all old
      * voices have released; silent incoming layers cannot enter early. */
-    song.playing=0;amb_fixture_scene(0);amb_prepare();for(k=0;k<4;k++)trk[k].engine=trk[k].eng_req;panic_req=0;
+    song.playing=0;amb_fixture_scene(0);amb_controls.walk[5]=1;amb_prepare();for(k=0;k<4;k++)trk[k].engine=trk[k].eng_req;panic_req=0;
     trk_note_on(&trk[0],60,100);for(i=0;i<FS/5u/CTL;i++)mix_block(out,CTL);
     {amb_piece_t next;int old_fx=song.g[G_RTYPE];unsigned old_master=amb.master;
         amb_make_scene(&next,1);next.global[G_RTYPE]=(old_fx+1)%5;next.master=400;next.eq[0]=6;
@@ -67,7 +67,7 @@ int main(void)
         for(i=0;i<FS/5u/CTL;i++)mix_block(out,CTL);
         assert(!ambr.piece_transition && song.g[G_RTYPE]==next.global[G_RTYPE] && !amb_tail_any());}
     /* HOME header follows accepted layer gain, not selection or pot jitter. */
-    amb_fixture_scene(0);ambr.view=0;amb_target(4);fm1_ms=1000;
+    amb_fixture_scene(0);amb_controls.walk[5]=1;ambr.view=0;amb_target(4);fm1_ms=1000;
     {unsigned master=amb.master;amb_master(0,0);amb_master(1023,0);
         assert(amb_level_feedback()==4 && amb.master==master);
         fm1_ms=2199;assert(amb_level_feedback()==4);amb_master(1023,0);

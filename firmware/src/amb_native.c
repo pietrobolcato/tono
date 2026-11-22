@@ -45,6 +45,19 @@ static void amb_anchor_master(amb_piece_t *p)
     }
 }
 static amb_piece_t amb;
+/* Optional trailer after the established piece or complete piece+take record.
+ * Theme belongs to the device. Musical preferences start with the composition. */
+typedef struct {
+    uint8_t tag, schema;
+    uint8_t walk[6], lanes[6];
+    int8_t octave[4];
+    uint8_t flags, reserved; /* bit 0 train scenery, bit 1 dry monitor */
+} amb_song_controls_t;
+static const amb_song_controls_t amb_factory_controls={
+    .tag='T',.schema=1,.walk={1,4,16,32,2,2}
+};
+static amb_song_controls_t amb_controls;
+
 #include "amb_grain.h"
 static int8_t amb_reset_grain[4][4];
 static int8_t amb_reset_eq[4][4];
@@ -312,7 +325,7 @@ static void amb_begin_change(unsigned k)
 }
 /* Release-only slots 5 and 6 use the existing mixer. They never accept
  * sequencer notes and stay inside the live voice governor. */
-static int amb_crossfade(void){return !(favorites.factory[15][13]&1);}
+static int amb_crossfade(void){return !(amb_controls.walk[5]&1);}
 static void amb_sound_change(unsigned k)
 {
     ambr.last_edit_route[k]=0;
@@ -587,19 +600,30 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
 }
 typedef struct {amb_piece_t piece;amb_take_t take;} amb_take_song_t;
 _Static_assert(sizeof(amb_take_song_t)<=ST_PAYLOAD_MAX,"voice take fits an existing song");
-static amb_take_song_t amb_pending_song __attribute__((section(".pool")));
+typedef struct {
+    union {
+        amb_take_song_t legacy;
+        struct { amb_piece_t piece; amb_song_controls_t compact; };
+    };
+    amb_song_controls_t extended;
+} amb_song_record_t;
+_Static_assert(sizeof(amb_song_controls_t)==20 && sizeof(amb_take_song_t)==3648 &&
+               sizeof(amb_song_record_t)<=ST_PAYLOAD_MAX,"preserve full-length takes and old wire offsets");
+static amb_song_record_t amb_pending_song __attribute__((section(".pool")));
 #define amb_pending amb_pending_song.piece
-static uint8_t amb_load_take,amb_capture_page,amb_replace_take;
+static uint8_t amb_load_controls,amb_load_take,amb_capture_page,amb_replace_take;
 static uint32_t amb_input_seen,amb_input_ms;
 
 static volatile uint8_t amb_pending_ready;
 static void amb_release(unsigned k);
 static void amb_install(const amb_piece_t *p)
 {
+    const amb_song_controls_t *incoming=amb_load_controls?
+        (amb_load_take?&amb_pending_song.extended:&amb_pending_song.compact):&amb_factory_controls;
     if(amb_load_take){
         take_rec.running=amb_capture_page=amb_replace_take=0;
         take_generation[take_active^1]++;
-        take_banks[take_active^1]=amb_pending_song.take;RING_PUBLISH();take_active^=1;
+        take_banks[take_active^1]=amb_pending_song.legacy.take;RING_PUBLISH();take_active^=1;
         amb_load_take=0;
     }
 
@@ -612,6 +636,12 @@ static void amb_install(const amb_piece_t *p)
         /* Silent old layers also wait for the coordinated piece handoff. */
         for(k=0;k<4;k++)if(!ambr.handoff[k]){ambr.handoff[k]=1;ambr.tail_left[k]=ambr.tail_total[k]=0;memcpy(ambr.tail_eq[k],amb.layer_eq[k],4);}
     }else ambr.piece_transition=0;
+    amb_controls=*incoming;amb_load_controls=0;
+    for(k=0;k<4;k++)amb_bar_octave[k]=amb_controls.octave[k];
+    memcpy(ambr.octave_seen,(const void *)ambr.octave_taps,sizeof ambr.octave_seen);
+    ambr.zen_train=amb_controls.flags&1u;
+    amb_monitor_requested=(amb_controls.flags>>1)&1u;
+    memset(ambr.gen_edit,0,sizeof ambr.gen_edit);
     ambr.evolve_open=ambr.evolve_queued=0;memset(&travel,0,sizeof travel);amb_auto_reset();amb_reset_lanes();
     amb=*p;memcpy(amb_reset_grain,amb.grain,sizeof amb_reset_grain);memcpy(amb_reset_layer,amb.layer,sizeof amb_reset_layer);memcpy(amb_reset_eq,amb.layer_eq,sizeof amb_reset_eq);
     memset(ambr.recent,0,sizeof ambr.recent);
@@ -631,7 +661,7 @@ static void amb_start_factory(unsigned scene)
 }
 static void amb_factory(unsigned scene)
 {
-    amb_load_take=0;amb_make_scene(&amb_pending,scene);amb_start_factory(scene);
+    amb_load_take=amb_load_controls=0;amb_make_scene(&amb_pending,scene);amb_start_factory(scene);
 }
 static void amb_scan_slots(void);
 static void amb_init(void)
@@ -1237,7 +1267,7 @@ static void amb_master(int32_t raw,int boot)
     if(raw<0 || raw>1023)return;
     if(boot || ambr.master_raw>1023){
         ambr.master_raw=(uint16_t)raw;
-        if(boot){amb.master=(uint16_t)raw;ambr.master_smooth=raw*256;}
+        if(boot)ambr.master_smooth=(int32_t)amb.master*256;
         return;
     }
     // Only act on physical motion. Changing target or loading a song is silent.
@@ -1412,7 +1442,7 @@ static int amb_valid(const amb_piece_t *p)
 }
 enum { AMB_EMPTY, AMB_SAVED, AMB_UNREADABLE };
 static uint8_t amb_slot_state[AMB_SLOTS],amb_save_slot;
-static amb_take_song_t amb_saved_song;
+static amb_song_record_t amb_saved_song;
 #define amb_snapshot amb_saved_song.piece
 static unsigned amb_save_bytes;
 static int amb_loadable(const amb_piece_t *p,int n)
@@ -1423,8 +1453,21 @@ static int amb_loadable(const amb_piece_t *p,int n)
 static int amb_read_slot(unsigned slot)
 {
     int n=st_load(amb_object(slot),&amb_pending_song,sizeof amb_pending_song);
-    amb_load_take=n==(int)sizeof amb_pending_song && amb_take_valid(&amb_pending_song.take);
-    return amb_load_take?(int)sizeof amb_pending:n;
+    int compact=n==(int)(sizeof(amb_piece_t)+sizeof(amb_song_controls_t));
+    int extended=n==(int)sizeof(amb_song_record_t);
+    amb_load_controls=0;
+    amb_load_take=n==(int)sizeof(amb_take_song_t) || extended;
+    if(amb_load_take && !amb_take_valid(&amb_pending_song.legacy.take))return -1;
+    if(compact || extended){
+        const amb_song_controls_t *c=extended?&amb_pending_song.extended:&amb_pending_song.compact;
+        if(c->tag!='T' || c->schema!=1 || c->reserved || c->flags>3 ||
+           c->walk[0]>7 || c->walk[1]>120 || c->walk[2]>120 || c->walk[3]>80 ||
+           c->walk[4]>2 || c->walk[5]>15)return -1;
+        for(unsigned i=0;i<4;i++)if(c->octave[i]<-3 || c->octave[i]>3)return -1;
+        for(unsigned i=0;i<6;i++)if(c->lanes[i]>(i%3?120:6))return -1;
+        amb_load_controls=1;
+    }
+    return amb_load_take || amb_load_controls?(int)sizeof amb_pending:n;
 }
 static void amb_scan_slots(void)
 {
@@ -1488,10 +1531,15 @@ static void amb_save(void)
     uint32_t flags=irq_save();
 #endif
     amb_snapshot=amb;
-    amb_save_bytes=sizeof amb_snapshot;
+    amb_song_controls_t *saved_controls=&amb_saved_song.compact;
+    amb_save_bytes=sizeof amb_snapshot+sizeof *saved_controls;
     for(unsigned k=0;k<4;k++)if(amb.layer[k].engine==ENGI_AMB_SAMPLE && amb.layer[k].base[P_E0]==AMB_MIC_SOURCE && amb_current_take()->length){
-        amb_saved_song.take=*amb_current_take();amb_save_bytes=sizeof amb_saved_song;break;
+        amb_saved_song.legacy.take=*amb_current_take();saved_controls=&amb_saved_song.extended;
+        amb_save_bytes=sizeof amb_saved_song;break;
     }
+    *saved_controls=amb_controls;
+    saved_controls->flags=(uint8_t)(ambr.zen_train|(amb_monitor_requested?2u:0u));
+    for(unsigned k=0;k<4;k++)saved_controls->octave[k]=(int8_t)amb_bar_octave[k];
 #if FELUCCA_FLASH
     irq_restore(flags);
 #endif
@@ -1836,13 +1884,13 @@ static void amb_knob(unsigned knob,int delta)
         if(ambr.page==6){
             if(knob==3)amb_walk_clock(amb_walk_unit(),delta>0);
             if(knob==2 && amb_crossfade()!=(delta>0)){
-                favorites.factory[15][13]^=1;settings_save();ambr.dirty=1;
+                amb_controls.walk[5]^=1;ambr.dirty=1;
             }
             if(knob==1)amb.release_ms=(uint16_t)clamp((int)amb.release_ms+delta*250,250,AMB_MAX_TAIL_MS);
             if(knob==0 && amb_endless()!=(delta>0)){
-                favorites.factory[15][13]^=2;
+                amb_controls.walk[5]^=2;
                 if(!amb_endless() && travel.ready)amb_landscape_turn(0);
-                settings_save();ambr.dirty=1;
+                ambr.dirty=1;
             }
             return;
         }
@@ -1906,7 +1954,7 @@ static void amb_rec(void)
     if(ambr.piece_preview!=255) {
         unsigned p=ambr.piece_preview;ambr.preset_position=(uint8_t)p;
         if(p<AMB_SCENE_COUNT){
-            amb_load_take=0;amb_pending_ready=0;amb_make_scene(&amb_pending,p);
+            amb_load_take=amb_load_controls=0;amb_pending_ready=0;amb_make_scene(&amb_pending,p);
             /* A confirmed factory recall is a new take. A slot recall keeps
              * its stored seed. The default at power-on remains reproducible. */
             if(p!=AMB_SCENE_INN)amb_pending.policy.seed=amb_hash(amb_pending.policy.seed+fm1_ms+0x9e3779b9u*(++ambr.factory_take));

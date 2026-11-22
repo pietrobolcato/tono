@@ -4,11 +4,10 @@
 int main(void)
 {
     memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();
-    amb_fresh_travel();
     assert(amb_walk_value(0)==WALK_BARS && amb_walk_value(1)==4 && amb_walk_value(2)==16 && amb_walk_value(3)==32);
     assert(amb_journey_style()==2 && amb_endless() && amb_crossfade() && amb.release_ms==6000);
     assert(!amb_lane_value(0,0) && !amb_lane_value(1,0));
-    /* Imported legacy settings take precedence, including an explicit Off. */
+    /* Off is an explicit setting on this song. */
     memset(amb_walk_config(),0,6);
     assert(!amb_walk_value(0) && !amb_journey_style());
     press(B_GLO);turn(EN_SELECT,1);unsigned interval=amb.auto_index;
@@ -27,8 +26,9 @@ int main(void)
     turn(EN_K1,-1);turn(EN_SELECT,-1);assert(!amb_vary_patterns());
     turn(EN_K2,-3);turn(EN_K3,-3);
     assert(amb_walk_value(0)==WALK_SECONDS && amb_walk_value(1)==1 && amb_walk_value(2)==1);
-    uint8_t pref[5];memcpy(pref,amb_walk_config(),sizeof pref);
-    amb_fixture_scene(3);assert(!memcmp(amb_walk_config(),pref,sizeof pref));
+    uint8_t pref[6];memcpy(pref,amb_walk_config(),sizeof pref);
+    amb_fixture_scene(3);assert(!memcmp(amb_walk_config(),amb_factory_controls.walk,sizeof pref));
+    memcpy(amb_walk_config(),pref,sizeof pref); /* clock tests use one-second intervals */
     song.playing=1;uint32_t start=fm1_ms=0xffffff00u;amb_auto_tick();
     fm1_ms=start+999;amb_auto_tick();assert(!travel.wanted);
     fm1_ms++;amb_auto_tick();assert(travel.wanted && !travel.indicator);
@@ -59,9 +59,9 @@ int main(void)
     song.playing=0;amb_walk_config()[4]=0;amb_journey_recentre();
     amb.policy.active[0]=8;memset(amb.policy.pending,255,3);
     amb_landscape_turn(4);assert(amb.policy.active[0]==8);
-    favorites.factory[14][24]=4; /* Old Journey clock. */
-    favorites.factory[14][27]=1; /* Old Move tick clock. */
-    favorites.factory[15][13]|=4|8;
+    amb_controls.lanes[0]=4; /* Old Journey clock. */
+    amb_controls.lanes[3]=1; /* Old Move tick clock. */
+    amb_controls.walk[5]|=4|8;
     assert(amb_lane_value(0,1)==LANE_FOLLOW && amb_lane_value(1,1)==LANE_FOLLOW);
     amb_walk_clock(WALK_MINUTES,0);
     assert(amb_walk_unit()==WALK_MINUTES && !amb_walk_value(0));

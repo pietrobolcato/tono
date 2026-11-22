@@ -90,6 +90,8 @@ static void persistent_sound_lock(void)
 int main(void)
 {
     memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();
+    /* Exercise the bounded Long Journeys path, independently of factory Travel. */
+    memset(amb_walk_config(),0,6);
     amb.layer[1].generated=0;amb.layer[1].notes[3]=67;
     amb_layer_t initial[4];memcpy(initial,amb.layer,sizeof initial);
     song.playing=1;ambr.step=1;unsigned chord=amb.chord;

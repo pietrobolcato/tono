@@ -36,7 +36,7 @@ int main(void)
 {
     check_eq_display();
     unsigned i,k,old_engine;int32_t out[CTL*2];amb_piece_t old;
-    memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();amb_fixture_scene(0);favorites.factory[15][13]=1;assert(amb.release_ms==6000);amb.release_ms=3000;
+    memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();amb_fixture_scene(0);amb_controls.walk[5]=1;assert(amb.release_ms==6000);amb.release_ms=3000;
     amb.auto_index=0;ambr.solo=0;seq_start();for(i=0;i<FS*5u/CTL;i++)mix_block(out,CTL);
     old_engine=trk[0].engine;amb_patch(0,2,0);
     assert(ambr.handoff[0] && trk[0].engine==old_engine && trk[0].eng_req==old_engine);
@@ -48,14 +48,14 @@ int main(void)
     assert(!ambr.handoff[0] && trk[0].eng_req==amb.layer[0].engine);
     assert(i<FS*3u/CTL);printf("release handoff completed in %.3f s PASS\n",0.1+(double)i*CTL/FS);
     /* The cap applies to internal-envelope FM6 as well as ordinary ADSR. */
-    song.playing=0;amb_fixture_scene(0);amb.release_ms=500;amb_patch(0,2,0);amb_prepare();trk[0].engine=trk[0].eng_req;panic_req=0;
+    song.playing=0;amb_fixture_scene(0);amb_controls.walk[5]=1;amb.release_ms=500;amb_patch(0,2,0);amb_prepare();trk[0].engine=trk[0].eng_req;panic_req=0;
     trk_note_on(&trk[0],60,90);for(i=0;i<FS/CTL;i++)mix_block(out,CTL);
     amb_patch(0,0,0);assert(ambr.handoff[0]);
     for(i=0;i<FS/CTL && ambr.handoff[0];i++)mix_block(out,CTL);
     assert(!ambr.handoff[0] && i<=FS/2u/CTL+2);
     /* Every outgoing role obeys a short cap, without adding synth voices. */
     for(k=0;k<7;k++){
-        song.playing=0;amb_fixture_scene(0);amb.release_ms=250;amb_patch(0,k,0);
+        song.playing=0;amb_fixture_scene(0);amb_controls.walk[5]=1;amb.release_ms=250;amb_patch(0,k,0);
         amb_prepare();trk[0].engine=trk[0].eng_req;panic_req=0;
         trk_note_on(&trk[0],k==4?36:60,90);for(i=0;i<FS/4u/CTL;i++)mix_block(out,CTL);
         amb_patch(0,(k+1)%7,0);
@@ -63,7 +63,7 @@ int main(void)
         assert(!ambr.handoff[0] && i<=FS/4u/CTL+2);
     }
     /* Entry edits the selected slot silently; the sequencer remains the player. */
-    song.playing=0;amb_fixture_scene(0);amb_target(1);ambr.view=1;ambr.page=4;press(B_REC);ambr.cursor=5;
+    song.playing=0;amb_fixture_scene(0);amb_controls.walk[5]=1;amb_target(1);ambr.view=1;ambr.page=4;press(B_REC);ambr.cursor=5;
     amb.layer[0].notes[2]=0;fm1_in.notes=host_notes=1u<<4;amb_input();keyboard_block();
     assert(ambr.cursor==5 && amb.layer[0].notes[5]==57 && !amb.layer[0].notes[2] && kb_note[4]==KB_SILENT);
     fm1_in.notes=host_notes=0;keyboard_block();
@@ -72,7 +72,7 @@ int main(void)
     amb_layer_step(0,20,1);assert(ambr.playhead[0]==5);
     amb_layer_step(0,21,1);assert(ambr.playhead[0]==5);
     /* EQ and cap round trip; legacy v3's 1400-byte payload migrates flat/default. */
-    song.playing=0;amb_fixture_scene(0);amb.layer_eq[0][0]=6;amb.layer_eq[1][2]=-9;amb.release_ms=1750;
+    song.playing=0;amb_fixture_scene(0);amb_controls.walk[5]=1;amb.layer_eq[0][0]=6;amb.layer_eq[1][2]=-9;amb.release_ms=1750;
     ambr.slot=0;amb_save();old=amb;amb_fixture_scene(1);assert(amb_recall(0));assert(!memcmp(&old,&amb,sizeof amb));
     old.version=3;assert(!st_save(amb_object(1),&old,1400));assert(amb_recall(1));
     assert(amb.version==AMB_VERSION && amb.release_ms==3000);

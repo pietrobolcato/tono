@@ -1,17 +1,10 @@
-/* SPDX-License-Identifier: GPL-3.0-only
- * Global settings; these engine-15 bytes were unused in older PER4 records.
- * All zero decodes to Off, 4–4 bars/seconds, reach 16 and Long Journeys. */
+/* SPDX-License-Identifier: GPL-3.0-only */
+/* Travel control encodings are shared by both generations of song saves. */
 enum { WALK_OFF, WALK_BARS, WALK_SECONDS, WALK_SECONDS_OFF, WALK_MINUTES, WALK_HOURS };
 static const char *const amb_walk_styles[]={"Long Journeys","New Chapters","Branching Paths"};
 static const char *const amb_walk_clocks[]={"Off","Bars","Seconds","Seconds","Minutes","Hours"};
 static const char *const amb_walk_labels[]={"UNIT","MIN","MAX","REACH"};
-static uint8_t *amb_walk_config(void){return &favorites.factory[15][8];}
-/* Seed RAM before persist_boot so even an explicitly disabled saved clock wins. */
-static void amb_fresh_travel(void)
-{
-    static const uint8_t fresh[]={WALK_BARS,4,16,32,2,2}; /* Branching Paths, Endless */
-    memcpy(amb_walk_config(),fresh,sizeof fresh);
-}
+static uint8_t *amb_walk_config(void){return amb_controls.walk;}
 static unsigned amb_journey_style(void){unsigned v=amb_walk_config()[4];return v<3?v:0;}
 /* Keep legacy encodings for active Bars/Seconds and inactive Bars/Seconds. */
 static unsigned amb_walk_unit(void)
@@ -50,7 +43,7 @@ static void amb_walk_clock(unsigned unit,int enabled)
     unsigned v=enabled?unit:unit==WALK_BARS?WALK_OFF:unit==WALK_SECONDS?WALK_SECONDS_OFF:unit+2u;
     if(amb_walk_config()[0]==v)return;
     amb_walk_config()[0]=(uint8_t)v;
-    amb_auto_reset();settings_save();ambr.dirty=1;
+    amb_auto_reset();ambr.dirty=1;
 }
 static void amb_journey_recentre(void);
 static void amb_walk_adjust(unsigned k,int delta)
@@ -69,5 +62,5 @@ static void amb_walk_adjust(unsigned k,int delta)
         if(k==1 && cfg[k]>amb_walk_value(2))cfg[2]=cfg[k];
         if(k==2 && cfg[k]<amb_walk_value(1))cfg[1]=cfg[k];
     }
-    amb_auto_reset();settings_save();ambr.dirty=1;
+    amb_auto_reset();ambr.dirty=1;
 }
