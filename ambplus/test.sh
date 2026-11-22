@@ -5,7 +5,7 @@ set -eu
 AMB_PROJECT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 cd "$AMB_PROJECT"
 mkdir -p build/host build/amb-ui
-for AMB_TEST in amb_controls_test amb_policy_test amb_music_test; do
+for AMB_TEST in amb_pcm_octets_test amb_controls_test amb_policy_test amb_music_test; do
     cc -std=c11 -O2 -Wall -Wextra -Werror "tests/$AMB_TEST.c" -o "build/host/$AMB_TEST"
     "build/host/$AMB_TEST"
 done
