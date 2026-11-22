@@ -1243,10 +1243,16 @@ static void amb_master(int32_t raw,int boot)
     // Only act on physical motion. Changing target or loading a song is silent.
     int delta=raw-ambr.master_raw;
     if(delta>-4 && delta<4 && ((raw!=0 && raw!=1023) || !delta))return;
+    /* Difference of quantized positions preserves sub-step travel across
+     * polls and responds immediately when reversing away from a limit. */
+    int layer_delta=(raw*127)/1023-(ambr.master_raw*127)/1023;
     ambr.master_raw=(uint16_t)raw;
-    if(target==0){amb.master=(uint16_t)raw;if(ambr.piece_transition)ambr.piece_master=(uint16_t)raw;}
+    if(target==0){
+        amb.master=(uint16_t)clamp(amb.master+delta,0,1023);
+        if(ambr.piece_transition)ambr.piece_master=(uint16_t)clamp(ambr.piece_master+delta,0,1023);
+    }
     else {
-        unsigned level=(unsigned)raw*127u/1023u;
+        unsigned level=(unsigned)clamp(amb.layer[target-1].level+layer_delta,0,127);
         if(level!=amb.layer[target-1].level){ambr.last_edit_route[target-1]=3+1; /* VOLUME */
             ambr.level_feedback_active=1;ambr.level_feedback_target=(uint8_t)target;ambr.level_feedback_ms=fm1_ms;}
         amb.layer[target-1].level=(uint8_t)level;
