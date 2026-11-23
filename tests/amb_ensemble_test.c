@@ -17,6 +17,8 @@ static void check_knobs(void)
     for(unsigned knob=0;knob<4;knob++){
         char label[16]={0},before[24]={0},after[24]={0};
         if((ambr.view==1 && ambr.page==4 && !amb.layer[0].generated && amb.layer[0].role!=4 && !amb_mono_role(&amb.layer[0]) && knob==0) ||
+           (ambr.view==1 && ambr.page==3 && ambr.bank &&
+            (knob==3 || (knob==2 && amb.layer[0].base[P_LRATE]<AMB_RANDOM_BARS))) ||
            (ambr.view==2 && ambr.page==1 && knob==3)){
             amb_knob(knob,2);amb_knob_value(knob,label,after);
             assert(!*label && !*after && !memcmp(&amb,&piece,sizeof amb) && ambr.cursor==runtime.cursor);
@@ -43,10 +45,17 @@ static void audit_controls(void)
         ambr.view=0;amb_target(1);check_knobs();
         ambr.view=1;
         for(unsigned page=0;page<7;page++){
-            ambr.page=page;
+            ambr.page=page;ambr.bank=0;
             if(page==1){
                 for(ambr.bank=0;ambr.bank<(role==6?3:2);ambr.bank++)
                     for(ambr.detail=0;ambr.detail<(ambr.bank && role!=6?3:1);ambr.detail++)check_knobs();
+            }else if(page==3){
+                check_knobs();
+                int rate=amb.layer[0].base[P_LRATE];
+                ambr.bank=1;check_knobs();
+                amb_knob(0,1);check_knobs();
+                amb_knob(0,1);check_knobs();
+                amb.layer[0].base[P_LRATE]=rate;
             }else if(page==4){
                 for(unsigned gen=0;gen<2;gen++)for(unsigned mode=0;mode<(role==0?AMB_CHANT+1:5);mode++){
                     amb.layer[0].generated=gen;amb.layer[0].mode=mode;check_knobs();
