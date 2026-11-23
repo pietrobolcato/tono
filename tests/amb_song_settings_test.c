@@ -33,6 +33,20 @@ int main(void)
     /* New songs retain their own gains when a physical pot is first sampled. */
     unsigned factory_master=amb.master;
     amb_master(117,1);assert(amb.master==factory_master);
+    ambr.view=0;amb_target(0);
+    int echo=amb.global[G_DMIX];
+    assert(!amb_controls.thinning);
+    for(unsigned step=0;step<1024;step++)assert(amb_keep_onset(0,step));
+    amb_knob(1,-25);
+    assert(amb_controls.thinning==50 && amb.global[G_DMIX]==echo);
+    unsigned kept=0;
+    for(unsigned step=0;step<1024;step++)kept+=amb_keep_onset(0,step);
+    assert(kept>435 && kept<590);
+    btn_down(B_HOME);frame();turn(EN_K2,echo>48?-1:1);btn_up(B_HOME);frame();
+    assert(amb.global[G_DMIX]!=echo && amb_controls.thinning==50 && !ambr.view);
+    amb_knob(1,-100);
+    for(unsigned step=0;step<1024;step++)assert(!amb_keep_onset(0,step));
+    amb_knob(1,25);
     set_travel(1);
     amb_target(0);amb_master(225,0);assert(amb.master==(unsigned)clamp((int)factory_master+108,0,1023));
     ambr.view=0;amb_target(1);
@@ -61,6 +75,7 @@ int main(void)
     amb_theme_turn(1);
     ambr.slot=1;amb_save();
     assert(amb_recall(0) && !memcmp(&amb,&a,sizeof a));
+    assert(amb_controls.thinning==50);
     assert(!memcmp(amb_controls.walk,controls.walk,6) && !memcmp(amb_controls.lanes,controls.lanes,6));
     assert(amb_bar_octave[0]==-2 && amb_bar_octave[3]==1 && amb_monitor_requested && ambr.zen_train);
     assert(amb_theme()==2 && ambr.solo==2 && amb_sound_locks()==5);

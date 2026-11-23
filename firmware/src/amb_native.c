@@ -51,7 +51,7 @@ typedef struct {
     uint8_t tag, schema;
     uint8_t walk[6], lanes[6];
     int8_t octave[4];
-    uint8_t flags, reserved; /* bit 0 train scenery, bit 1 dry monitor */
+    uint8_t flags, thinning; /* bit 0 train scenery, bit 1 dry monitor */
 } amb_song_controls_t;
 static const amb_song_controls_t amb_factory_controls={
     .tag='T',.schema=1,.walk={1,4,16,32,2,2}
@@ -1126,6 +1126,13 @@ static void amb_capture_generated(unsigned k)
     for(i=n=0;i<16;i++)n+=l->notes[i]!=0;
     if(!n && (amb.policy.active[0]!=8 || !ambr.recent_valid[k])){l->notes[0]=(uint8_t)(ambr.voicing[k]+(l->role==2?12:0));l->velocity[0]=70;}
 }
+/* Score each opportunity without advancing any generator or audio RNG.
+ * A lower setting keeps a subset of the same attacks. */
+static int amb_keep_onset(unsigned layer,uint32_t position)
+{
+    unsigned thinning=amb_controls.thinning;
+    return !thinning || (thinning<100 && amb_hash(amb.policy.seed+position+layer*0x9e3779b9u)%100u>=thinning);
+}
 #include "amb_garden.h"
 static void amb_acid_step(unsigned k,unsigned note,unsigned velocity,unsigned speed,int slide)
 {
@@ -1152,6 +1159,7 @@ static void amb_layer_step(unsigned k,unsigned step,unsigned mask)
     if(l->role==4){
         ambr.playhead[k]=(uint8_t)(step%16);ambr.playhead_valid[k]=1;
         static const uint8_t drum[4]={36,38,42,50};
+        if(!amb_keep_onset(k,step))return;
         if(!l->generated){for(i=0;i<4;i++)if((l->drums[i]>>tick)&1u)trk_note_on(&trk[k],drum[i],64+i*4);}
         else if((mask>>k)&1){unsigned lane=amb_hash(amb.policy.seed+step+k*53+bar*mutation)%4;trk_note_on(&trk[k],drum[lane],52+amb_hash(step)%24);
             if(fill && tick==15 && bar%4==3)trk_note_on(&trk[k],42,45+fill/4);}
@@ -1162,7 +1170,7 @@ static void amb_layer_step(unsigned k,unsigned step,unsigned mask)
         unsigned slot=(step>>speed)%16;
         unsigned note=l->notes[slot]?amb_routed(k,ROUTE_NOTE,l->notes[slot],1,127):0;
         int articulated=amb_acid(l) || (amb_mono_role(l) && l->drums[3]);
-        if(!note){if(l->role==5 || articulated)amb_release(k);return;}
+        if(!note || !amb_keep_onset(k,step)){if(l->role==5 || articulated)amb_release(k);return;}
         if(l->role<2 || l->role==5){
             gate=FS*(l->role==0?8u+l->macro[2]/4u:12u+l->macro[2]/3u);
             if(amb_carry_note(k,note,gate))return;
@@ -1197,13 +1205,13 @@ static void amb_layer_step(unsigned k,unsigned step,unsigned mask)
         }
         ambr.recent_slide[k]=(ambr.recent_slide[k]&~bit)|(slide?bit:0);
         ambr.recent[k][slot]=note;ambr.recent_vel[k][slot]=velocity;ambr.recent_valid[k]=1;
-        if(note)amb_acid_step(k,note,velocity,speed,slide);
+        if(note && amb_keep_onset(k,step))amb_acid_step(k,note,velocity,speed,slide);
         else amb_release(k);
         return;
     }
     n=amb_generated_notes(k,step,mask,notes,&gate);
     if(!(step% (1u<<speed))){i=(step>>speed)%16;ambr.recent[k][i]=n?notes[0]:0;ambr.recent_vel[k][i]=65;ambr.recent_valid[k]=1;}
-    if(!n)return;
+    if(!n || !amb_keep_onset(k,step))return;
     if(n==1 && (l->role==0 || l->role==1 || l->role==5) && amb_carry_note(k,notes[0],gate))return;
     if(l->role==0 && amb_keep_pad(k,notes,n,gate))return;
     unsigned velocity=65;
@@ -1521,7 +1529,7 @@ static int amb_read_slot(unsigned slot)
     if(amb_load_take && !amb_take_valid(&amb_pending_song.legacy.take))return -1;
     if(compact || extended){
         const amb_song_controls_t *c=extended?&amb_pending_song.extended:&amb_pending_song.compact;
-        if(c->tag!='T' || c->schema!=1 || c->reserved || c->flags>3 ||
+        if(c->tag!='T' || c->schema!=1 || c->thinning>100 || c->flags>3 ||
            c->walk[0]>7 || c->walk[1]>120 || c->walk[2]>120 || c->walk[3]>80 ||
            c->walk[4]>2 || c->walk[5]>15)return -1;
         for(unsigned i=0;i<4;i++)if(c->octave[i]<-3 || c->octave[i]>3)return -1;
@@ -1865,6 +1873,10 @@ static unsigned amb_param_route(unsigned id)
         if(amb_route_param[i]==id)return ROUTE_PARAM+i;
     return ROUTE_COUNT;
 }
+static int amb_home_echo(void)
+{
+    return (fm1_in.buttons>>panel.btn[B_HOME])&1u;
+}
 static void amb_knob(unsigned knob,int delta)
 {
     amb_layer_t *l=&amb.layer[ambr.edit_layer]; unsigned id=0;
@@ -1878,6 +1890,11 @@ static void amb_knob(unsigned knob,int delta)
     if(ambr.view==0 || (ambr.view==1 && ambr.page==0)) {
         if(ambr.target==0 && ambr.view==0) {
 
+            if(knob==1 && !amb_home_echo()){
+                amb_controls.thinning=(uint8_t)clamp((int)amb_controls.thinning-delta*2,0,100);
+                ambr.dirty=1;return;
+            }
+            if(knob==1)ambr.home_used=1;
             id=amb_master_macros[knob];amb.global[id]=(int16_t)clamp(amb.global[id]+(knob==3?-delta*2:delta*4),GP[id].min,GP[id].max);
         } else {
             if(ambr.view==0) l=&amb.layer[ambr.target-1];
@@ -2433,6 +2450,9 @@ static void amb_knob_value(unsigned knob,char *label,char *value)
         if(ambr.view==0 && ambr.target==0) {
             static const char *const labels[4]={"SPACE","ECHO","MOTION","WARMTH"};
 
+            if(knob==1 && !amb_home_echo()){
+                str_cpy(label,"DENSITY",16);fmt_int(value,100-amb_controls.thinning);str_cpy(value+str_len(value),"%",2);return;
+            }
             str_cpy(label,labels[knob],16);v=amb.global[amb_master_macros[knob]];if(knob==3)v=-v*100/64;else if(GP[amb_master_macros[knob]].fmt==F_PCT)v=v*100/127;
         } else {
             if(ambr.view==0) l=&amb.layer[ambr.target-1];
@@ -3251,6 +3271,7 @@ static void amb_draw(void)
         if(amb_theme() && ambr.view==0){
             int amount;
             if(ambr.target)amount=amb.layer[ambr.target-1].macro[k]*100/127;
+            else if(k==1 && !amb_home_echo())amount=100-amb_controls.thinning;
             else{
                 unsigned id=amb_master_macros[k];
                 amount=k==3?-amb.global[id]*100/64:amb.global[id]*100/GP[id].max;

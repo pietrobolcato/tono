@@ -128,6 +128,10 @@ static void garden_advance(unsigned k, unsigned frames)
         if (!e->velocity)
             continue;
         if (!e->playing && (int32_t)(g->now - e->due) >= 0) {
+            if(!amb_keep_onset(k,e->due)){
+                *e=(garden_event_t){0};
+                continue;
+            }
             /* A retrigger takes ownership of its pitch's eventual NOTE OFF. */
             for (unsigned j = 0; j < NELEM(g->event); j++)
                 if (g->event[j].playing && g->event[j].note == e->note)
@@ -185,7 +189,10 @@ static void garden_pulse(garden_layer_t *g, unsigned k, unsigned step, unsigned 
     }
     for (unsigned i = 0; i < 3; i++)
         if (allow && !g->pulse_rest && (g->pulse_pattern[i] >> (step % garden_pulse_len[i]) & 1))
-            trk_note_on(&trk[k], gm[i], (step % garden_pulse_len[i] ? 60 : 88) + garden_random(g, 21));
+        {
+            unsigned velocity=(step % garden_pulse_len[i] ? 60 : 88) + garden_random(g,21);
+            if(amb_keep_onset(k,step))trk_note_on(&trk[k],gm[i],velocity);
+        }
 }
 /* Upstream drift is measured in seconds, then committed on a bar. AUTO
  * BARS scales its average duration; at the factory setting it is 39.4 s.
@@ -307,7 +314,7 @@ static void garden_step(unsigned k, unsigned step)
         if (l->engine == ENGI_SOFTPULSE)
             trk[k].p[P_ROOT] = (amb.key + scale[amb.chord % count]) % 12;
         garden_pulse(g, k, step, density, variation, allow);
-        if (allow && step % 64 == 63 && garden_random(g, 100) < amb_routed(k,ROUTE_FILL,l->fill,0,100))
+        if (allow && step % 64 == 63 && garden_random(g, 100) < amb_routed(k,ROUTE_FILL,l->fill,0,100) && amb_keep_onset(k,step))
             trk_note_on(&trk[k], 42, 56);
         return;
     }
