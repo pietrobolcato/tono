@@ -24,9 +24,32 @@ static void check_defaults(void)
     assert(!amb_monitor_requested && !ambr.zen_train);
     for(unsigned i=0;i<4;i++)assert(!amb_bar_octave[i] && !amb_octave_delta(i+1));
 }
+static void check_manual_density(void)
+{
+    amb_fixture_scene(0);
+    amb_layer_t *layer=&amb.layer[0];
+    layer->generated=0;layer->speed=0;layer->base[P_MUTE]=0;
+    for(unsigned n=0;n<16;n++){layer->notes[n]=60+n;layer->velocity[n]=90;}
+    amb_layer_t original=*layer;
+    trk[0].engine=layer->engine;
+    for(int thinning=0;thinning<=100;thinning+=50){
+        amb_controls.thinning=thinning;
+        unsigned count=0;
+        for(unsigned step=0;step<512;step++){
+            amb_release(0);
+            amb_layer_step(0,step,0);
+            count+=ambr.held_n[0]!=0;
+        }
+        if(thinning==0)assert(count==512);
+        if(thinning==50)assert(count>200 && count<312);
+        if(thinning==100)assert(count==0);
+    }
+    assert(!memcmp(layer,&original,sizeof original));
+}
 int main(void)
 {
     memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();
+    check_manual_density();
     const unsigned scene=AMB_SCENE_GARDEN;
     amb_factory(scene);
     check_defaults();
