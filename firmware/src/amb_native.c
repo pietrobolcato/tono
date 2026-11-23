@@ -1247,6 +1247,7 @@ static const struct {
     const char *name, *gesture, *mood;
     uint8_t values[4];
 } amb_generate_recipes[]={
+    {"Garden Original","Independent loops ebb and return.","The factory Garden setting.",{8,0,0,35}},
     {"Open Garden","Layers breathe in separate loops.","Gentle and unhurried.",{8,0,0,15}},
     {"Acid Hocket","Short lines trade the pulse.","Restless, with room to breathe.",{1,8,3,25}},
     {"Passing Lights","The players take turns in focus.","Suspended and conversational.",{3,2,2,35}},

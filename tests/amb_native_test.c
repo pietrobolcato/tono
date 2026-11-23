@@ -210,6 +210,10 @@ int AMB_MAIN(int argc,char **argv)
     }
     amb_fixture_scene(0);amb.layer[0].swing=100;ambr.step=1;amb_step();assert(ambr.due[0]>0);
     ambr.view=2;ambr.page=2;before=amb;turn(EN_ALGO,4);press(B_REC);assert(!memcmp(&before,&amb,sizeof amb));
+    amb_piece_t factory_garden;
+    amb_make_scene(&factory_garden,AMB_SCENE_GARDEN);
+    assert(!memcmp(factory_garden.policy.active,amb_generate_recipes[0].values,3));
+    assert(factory_garden.policy.variation==amb_generate_recipes[0].values[3]);
     seq_start();ambr.step=63;
     turn(EN_PRESET,-1);
     assert(ambr.local_preset==NELEM(amb_generate_recipes));
