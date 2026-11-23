@@ -290,7 +290,11 @@ static void track_lfo_tick(track_t *t)
     int32_t r = t->p[P_LRATE];
 
 #if AMBPLUS
-    if(r>=AMB_RANDOM_HZ)r=amb_cycle_rate(r,t->lfo_rnd,(unsigned)(t-trk));
+    if(amb_bar_rate(r)){
+        unsigned bars=1u+amb_cycle_rate(r,t->lfo_rnd,(unsigned)(t-trk));
+        /* Carry fractional cycle phase across both tempo changes and new draws. */
+        t->lfo_ph+=(uint32_t)(((uint64_t)CTL<<32)/(beat_samples()*4u*bars));
+    }else
 #endif
     if (r < 0) {                                        /* (JIANT 0.6.51) in time: 4BAR .. 1/32 (params.c N_LSYNC), on
                                                          * the transport's grid while it plays (PHASE its offset), free
@@ -305,7 +309,12 @@ static void track_lfo_tick(track_t *t)
         else
             t->lfo_ph += (uint32_t)(((uint64_t)CTL << 32) / len);
     } else
+    {
+#if AMBPLUS
+        if(r>=AMB_RANDOM_HZ)r=amb_cycle_rate(r,t->lfo_rnd,(unsigned)(t-trk));
+#endif
         t->lfo_ph += LFO_INC[r & 127];
+    }
     if (t->lfo_ph < old)
         t->lfo_rnd = lfo_rand(t);
     t->lfo_val = lfo_wave(t, t->lfo_ph);

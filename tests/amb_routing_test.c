@@ -48,6 +48,29 @@ static void check_random_rate(void)
     amb_target(1);press(B_LFO);press(B_EDIT);
     int current=amb_cycle_rate(range,t->lfo_rnd,0);
     amb_knob(0,-1);assert(l->base[P_LRATE]==current);
+    amb_knob(0,2);
+    assert(l->base[P_LRATE]==(AMB_RANDOM_BARS|3));
+    amb_knob(1,1);amb_knob(2,40);
+    range=l->base[P_LRATE];
+    assert(amb_rate_min(range)==1 && amb_rate_max(range)==15 && amb_valid(&amb));
+    amb_knob(3,1);turn(EN_SELECT,1);
+    assert(l->lfo_dest==destination && !amb_page_bank());
+    l->base[P_LRATE]=AMB_RANDOM_BARS|16;assert(!amb_valid(&amb));l->base[P_LRATE]=range;
+    ambr.slot=4;amb_save();amb_fixture_scene(0);assert(amb_recall(4));
+    assert(l->base[P_LRATE]==range);
+    amb_prepare();
+    for(unsigned n=0;n<24;n++){
+        t->lfo_ph=0xffffffff;track_lfo_tick(t);
+        unsigned bars=1+amb_cycle_rate(range,t->lfo_rnd,0);
+        assert(bars>=2 && bars<=16);
+        for(int bpm=60;bpm<=120;bpm+=60){
+            song.g[G_BPM]=bpm;
+            uint32_t before=t->lfo_ph,held=t->lfo_rnd;
+            track_lfo_tick(t);
+            assert(t->lfo_ph-before==(uint32_t)(((uint64_t)CTL<<32)/(beat_samples()*4u*bars)));
+            assert(t->lfo_rnd==held);
+        }
+    }
     puts("Random LFO UI, cycle timing, bounds and song recall PASS");
 }
 

@@ -35,7 +35,7 @@ static const amb_page_bank_t *amb_page_bank(void)
         const amb_layer_t *l=&amb.layer[ambr.edit_layer];
         return amb_envelope_id(l,0)==P_ATK?&amb_env_bank:0;
     }
-    case 3:return &amb_lfo_bank;
+    case 3:return ambr.bank?0:&amb_lfo_bank;
     case 5:return &amb_fx_banks[ambr.fx%6];
     case 6:return &amb_eq_bank;
     default:return 0;

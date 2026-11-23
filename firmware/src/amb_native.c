@@ -783,11 +783,15 @@ static __attribute__((noinline)) void amb_apply_param_route(unsigned k,amb_layer
     if(id==P_E0 && l->engine==ENGI_AMB_SAMPLE && l->base[P_E0]<AMB_FIELD_SOURCE)
         upper=AMB_FIELD_SOURCE-1;
     int base=t->p[id],lower=d->min;
-    if(id==P_LRATE && base>=AMB_RANDOM_HZ){
+    if(id==P_LRATE && base>=AMB_RANDOM_BARS){
         lower=amb_rate_min(base);upper=amb_rate_max(base);
         base=amb_cycle_rate(base,t->lfo_rnd,k);
     }
     t->p[id]=amb_routed(k,l->lfo_dest,base,lower,upper);
+    if(id==P_LRATE && amb_bar_rate(l->base[id])){
+        unsigned chosen=t->p[id];
+        t->p[id]=AMB_RANDOM_BARS|(chosen<<7)|chosen;
+    }
     ambr.last_routed_param[k]=(uint8_t)(id+1);
 }
 static __attribute__((noinline)) void amb_prepare(void)
@@ -1486,8 +1490,10 @@ static int amb_valid(const amb_piece_t *p)
         for(i=0;i<16;i++) if(l->notes[i]>127 || l->velocity[i]>127) return 0;
         for(i=0;i<P_COUNT;i++) {
             const param_desc_t *d=param_desc_of(l->engine,i);
-            if(i==P_LRATE && l->base[i]>=AMB_RANDOM_HZ){
-                if(amb_rate_min(l->base[i])>amb_rate_max(l->base[i]))return 0;
+            if(i==P_LRATE && l->base[i]>=AMB_RANDOM_BARS){
+                int rate=l->base[i];
+                if(amb_bar_rate(rate) && (rate!=(int)(AMB_RANDOM_BARS|(amb_rate_min(rate)<<7)|amb_rate_max(rate)) || amb_rate_max(rate)>=AMB_MAX_BARS))return 0;
+                if(amb_rate_min(rate)>amb_rate_max(rate))return 0;
                 continue;
             }
             if(l->base[i]<d->min || l->base[i]>d->max) return 0;
@@ -1883,19 +1889,25 @@ static void amb_knob(unsigned knob,int delta)
         else if(ambr.page==2) id=amb_envelope_id(l,knob);
         else if(ambr.page==3) {
             int rate=l->base[P_LRATE];
+            int bars=amb_bar_rate(rate);
+            if(ambr.bank && (knob==3 || (knob==2 && rate<AMB_RANDOM_BARS)))return;
             if(ambr.bank && knob==0){
-                if(delta>0 && rate<AMB_RANDOM_HZ){
-                    int center=rate<0?48:rate;
+                int mode=bars?2:rate>=AMB_RANDOM_HZ?1:0;
+                int next=clamp(mode+delta,0,2);
+                if(mode==next)return;
+                if(next==2)l->base[P_LRATE]=AMB_RANDOM_BARS|3; /* 1 to 4 bars */
+                else if(next==1){
+                    int center=mode==0 && rate>=0?rate:48;
                     l->base[P_LRATE]=amb_rate_range(clamp(center-12,0,127),clamp(center+12,0,127));
-                }else if(delta<0 && rate>=AMB_RANDOM_HZ)l->base[P_LRATE]=amb_cycle_rate(rate,trk[ambr.edit_layer].lfo_rnd,ambr.edit_layer);
+                }else l->base[P_LRATE]=bars?-3:amb_cycle_rate(rate,trk[ambr.edit_layer].lfo_rnd,ambr.edit_layer);
                 amb_base_revision[ambr.edit_layer]++;
                 amb_remember_edit(ROUTE_COUNT);
-            }else if(rate>=AMB_RANDOM_HZ && (knob==1 || (ambr.bank && knob==2))){
-                int lo=amb_rate_min(rate),hi=amb_rate_max(rate);
-                if(!ambr.bank){int shift=clamp(delta,-lo,127-hi);lo+=shift;hi+=shift;}
+            }else if(rate>=AMB_RANDOM_BARS && (knob==1 || (ambr.bank && knob==2))){
+                int lo=amb_rate_min(rate),hi=amb_rate_max(rate),limit=bars?AMB_MAX_BARS-1:127;
+                if(!ambr.bank){int shift=clamp(delta,-lo,limit-hi);lo+=shift;hi+=shift;}
                 else if(knob==1)lo=clamp(lo+delta,0,hi);
-                else hi=clamp(hi+delta,lo,127);
-                l->base[P_LRATE]=amb_rate_range(lo,hi);
+                else hi=clamp(hi+delta,lo,limit);
+                l->base[P_LRATE]=(bars?AMB_RANDOM_BARS:AMB_RANDOM_HZ)|(lo<<7)|hi;
                 amb_base_revision[ambr.edit_layer]++;
                 amb_remember_edit(amb_param_route(P_LRATE));
             }else if(knob==0)id=P_LWAVE;
@@ -2246,7 +2258,7 @@ static void amb_input(void)
             if(ambr.page==1) {
                 if(!amb_sound_picker() && l->role!=6)ambr.detail=(uint8_t)amb_wrap(ambr.detail+sel,3);
             }
-            else if(ambr.page==3)l->lfo_dest=amb_group_turn(l,sel);
+            else if(ambr.page==3 && !ambr.bank)l->lfo_dest=amb_group_turn(l,sel);
             else if(ambr.page==4) {
                 if(l->role==4) ambr.lane=(uint8_t)amb_wrap(ambr.lane+sel,4);
                 else ambr.cursor=(uint8_t)amb_wrap(ambr.cursor+sel,16);
@@ -2432,15 +2444,20 @@ static void amb_knob_value(unsigned knob,char *label,char *value)
         else if(ambr.page==3) {
             const char *dest=amb_route_name(l,l->lfo_dest);
             int rate=l->base[P_LRATE];
+            int bars=amb_bar_rate(rate);
+            if(ambr.bank && (knob==3 || (knob==2 && rate<AMB_RANDOM_BARS))){label[0]=value[0]=0;return;}
             if(ambr.bank && knob==0){
-                str_cpy(label,"RATE MODE",16);str_cpy(value,rate>=AMB_RANDOM_HZ?"Random":"Fixed",24);return;
+                str_cpy(label,"MODE",16);str_cpy(value,bars?"Rnd Bars":rate>=AMB_RANDOM_HZ?"Rnd Hz":"Fixed",24);return;
             }
-            if(rate>=AMB_RANDOM_HZ && (knob==1 || (ambr.bank && knob==2))){
-                int hz=ambr.bank?(knob==1?amb_rate_min(rate):amb_rate_max(rate)):
+            if(rate>=AMB_RANDOM_BARS && (knob==1 || (ambr.bank && knob==2))){
+                int chosen=ambr.bank?(knob==1?amb_rate_min(rate):amb_rate_max(rate)):
                     amb_cycle_rate(trk[ambr.edit_layer].p[P_LRATE],trk[ambr.edit_layer].lfo_rnd,ambr.edit_layer);
-                str_cpy(label,ambr.bank?(knob==1?"MIN HZ":"MAX HZ"):"LIVE RATE",16);
-                param_format(amb_param_desc(l,P_LRATE),hz,value,&unit);
-                if(unit)str_cpy(value+str_len(value),unit,24-str_len(value));
+                str_cpy(label,ambr.bank?(knob==1?(bars?"MIN BARS":"MIN HZ"):(bars?"MAX BARS":"MAX HZ")):(bars?"LIVE BARS":"LIVE RATE"),16);
+                if(bars)fmt_int(value,chosen+1);
+                else{
+                    param_format(amb_param_desc(l,P_LRATE),chosen,value,&unit);
+                    if(unit)str_cpy(value+str_len(value),unit,24-str_len(value));
+                }
                 return;
             }
             if(knob==0)id=P_LWAVE;else if(knob==1)id=P_LRATE;
@@ -2650,7 +2667,7 @@ static void amb_guidance(const amb_layer_t *l,const char **first,const char **se
             if(l->role==6){a=ambr.bank==0?"SCL PAGE / ALGO SOURCE":"SCL PAGE / KNOBS EDIT";b="EDIT NEXT SAMPLE PAGE";}
             else {a=ambr.bank?"SCL PAGE / SELECT DETAIL GROUP":"SCL PAGE / ALGO PATCH";b=ambr.bank?"EDIT PATCH / KNOBS EDIT":"EDIT DETAILS / KNOBS EDIT";}
             if(amb_sound_picker()){a="ALGO SOUND / PRESETS VARIATION";b="REC APPLY / HOME CANCEL";}
-        }else if(ambr.page==3){a="SELECT GROUP / K4 DESTINATION";b=ambr.bank?"RANDOM / NEW HZ EACH CYCLE":"EDIT RATE / FIXED OR RANDOM";
+        }else if(ambr.page==3){a=ambr.bank?"K1 RATE MODE":"SELECT GROUP / K4 DESTINATION";b=ambr.bank?"RANDOM / DRAW EACH CYCLE":"EDIT RATE / FIXED OR RANDOM";
         }else if(ambr.page==4){
             a=l->role==4?"SCL PAGE / SELECT DRUM LANE":!l->generated && l->notes[ambr.cursor]?"SELECT STEP / ARP CLEAR / SCL PAGE":"SCL PAGE / SELECT EDIT STEP";
             b=ambr.recording?(l->role==4?"WHITE KEYS TOGGLE STEPS / REC END":"KEYS SET PITCH / REC END"):l->generated?"EDIT OR SEQ MANUAL / REC CAPTURE":"EDIT OR SEQ AUTO / REC OVERDUB";
@@ -3019,8 +3036,8 @@ static void amb_draw(void)
             int x=19+(int)((ph>>16)*200u/65536u),y=82-lfo_wave(t,ph)*22/32768;
             cv_line(x,56,x,107,TONO_ORANGE);tono_disc(x,y,3,TONO_ORANGE);
             amb_text(17,112,"0",SCOPE_INK,1);amb_text(178,112,"1 CYCLE",SCOPE_INK,8);cv_bg=ABG;
-            char label[16],dest[24];amb_knob_value(3,label,dest);
-            amb_text(10,133,amb_route_groups[amb_route_group(l->lfo_dest)],ADIM,12);amb_text(84,133,dest,AINK,18);
+            if(!ambr.bank){char label[16],dest[24];amb_knob_value(3,label,dest);
+            amb_text(10,133,amb_route_groups[amb_route_group(l->lfo_dest)],ADIM,12);amb_text(84,133,dest,AINK,18);}
         } else if(ambr.view==1 && ambr.page==4) {
             amb_display(49,75);
             for(i=0;i<16;i++){

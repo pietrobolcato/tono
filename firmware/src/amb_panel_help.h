@@ -104,7 +104,10 @@ static const char *amb_knob_hint(const amb_layer_t *l,unsigned knob)
     if(ambr.page==1)return amb_param_hint(l,amb_sound_id(l,ambr.bank,knob));
     if(ambr.page==2)return l->role==4 || (l->role==6 && l->base[P_E1]==3)?amb_param_hint(l,amb_envelope_id(l,knob)):env[knob];
     if(ambr.page==3){
-        int random=l->base[P_LRATE]>=AMB_RANDOM_HZ;
+        int rate=l->base[P_LRATE],random=rate>=AMB_RANDOM_BARS;
+        if(ambr.bank && (knob==3 || (!random && knob==2)))return "";
+        if(amb_bar_rate(rate) && ambr.bank && knob==1)return "Shortest cycle in bars";
+        if(amb_bar_rate(rate) && ambr.bank && knob==2)return "Longest cycle in bars";
         if(ambr.bank && knob==0)return "Fixed or random per cycle";
         if(random && knob==1)return ambr.bank?"Lowest cycle frequency":"Shift both rate limits";
         if(random && ambr.bank && knob==2)return "Highest cycle frequency";
