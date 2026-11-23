@@ -3182,7 +3182,13 @@ static void amb_draw(void)
             int timing=ambr.page==7;
             amb_text(12,58,timing?"TIMING":"JOURNEY",ADIM,20);
             cv_text(12,77,&AF_M,timing?timing_names[timing_tab]:amb_walk_styles[amb_journey_style()],AINK);
-            if(timing)amb_text(12,100,timing_tab==1 && amb_lane_value(0,0)==2?"Pick a different Generate preset":"SELECT chooses lane",ADIM,40);
+            if(timing && timing_tab==1){
+                unsigned mode=amb_lane_value(0,0);
+                if(mode==1){
+                    amb_text(12,98,"Each tick advances one setting.",ADIM,40);
+                    amb_text(12,111,"Rhythm, then Phrase, then Interplay.",ADIM,40);
+                }else amb_text(12,100,mode?"Pick a different Generate preset":"Keep current generator settings.",ADIM,40);
+            }else if(timing)amb_text(12,100,"SELECT chooses lane",ADIM,40);
             else{
                 const char *const *hint=hints[amb_journey_style()];
                 amb_text(12,98,hint[0],ADIM,40);
