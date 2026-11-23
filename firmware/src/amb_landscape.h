@@ -25,7 +25,7 @@ static struct {uint32_t due,serial;uint8_t armed;} lane_clock[2];
 static uint8_t role_pending,pattern_pending;
 static unsigned amb_lane_value(unsigned lane,unsigned knob)
 {
-    if(!knob)return !!(amb_controls.walk[5]&(4u<<lane));
+    if(!knob)return (amb_controls.walk[5]&(4u<<lane))?1u+(!lane && (amb_controls.walk[5]&16u)):0;
     unsigned raw=amb_controls.lanes[3*lane+knob-1];
     if(knob==1){
         // Old Move tick and Journey records both follow the automatic clock.
@@ -49,13 +49,14 @@ static void amb_lane_adjust(unsigned lane,unsigned knob,int delta)
     unsigned old=amb_lane_value(lane,knob);
     unsigned unit=amb_lane_value(lane,1);
     if(knob>=2 && unit==LANE_FOLLOW)return;
-    unsigned v=knob==1?amb_clock_turn(old,delta,LANE_FOLLOW):knob?(unsigned)clamp((int)old+delta,1,120):(unsigned)(delta>0);
+    unsigned v=knob==1?amb_clock_turn(old,delta,LANE_FOLLOW):knob?(unsigned)clamp((int)old+delta,1,120):(unsigned)clamp((int)old+delta,0,lane?1:2);
     if(v==old)return;
     uint8_t *cfg=&amb_controls.lanes[3*lane];
     ambr.loading=1;
     if(!knob){
         cfg[0]=unit+1;
-        amb_controls.walk[5]^=4u<<lane;
+        unsigned flag=4u<<lane;
+        amb_controls.walk[5]=(amb_controls.walk[5]&~(flag|(lane?0u:16u)))|(v?flag:0)|(v==2?16u:0);
     }else cfg[knob-1]=knob==1?v+1:v;
     if(knob==2 && amb_lane_value(lane,3)<v)cfg[2]=v;
     if(knob==3 && amb_lane_value(lane,2)>v)cfg[1]=v;
@@ -234,6 +235,16 @@ static void amb_change_role(void)
 static void amb_pattern_tick(void)
 {
     pattern_pending=0;
+    if(amb_lane_value(0,0)==2){
+        if(ambr.generate_queued)return; /* A manual REC has priority. */
+        uint8_t choices[NELEM(amb_generate_recipes)];
+        unsigned count=0;
+        for(unsigned i=0;i<NELEM(amb_generate_recipes);i++)
+            if(memcmp(amb.policy.active,amb_generate_recipes[i].values,3))choices[count++]=i+1;
+        ambr.generate_queued=choices[amb_hash(amb.policy.seed+lane_clock[0].serial)%count];
+        amb_commit_generate();
+        return;
+    }
     unsigned f=(lane_clock[0].serial-1)%3;
     if(amb.policy.pending[f]==255)
         amb_policy_choose(&amb.policy,f,(amb.policy.active[f]+1)%amb_style_count(f),0);

@@ -419,6 +419,27 @@ static void amb_patch(unsigned k,unsigned role,unsigned patch)
     ambr.loading=0;ambr.dirty=1;
 }
 #include "amb_auto_travel.h"
+static const struct {
+    const char *name, *gesture, *mood;
+    uint8_t values[4];
+} amb_generate_recipes[]={
+    {"Garden Original","Independent loops; 35% variation.","Patient, chiming factory Garden.",{8,0,0,35}},
+    {"Open Garden","Garden loops; 15% variation.","Steadier, with more repetition.",{8,0,0,15}},
+    {"Acid Hocket","Bass and lead trade short pulses.","Focused, gently driving.",{1,8,3,25}},
+    {"Passing Lights","Uneven loops trade little motifs.","Open, with a wandering pulse.",{2,2,1,55}},
+    {"Slipstream","Staggered lines answer offbeat.","Loose, with a lilting pulse.",{6,5,1,55}},
+};
+static void amb_commit_generate(void)
+{
+    unsigned queued=ambr.generate_queued;
+    if(!queued)return;
+    const uint8_t *values=amb_generate_recipes[queued-1].values;
+    memcpy(amb.policy.active,values,3);
+    memset(amb.policy.pending,255,3);
+    amb.policy.variation=values[3];
+    ambr.generate_queued=0;
+    ambr.dirty=1;
+}
 #include "amb_landscape.h"
 /* UI scheduler. BARS publishes during the final sixteenth before the due
  * downbeat; the existing music engine applies both colour and harmony there.
@@ -1243,27 +1264,6 @@ static void amb_queue_octave(int direction)
     if(amb_octave_delta(target)*direction<3)ambr.octave_taps[target]+=direction;
     ambr.dirty=1;
 }
-static const struct {
-    const char *name, *gesture, *mood;
-    uint8_t values[4];
-} amb_generate_recipes[]={
-    {"Garden Original","Independent loops ebb and return.","The factory Garden setting.",{8,0,0,35}},
-    {"Open Garden","Layers breathe in separate loops.","Gentle and unhurried.",{8,0,0,15}},
-    {"Acid Hocket","Short lines trade the pulse.","Restless, with room to breathe.",{1,8,3,25}},
-    {"Passing Lights","The players take turns in focus.","Suspended and conversational.",{3,2,2,35}},
-    {"Slipstream","Offset phrases drift out of step.","Loose and slightly off balance.",{6,5,1,55}},
-};
-static void amb_commit_generate(void)
-{
-    unsigned queued=ambr.generate_queued;
-    if(!queued)return;
-    const uint8_t *values=amb_generate_recipes[queued-1].values;
-    memcpy(amb.policy.active,values,3);
-    memset(amb.policy.pending,255,3);
-    amb.policy.variation=values[3];
-    ambr.generate_queued=0;
-    ambr.dirty=1;
-}
 static void amb_step(void)
 {
     amb_participation_t part[4]; uint8_t mask; unsigned k,bar=ambr.step/16;
@@ -1556,7 +1556,7 @@ static int amb_read_slot(unsigned slot)
         const amb_song_controls_t *c=extended?&amb_pending_song.extended:&amb_pending_song.compact;
         if(c->tag!='T' || c->schema!=1 || c->thinning>100 || c->flags>3 ||
            c->walk[0]>7 || c->walk[1]>120 || c->walk[2]>120 || c->walk[3]>80 ||
-           c->walk[4]>2 || c->walk[5]>15)return -1;
+           c->walk[4]>2 || c->walk[5]>31)return -1;
         for(unsigned i=0;i<4;i++)if(c->octave[i]<-3 || c->octave[i]>3)return -1;
         for(unsigned i=0;i<6;i++)if(c->lanes[i]>(i%3?120:6))return -1;
         amb_load_controls=1;
@@ -2559,7 +2559,11 @@ static void amb_knob_value(unsigned knob,char *label,char *value)
                 static const char *const labels[]={"ACTIVE","CLOCK","MIN","MAX"};
                 unsigned lane=timing_tab-1,unit=amb_lane_value(lane,1);
                 str_cpy(label,labels[knob],16);
-                if(!knob)str_cpy(value,amb_lane_value(lane,0)?"On":"Off",24);
+                if(!knob){
+                    unsigned mode=amb_lane_value(lane,0);
+                    if(!lane)str_cpy(label,"CHANGE",16);
+                    str_cpy(value,!mode?"Off":lane?"On":mode==1?"Rotate":"Preset",24);
+                }
                 else if(knob==1)str_cpy(value,unit==LANE_FOLLOW?"Follow Travel":amb_walk_clocks[unit],24);
                 else if(unit==LANE_FOLLOW)str_cpy(value,"-",24);
                 else fmt_int(value,amb_lane_value(lane,knob));
@@ -3178,7 +3182,7 @@ static void amb_draw(void)
             int timing=ambr.page==7;
             amb_text(12,58,timing?"TIMING":"JOURNEY",ADIM,20);
             cv_text(12,77,&AF_M,timing?timing_names[timing_tab]:amb_walk_styles[amb_journey_style()],AINK);
-            if(timing)amb_text(12,100,"SELECT chooses lane",ADIM,40);
+            if(timing)amb_text(12,100,timing_tab==1 && amb_lane_value(0,0)==2?"Pick a different Generate preset":"SELECT chooses lane",ADIM,40);
             else{
                 const char *const *hint=hints[amb_journey_style()];
                 amb_text(12,98,hint[0],ADIM,40);
@@ -3189,7 +3193,7 @@ static void amb_draw(void)
             if(timing && timing_tab){
                 unsigned lane=timing_tab-1;
                 status=amb_lane_value(lane,1)==LANE_FOLLOW?"Follows Auto Travel":
-                    timing_tab==1?"Rotate rhythm, phrase, interplay":"Change one layer type";
+                    timing_tab==1?(amb_lane_value(0,0)==2?"Random generator preset":"Rotate rhythm, phrase, interplay"):"Change one layer type";
             }
             if(!timing)status=amb_lane_value(1,0)?"Layer types can change":"Layer types stay fixed";
             amb_text(12,129,status,AINK,36);

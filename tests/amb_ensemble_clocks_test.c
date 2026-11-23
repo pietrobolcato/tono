@@ -37,5 +37,20 @@ int main(void){
     amb_follow_travel_tick();assert(pattern_pending && lane_clock[0].serial==serial+1);
     amb_follow_travel_tick();assert(lane_clock[0].serial==serial+1);
     amb_ensemble_downbeat();assert(!pattern_pending);
+    amb_lane_adjust(0,0,1);
+    assert(amb_lane_value(0,0)==2);
+    for(unsigned i=0;i<32;i++){
+        amb_policy_t old=amb.policy;
+        lane_clock[0].serial++;
+        amb_pattern_tick();
+        assert(memcmp(old.active,amb.policy.active,3));
+        unsigned match=0;
+        for(unsigned j=0;j<NELEM(amb_generate_recipes);j++)
+            match|=!memcmp(amb.policy.active,amb_generate_recipes[j].values,3)
+                  && amb.policy.variation==amb_generate_recipes[j].values[3];
+        assert(match);
+    }
+    amb_lane_adjust(0,0,-1);assert(amb_lane_value(0,0)==1);
+    amb_lane_adjust(0,0,-1);assert(!amb_lane_value(0,0));
     puts("Independent one-bar clocks, role diversity, manual to generated role handoff and valid snapshots PASS");
 }
