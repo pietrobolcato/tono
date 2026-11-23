@@ -629,3 +629,5 @@ Everything since V10.7.6 (the betas V10.7.7 … V10.7.15 included).
 - GLO Generate adds Locked Loop, Drift Loop and Markov Walk. Each automatic melodic layer keeps its own short-term memory. The two loop modes can also retain the order of drum strikes.
 - HOME adds three generative pieces, Night Wire, Blue Hour Acid and Kiln Echoes. Generate includes a reusable recipe for every distinct factory-song configuration.
 - Repacked cello and flute sample groups and rebuilt factory speech seek checkpoints at startup. Sample values, durations, and the song/recording save format are preserved.
+
+- Generate has four global user preset slots. SAVE selects a destination, REC confirms, and PRESETS browses them after the factory recipes.

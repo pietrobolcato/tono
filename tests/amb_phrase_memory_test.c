@@ -43,9 +43,23 @@ int main(void)
         assert(amb_octet_code(amb_oct_cello,amb_oct_cello_offsets,amb_oct_cello_widths,i,amb_oct_cello_period)==amb_packed_code(amb_pcm_cello,amb_pcm_cello_offsets,amb_pcm_cello_widths,i,amb_pcm_cello_period));
     for(unsigned i=0;i<amb_pcm_flute_length;i++)
         assert(amb_octet_code(amb_oct_flute,amb_oct_flute_offsets,amb_oct_flute_widths,i,amb_oct_flute_period)==amb_packed_code(amb_pcm_flute,amb_pcm_flute_offsets,amb_pcm_flute_widths,i,amb_pcm_flute_period));
+    amb_factory(AMB_SCENE_GARDEN);ambr.view=2;ambr.page=2;
+    press(B_SAVE);assert(ambr.view==2 && ambr.local_preset==AMB_ALL_GENERATE+1);
+    turn(EN_SELECT,1);press(B_REC);
+    uint8_t *user=amb_user_recipe(1);assert(amb_recipe_used(user));
+    assert(!memcmp(user,amb.policy.active,3) && (user[3]&127)==amb.policy.variation);
+    amb_factory(AMB_SCENE_KILN);ambr.view=2;ambr.page=2;
+    press(B_SAVE);turn(EN_PRESET,1);press(B_REC);assert(ambr.overwrite);
+    press(B_HOME);assert(!ambr.local_preset && user[0]==8);
+    ambr.view=2;ambr.page=2;seq_start();
+    turn(EN_PRESET,-3);press(B_REC);assert(ambr.generate_queued>AMB_FACTORY_GENERATE);
+    amb_commit_generate();assert(amb.policy.active[0]==8 && amb.policy.variation==35);
+    /* SAVE captures a pending manual style even before the settle timer. */
+    turn(EN_K2,2);press(B_SAVE);turn(EN_SELECT,1);press(B_REC);press(B_REC);
+    assert(user[1]==2);seq_stop();
     /* Decoded reference fingerprints from the 0.56 factory speech bank. */
     static const uint32_t speech_reference[]={0xd9951794u,0x9b74e45du,0xa7a905afu};
-    amb_speech_init();
+    amb_sample_seek_init();
     for(unsigned n=0;n<3;n++){
         uint32_t hash=2166136261u;
         const amb_recording_t *r=&amb_recordings[13+n];

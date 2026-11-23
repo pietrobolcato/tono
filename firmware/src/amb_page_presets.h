@@ -44,14 +44,35 @@ static const amb_page_bank_t *amb_page_bank(void)
 static int amb_generate_page(void){return ambr.view==2 && ambr.page==2;}
 static unsigned amb_local_count(void)
 {
-    return amb_generate_page()?NELEM(amb_generate_recipes):amb_page_bank()?3:0;
+    return amb_generate_page()?AMB_ALL_GENERATE:amb_page_bank()?3:0;
 }
 static void amb_apply_page_preset(void)
 {
     const amb_page_bank_t *bank=amb_page_bank();
     const int index=ambr.local_preset-1;
     ambr.local_preset=0;
-    if(amb_generate_page() && (unsigned)index<NELEM(amb_generate_recipes)){
+    if(amb_generate_page()){
+        if(index>=AMB_FACTORY_GENERATE){
+            uint8_t *v=amb_user_recipe((index-AMB_FACTORY_GENERATE)%AMB_USER_GENERATE);
+            if(index>=AMB_ALL_GENERATE){
+#if FELUCCA_FLASH
+                if(!flash_ok){amb_say("UNSUPPORTED FLASH - SAVE REFUSED");return;}
+#endif
+                if(amb_recipe_used(v) && !ambr.overwrite){
+                    ambr.overwrite=1;ambr.local_preset=index+1;ambr.dirty=1;return;
+                }
+                unsigned q=ambr.generate_queued;
+                if(q)memcpy(v,q>AMB_FACTORY_GENERATE?amb_user_queue:amb_generate_recipes[q-1].values,4);
+                else{
+                    for(unsigned k=0;k<3;k++)v[k]=amb_gen_style(k);
+                    v[3]=amb.policy.variation;
+                }
+                v[3]|=128;settings_save();ambr.overwrite=0;
+                amb_say(song.playing?"CAPTURED - WRITES ON STOP":"GENERATOR STORED");return;
+            }
+            if(!amb_recipe_used(v)){amb_say("EMPTY GENERATOR SLOT");return;}
+            memcpy(amb_user_queue,v,4);amb_user_queue[3]&=127;
+        }
         memset(ambr.gen_edit,0,sizeof ambr.gen_edit);
         ambr.generate_queued=(uint8_t)(index+1);
         if(!song.playing)amb_commit_generate();

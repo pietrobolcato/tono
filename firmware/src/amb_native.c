@@ -454,11 +454,24 @@ static const struct {
     {"303 Fellows","Short acid cells share a pulse.","Fluid, rounded forward motion.",{1,8,0,28}},
     {"Analog Days","Even pulses shift their entrances.","Mellow motion with a loose edge.",{1,5,0,24}},
 };
+enum { AMB_FACTORY_GENERATE=NELEM(amb_generate_recipes), AMB_USER_GENERATE=4, AMB_ALL_GENERATE=AMB_FACTORY_GENERATE+AMB_USER_GENERATE };
+/* PER4: SAMPLE has fewer than 128 factory stars. Its unused upper 16 bytes
+ * hold four global recipes; bit 7 in Variation distinguishes an occupied slot. */
+static uint8_t *amb_user_recipe(unsigned slot){return &favorites.factory[ENGI_SAMPLE][16+4*slot];}
+static int amb_recipe_used(const uint8_t *v)
+{
+    return v[0]<NELEM(AMB_RHYTHMS) && v[1]<NELEM(AMB_PHRASES) && v[2]<NELEM(AMB_INTERPLAY) && v[3]>=128 && v[3]<=228;
+}
+static uint8_t amb_user_queue[4];
+static unsigned amb_gen_style(unsigned k)
+{
+    return ambr.gen_edit[k]?ambr.gen_candidate[k]:amb.policy.pending[k]!=255?amb.policy.pending[k]:amb.policy.active[k];
+}
 static void amb_commit_generate(void)
 {
     unsigned queued=ambr.generate_queued;
     if(!queued)return;
-    const uint8_t *values=amb_generate_recipes[queued-1].values;
+    const uint8_t *values=queued>AMB_FACTORY_GENERATE?amb_user_queue:amb_generate_recipes[queued-1].values;
     memcpy(amb.policy.active,values,3);
     memset(amb.policy.pending,255,3);
     amb.policy.variation=values[3];
@@ -747,7 +760,7 @@ static void amb_init(void)
 #if defined(USB_DUPLEX) && FELUCCA_UAC
     usb_duplex_switch(1);
 #endif
-    amb_speech_init();tono_init_tables();
+    amb_sample_seek_init();tono_init_tables();
     memset(&ambr,0,sizeof ambr);ambr.master_raw=1024;amb_factory(AMB_SCENE_GARDEN);amb_scan_slots();
     ambr.dirty=1; kb_mask=0;perf_mask=0;song.grid=2;
 }
@@ -2072,7 +2085,7 @@ static void amb_knob(unsigned knob,int delta)
         } else if(ambr.page==2) {
             ambr.generate_queued=0;
             if(knob<3) {
-                unsigned cur=ambr.gen_edit[knob]?ambr.gen_candidate[knob]:amb.policy.pending[knob]!=255?amb.policy.pending[knob]:amb.policy.active[knob];
+                unsigned cur=amb_gen_style(knob);
                 ambr.gen_candidate[knob]=(uint8_t)amb_wrap((int)cur+delta,amb_style_count(knob));
                 ambr.gen_edit[knob]=1;ambr.gen_time[knob]=fm1_ms;
             } else amb.policy.variation=(uint8_t)clamp(amb.policy.variation+delta*2,0,100);
@@ -2260,6 +2273,7 @@ static void amb_input(void)
         for(k=0;k<4;k++)(void)panel_enc(EN_K1+k);
         ambr.dirty=1;home0=home;play0=play;return;
     }
+    if(amb_generate_page() && ambr.local_preset>AMB_ALL_GENERATE && sel){pre+=sel;sel=0;}
     if((pressed & ~(1u<<panel.btn[B_REC] | 1u<<panel.btn[B_PLAY])) || sel || algo)ambr.local_preset=0;
     if(ambr.view)ambr.zen=0;
     if(home && sel) {
@@ -2317,6 +2331,8 @@ static void amb_input(void)
         } else if(b==B_GLO) {ambr.view=2;ambr.page=0;ambr.recording=0;ambr.reset_pending=0;ambr.proposal=ambr.piece_preview=255;}
         else if(b==B_SCL) {
             if(ambr.view==1 || ambr.view==2) {ambr.reset_pending=0;ambr.page=ambr.view==1?(uint8_t)((ambr.page+1)%7):amb_global_order[(amb_global_index(ambr.page)+1)%NELEM(amb_global_order)];ambr.recording=0;ambr.bank=0;ambr.detail=0;ambr.proposal=255;}
+        } else if(b==B_SAVE && amb_generate_page()){
+            ambr.local_preset=AMB_ALL_GENERATE+1;ambr.overwrite=0;
         } else if(b==B_SAVE) {ambr.reset_pending=0;ambr.view=3;ambr.slot=0;ambr.overwrite=0;ambr.recording=0;ambr.proposal=ambr.piece_preview=255;}
         else if(b==B_REC) amb_rec();
         else if(b==B_ARP && ambr.view==1 && ambr.page==4 && amb.layer[ambr.edit_layer].role!=4 && !amb.layer[ambr.edit_layer].generated){
@@ -2366,7 +2382,10 @@ static void amb_input(void)
     }
     if(pre && amb_local_count()){
         ambr.reset_pending=0;ambr.proposal=255;
-        ambr.local_preset=1+amb_wrap((ambr.local_preset?ambr.local_preset-1:pre>0?-1:0)+pre,amb_local_count());
+        ambr.overwrite=0;
+        if(amb_generate_page() && ambr.local_preset>AMB_ALL_GENERATE)
+            ambr.local_preset=AMB_ALL_GENERATE+1+amb_wrap(ambr.local_preset-AMB_ALL_GENERATE-1+pre,AMB_USER_GENERATE);
+        else ambr.local_preset=1+amb_wrap((ambr.local_preset?ambr.local_preset-1:pre>0?-1:0)+pre,amb_local_count());
         ambr.dirty=1;
     }else if(pre && ambr.view==0) {
         ambr.reset_pending=0;
@@ -3166,7 +3185,7 @@ static void amb_draw(void)
             amb_participation_t parts[4]={{1,40},{1,35},{1,48},{1,25}};
             for(k=0;k<3;k++){
                 int y=53+k*23;
-                unsigned style=ambr.gen_edit[k]?ambr.gen_candidate[k]:amb.policy.pending[k]!=255?amb.policy.pending[k]:amb.policy.active[k];
+                unsigned style=amb_gen_style(k);
                 amb_policy_t preview=amb.policy;preview.active[k]=(uint8_t)style;
                 if(ambr.gen_edit[k] || amb.policy.pending[k]!=255)amb_text(209,y,"Q",TONO_ORANGE,1);
                 amb_text(17,y,k==0?"RHYTHM":k==1?"PHRASE":"INTERPLAY",amb_theme()?amb_accent_text(k):DISPLAY_TRACE,10);
@@ -3278,11 +3297,20 @@ static void amb_draw(void)
     }else if(!ambr.help && ambr.local_preset && amb_local_count()){
         GFX_HOOK_COVER(8,50,232,145);cv_bg=ASEL;cv_rect(8,50,224,95,cv_bg);
         const char *subject=ambr.page==1 && ambr.view==1?(l->role==6?N_AS_SOURCE[l->base[P_E0]]:amb_patch_name(l)):"PROPOSED VARIATION";
+        if(amb_generate_page() && ambr.local_preset>AMB_ALL_GENERATE)subject="SAVE GENERATOR / SELECT SLOT";
         amb_text(16,62,subject,ADIM,32);
         unsigned index=ambr.local_preset-1;
         int gen=amb_generate_page();
-        cv_text(16,79,&AF_M,gen?amb_generate_recipes[index].name:amb_page_bank()->name[index],AINK);
-        if(gen){
+        if(gen && index>=AMB_FACTORY_GENERATE){
+            unsigned slot=(index-AMB_FACTORY_GENERATE)%AMB_USER_GENERATE;
+            const uint8_t *v=amb_user_recipe(slot);
+            amb_text(16,79,"USER",AINK,4);amb_number(52,79,slot+1,AINK);
+            if(amb_recipe_used(v)){
+                amb_text(16,102,AMB_RHYTHMS[v[0]],AINK,20);amb_text(100,102,AMB_PHRASES[v[1]],AINK,20);
+                amb_text(16,118,AMB_INTERPLAY[v[2]],ADIM,20);amb_number(100,118,v[3]&127,ADIM);
+            }else amb_text(16,102,"Empty slot",ADIM,12);
+        }else cv_text(16,79,&AF_M,gen?amb_generate_recipes[index].name:amb_page_bank()->name[index],AINK);
+        if(gen && index<AMB_FACTORY_GENERATE){
             amb_text(16,102,amb_generate_recipes[index].gesture,AINK,38);
             amb_text(16,118,amb_generate_recipes[index].mood,ADIM,38);
         }
@@ -3387,6 +3415,8 @@ static void amb_draw(void)
     const char *hint="Help";
     if(ambr.reset_pending)hint="REC restore / HOME cancel";
     else if(ambr.piece_preview!=255)hint="REC recall / HOME cancel";
+    else if(amb_generate_page() && ambr.local_preset>AMB_ALL_GENERATE)hint=ambr.overwrite?"REC again to replace":"REC save / HOME cancel";
+    else if(amb_generate_page() && !ambr.local_preset)hint="SAVE  Store generator";
     else if(ambr.proposal!=255 || ambr.local_preset)hint="REC apply / HOME cancel";
     else if(ambr.view==2 && ambr.page==6)hint="EDIT  Timing and reach";
     else if(ambr.view==2 && ambr.page==7)hint="EDIT  Back to Travel";

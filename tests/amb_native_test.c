@@ -215,7 +215,7 @@ int AMB_MAIN(int argc,char **argv)
     assert(!memcmp(factory_garden.policy.active,amb_generate_recipes[0].values,3));
     assert(factory_garden.policy.variation==amb_generate_recipes[0].values[3]);
     seq_start();ambr.step=63;
-    turn(EN_PRESET,-1);
+    turn(EN_PRESET,-1-AMB_USER_GENERATE);
     assert(ambr.local_preset==NELEM(amb_generate_recipes));
     press(B_REC);
     assert(ambr.generate_queued==NELEM(amb_generate_recipes));

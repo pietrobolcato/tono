@@ -41,8 +41,15 @@ static amb_seek_t amb_speech_block(const uint8_t *block,amb_seek_t state,int16_t
     }
     return (amb_seek_t){pred,step};
 }
-static void amb_speech_init(void)
+static void amb_sample_seek_init(void)
 {
+    unsigned offset=0;
+    for(unsigned i=0;i<sizeof amb_oct_flute_offsets/sizeof *amb_oct_flute_offsets;i++){
+        amb_oct_flute_offsets[i]=offset;
+        unsigned row=amb_oct_flute_widths[i];
+        unsigned pairs=(row&0x0f0f0f0fu)+((row>>4)&0x0f0f0f0fu);
+        offset+=8+((pairs*0x01010101u)>>24);
+    }
     for(unsigned n=0;n<3;n++){
         const amb_recording_t *r=&amb_recordings[13+n];
         amb_seek_t state={0,1};
