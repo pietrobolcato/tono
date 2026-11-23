@@ -19,8 +19,8 @@ static void check_packed_factory_recordings(void)
 }
 int main(void)
 {
-    check_packed_factory_recordings();
     memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();
+    check_packed_factory_recordings();
     amb_take_start();
     for(unsigned i=0;i<44100;i++){
         int16_t s=(int16_t)(14000*sin(i*2.*3.14159265359*220./44100));
