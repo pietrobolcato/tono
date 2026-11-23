@@ -13,10 +13,10 @@ typedef struct {const uint8_t *pcm;unsigned length,root,rate_q16,loop_percent;} 
 static const amb_recording_t amb_recordings[]={
     {amb_oct_chime,amb_oct_chime_length,60,2972,24},{amb_oct_vowel,amb_oct_vowel_length,60,2972,24},
     {amb_oct_violin,amb_oct_violin_length,60,14861,29},
-    {amb_pcm_cello,amb_pcm_cello_length,60,17833,12},
+    {amb_oct_cello,amb_oct_cello_length,60,17833,12},
     {amb_pcm_piano,amb_pcm_piano_length,72,17833,29},
     {amb_oct_tenor,amb_oct_tenor_length,72,14861,29},
-    {amb_pcm_flute,amb_pcm_flute_length,72,14861,15},
+    {amb_oct_flute,amb_oct_flute_length,72,14861,15},
     /* Six phrase maps, each addressing grains of its own percussion take. */
     {amb_texture_frames[0],24576,60,8025,9},{amb_texture_frames[1],24576,60,8025,11},
     {amb_texture_frames[2],24576,60,8025,7},{amb_texture_frames[3],24576,60,8025,13},
@@ -26,21 +26,29 @@ static const amb_recording_t amb_recordings[]={
     {field_harbour,field_harbour_frames,60,field_harbour_rate,0},
     {field_subway,field_subway_frames,60,field_subway_rate,0}
 };
-/* Factory speech omits redundant predictor bytes in flash. Reconstruct
- * them once at boot so random seeks have the same cost as a personal take. */
-static int8_t speech_predict[(sizeof speech_eagle+sizeof speech_radio+sizeof speech_moon)/9];
-static const unsigned speech_offset[]={0,sizeof speech_eagle/9,(sizeof speech_eagle+sizeof speech_radio)/9};
+/* One exact ADPCM seek point per 64 frames. Sequential playback also reuses
+ * the state at the end of the even block for its neighbouring odd block. */
+#define SPEECH_SEEKS(pcm) ((sizeof(pcm)/8+1)/2)
+typedef struct { int8_t pred; uint8_t step; } amb_seek_t;
+static amb_seek_t speech_seek[SPEECH_SEEKS(speech_eagle)+SPEECH_SEEKS(speech_radio)+SPEECH_SEEKS(speech_moon)];
+static const unsigned speech_offset[]={0,SPEECH_SEEKS(speech_eagle),SPEECH_SEEKS(speech_eagle)+SPEECH_SEEKS(speech_radio)};
+static amb_seek_t amb_speech_block(const uint8_t *block,amb_seek_t state,int16_t *out)
+{
+    int pred=state.pred,step=state.step;
+    for(unsigned i=0;i<32;i++){
+        int value=amb_take_delta((block[i/4]>>(2*(i%4)))&3,&pred,&step);
+        if(out)out[i]=(int16_t)(256*value);
+    }
+    return (amb_seek_t){pred,step};
+}
 static void amb_speech_init(void)
 {
     for(unsigned n=0;n<3;n++){
         const amb_recording_t *r=&amb_recordings[13+n];
-        int pred=0;
+        amb_seek_t state={0,1};
         for(unsigned b=0;b<(r->length+31)/32;b++){
-            const uint8_t *block=r->pcm+9*b;
-            int step=*block++;
-            speech_predict[speech_offset[n]+b]=pred;
-            for(unsigned i=0;i<32;i++)
-                amb_take_delta((block[i/4]>>(2*(i%4)))&3,&pred,&step);
+            if(!(b&1))speech_seek[speech_offset[n]+b/2]=state;
+            state=amb_speech_block(r->pcm+8*b,state,0);
         }
     }
 }
@@ -74,10 +82,10 @@ static int amb_recorded_at(unsigned source,const uint8_t *src,unsigned at)
     case 0: code=amb_octet_code(src,amb_oct_chime_offsets,amb_oct_chime_widths,at,amb_oct_chime_period);break;
     case 1: code=amb_octet_code(src,amb_oct_vowel_offsets,amb_oct_vowel_widths,at,amb_oct_vowel_period);break;
     case 2: code=amb_octet_code(src,amb_oct_violin_offsets,amb_oct_violin_widths,at,amb_oct_violin_period);break;
-    case 3: code=amb_packed_code(src,amb_pcm_cello_offsets,amb_pcm_cello_widths,at,amb_pcm_cello_period);break;
+    case 3: code=amb_octet_code(src,amb_oct_cello_offsets,amb_oct_cello_widths,at,amb_oct_cello_period);break;
     case 4: code=amb_packed_code(src,amb_pcm_piano_offsets,amb_pcm_piano_widths,at,amb_pcm_piano_period);break;
     case 5: code=amb_octet_code(src,amb_oct_tenor_offsets,amb_oct_tenor_widths,at,amb_oct_tenor_period);break;
-    case 6: code=amb_packed_code(src,amb_pcm_flute_offsets,amb_pcm_flute_widths,at,amb_pcm_flute_period);break;
+    case 6: code=amb_octet_code(src,amb_oct_flute_offsets,amb_oct_flute_widths,at,amb_oct_flute_period);break;
     default: return amb_pcm_at(src,at);
     }
     return amb_pcm_decode[code];
@@ -170,7 +178,7 @@ static void amb_sample_render(track_t *t,voice_t *v,int32_t *out,uint32_t n,cons
     if(style==4)inc=((pitch_inc((unsigned)(60+t->p[P_E2])*16)>>12)*recording->rate_q16)/(pitch_inc(60*16)>>12);
     if(style==2)inc=inc*(990u+(unsigned)((t->lfo_ph>>24)&31))/1000u;
     unsigned repeat=t->p[P_E3];
-    unsigned block_id[2]={~0u,~0u};int16_t decoded[2][32];
+    unsigned block_id[2]={~0u,~0u};int16_t decoded[2][32];amb_seek_t even_end={0,1};
     unsigned cached=~0u;int32_t first=0,second=0,overlap=0;
     for(i=0;i<n;i++) {
         unsigned at=ph>>16,frac=(ph>>1)&32767u;int32_t x,b;
@@ -197,8 +205,11 @@ static void amb_sample_render(track_t *t,voice_t *v,int32_t *out,uint32_t n,cons
                         if(source>=AMB_FIELD_SOURCE)amb_field_decode(source-AMB_FIELD_SOURCE,src,id,decoded[slot]);
                         else if(source==AMB_MIC_SOURCE)amb_take_decode(take->block[id],decoded[slot]);
                         else {
-                            const uint8_t *block=src+9*id;
-                            amb_decode_codes(block+1,speech_predict[speech_offset[source-13]+id],block[0],decoded[slot]);
+                            const uint8_t *block=src+8*id;
+                            amb_seek_t state=speech_seek[speech_offset[source-13]+id/2];
+                            if(slot)state=block_id[0]==id-1?even_end:amb_speech_block(block-8,state,0);
+                            state=amb_speech_block(block,state,decoded[slot]);
+                            if(!slot)even_end=state;
                         }
                         block_id[slot]=id;
                     }

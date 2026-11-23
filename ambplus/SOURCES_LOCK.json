@@ -103,5 +103,20 @@
   "speech_sources": {
     "catalog": "https://www.nasa.gov/historical-sounds/",
     "asset_hashes": "tools/gen_amb_speech.py in source archive"
+  },
+  "pitch_memory_sources": {
+    "Marbles": {
+      "repository": "https://github.com/pichenettes/eurorack",
+      "commit": "f4cfa7697095a28d292bff758beb51deb49b5a86",
+      "path": "marbles/random/random_sequence.h",
+      "license": "MIT",
+      "port": "Eight-event deterministic replay and replacement at fixed probabilities."
+    },
+    "Downspout": {
+      "repository": "https://github.com/danja/downspout",
+      "commit": "52e99bb0b19eebe85bff996aa0f64d7a982f55f4",
+      "license": "MIT",
+      "port": "Onset-time adaptation of Stepwise prior and learned order-two walk. Sixteen-observation sparse counts, integer weighting and per-layer LCG replace desktop matrices, exponentiation and RNG."
+    }
   }
 }

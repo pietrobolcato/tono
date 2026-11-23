@@ -92,13 +92,13 @@ int main(void)
         AMB_SCENE_LAST_TRAM, AMB_SCENE_FIRST_FERRY, AMB_SCENE_EVENING_ARRAY,
         AMB_SCENE_FUMAROLE, AMB_SCENE_WINDOW_LIGHT, AMB_SCENE_LINEN_AND_BOW,
         AMB_SCENE_UMBRA_MERIDIAN, AMB_SCENE_LONG_LEE, AMB_SCENE_COLD_DESERT,
-        AMB_SCENE_EMBER_MERIDIAN, AMB_SCENE_303_FELLOWS, AMB_SCENE_ANALOG_DAYS, AMB_SCENE_ANALOG_WARM};
+        AMB_SCENE_EMBER_MERIDIAN, AMB_SCENE_303_FELLOWS, AMB_SCENE_ANALOG_DAYS, AMB_SCENE_ANALOG_WARM,AMB_SCENE_NIGHT_WIRE,AMB_SCENE_BLUE_HOUR,AMB_SCENE_KILN};
     for(unsigned i=0;i<NELEM(bank);i++){
         assert(amb_next_piece(AMB_SCENE_GARDEN,(int)i)==bank[i]);
         assert(amb_next_piece(bank[i],-(int)i)==AMB_SCENE_GARDEN);
     }
     assert(amb_next_piece(AMB_SCENE_GARDEN,NELEM(bank))==AMB_SCENE_GARDEN);
-    turn(EN_PRESET,-1);
+    turn(EN_PRESET,-4);
     assert(ambr.piece_preview==AMB_SCENE_ANALOG_WARM);press(B_REC);
     for(unsigned k=0;k<4;k++)assert(amb.layer[k].generated && amb.layer[k].engine==ENGI_AMB_A22);
     turn(EN_PRESET,-1);

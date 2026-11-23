@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-enum { AMB_PIANO_PHRASING = 0x71 };
+enum { AMB_PIANO_PHRASING = 0x71, AMB_BERLIN_PHRASING = 0x72 };
 static void amb_finish_new_song(amb_piece_t *p,unsigned scene)
 {
     if(scene>AMB_SCENE_WINDOW_LIGHT)return;

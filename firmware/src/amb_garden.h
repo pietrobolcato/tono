@@ -191,7 +191,7 @@ static void garden_pulse(garden_layer_t *g, unsigned k, unsigned step, unsigned 
         if (allow && !g->pulse_rest && (g->pulse_pattern[i] >> (step % garden_pulse_len[i]) & 1))
         {
             unsigned velocity=(step % garden_pulse_len[i] ? 60 : 88) + garden_random(g,21);
-            if(amb_keep_onset(k,step))trk_note_on(&trk[k],gm[i],velocity);
+            if(amb_keep_onset(k,step))trk_note_on(&trk[k],amb_remember(k,gm[i],1),velocity);
         }
 }
 /* Upstream drift is measured in seconds, then committed on a bar. AUTO
@@ -365,6 +365,7 @@ static void garden_step(unsigned k, unsigned step)
                        12 * (degree / count);
                 while (note > 103)
                     note -= 12;
+                note = amb_remember(k,note,0);
                 vel = loop->velocity[pos];
                 unsigned wait = garden_random(g, 2600);
                 garden_schedule(k, note, vel, wait, FS * 3, i + 1);

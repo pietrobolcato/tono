@@ -48,6 +48,26 @@ def assets():
     for name, period in [('violin',38),('tenor',19)]:
         samples = re.search(r'amb_pcm_'+name+r'\[\d+\] = \{([^}]+)', acoustic).group(1)
         yield name, period, list(map(int,re.findall(r'\d+',samples)))
+    # Decode the checked-in sixteen-point assets exactly before changing
+    # their storage stride. The decoded codes and the playback rates stay fixed.
+    for name, period in [('cello',46),('flute',19)]:
+        symbol = 'amb_pcm_' + name
+        def values(suffix):
+            raw = re.search(symbol + suffix + r'\[\d+\] = \{([^}]+)', acoustic)[1]
+            return list(map(int, re.findall(r'\d+', raw)))
+        data, offsets, widths = (values(s) for s in ('', '_offsets', '_widths'))
+        length = int(re.search(symbol + r'_length = (\d+)', acoustic)[1])
+        codes = []
+        for sample in range(length):
+            cycle, phase = divmod(sample, period)
+            row, slot = divmod((cycle // 16) * period + phase, 8)
+            sizes = [(widths[row] >> (4*i)) & 15 for i in range(8)]
+            offset = offsets[row] + slot + 2 * sum(sizes[:slot])
+            bit = (cycle % 16) * sizes[slot]
+            address = offset + 1 + bit // 8
+            bits = data[address] | (data[address+1] << 8)
+            codes.append(data[offset] + ((bits >> (bit % 8)) & ((1 << sizes[slot])-1)))
+        yield name, period, codes
 
 
 def main():

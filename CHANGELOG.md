@@ -623,3 +623,9 @@ Everything since V10.7.6 (the betas V10.7.7 … V10.7.15 included).
 - **0.3 – 0.5 (9 Oct)**: DRUM-X FM, punch-in FX, reverb and grain delay, HOME macros, the SELECT dice, the master
   leveler, a filter on every engine.
 - **Before 0.3 (2–8 Oct)**: Felucca betas (0.4 – 1.1.5), the web installer and the web editor.
+
+## Tono 0.57-opt
+
+- GLO Generate adds Locked Loop, Drift Loop and Markov Walk. Each automatic melodic layer keeps its own short-term memory. The two loop modes can also retain the order of drum strikes.
+- HOME adds three generative pieces, Night Wire, Blue Hour Acid and Kiln Echoes. Generate includes a reusable recipe for every distinct factory-song configuration.
+- Repacked cello and flute sample groups and rebuilt factory speech seek checkpoints at startup. Sample values, durations, and the song/recording save format are preserved.

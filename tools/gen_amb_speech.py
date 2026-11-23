@@ -29,7 +29,7 @@ for name,asset,length,digest in CLIPS:
             block[2+i//4]|=code<<(2*(i%4))
             pred=max(-127,min(127,pred+(-1 if code&2 else 1)*step*(3 if code&1 else 1)))
             step=max(1,min(64,step+(step+1)//2 if code&1 else step-(step+3)//4))
-        data.extend(block[1:])  # Predictor checkpoints are regenerated on boot.
+        data.extend(block[2:])  # Both seek checkpoints are regenerated at boot.
     out.append(f'#define SPEECH_{name.upper()}_FRAMES {len(wave)}u')
     out.append('static const uint8_t speech_'+name+'[]={')
     out.extend(','.join(map(str,data[i:i+32]))+',' for i in range(0,len(data),32))

@@ -44,6 +44,12 @@ static void amb_anchor_master(amb_piece_t *p)
         p->master_anchor[i]=(uint8_t)(p->global[id]-GP[id].min);
     }
 }
+typedef struct {
+    uint32_t rng;
+    int8_t history[16];
+    uint8_t count,head,pos,style,previous,older,pitch;
+} amb_memory_t;
+static amb_memory_t amb_memory[4];
 static amb_piece_t amb;
 /* Optional trailer after the established piece or complete piece+take record.
  * Theme belongs to the device. Musical preferences start with the composition. */
@@ -124,7 +130,7 @@ static unsigned amb_global_index(unsigned page)
 static const char *const AMB_MOOD[7] = {"homeward","warmer","brighter","suspended","deeper","open","darker"};
 #include "amb_nostalgic.h"
 _Static_assert(sizeof(amb_piece_t)==1440 && AMB_VERSION==5, "upgrade embedded song before changing format");
-enum { AMB_SCENE_GARDEN = 11, AMB_SCENE_INN = 12, AMB_SCENE_TIDE_ATLAS = 14, AMB_SCENE_LAST_TRAM = 16, AMB_SCENE_FIRST_FERRY = 17, AMB_SCENE_EVENING_ARRAY, AMB_SCENE_FUMAROLE, AMB_SCENE_WINDOW_LIGHT, AMB_SCENE_LINEN_AND_BOW, AMB_SCENE_UMBRA_MERIDIAN, AMB_SCENE_LONG_LEE, AMB_SCENE_EMBER_MERIDIAN, AMB_SCENE_COLD_DESERT, AMB_SCENE_303_FELLOWS, AMB_SCENE_ANALOG_DAYS, AMB_SCENE_ANALOG_WARM, AMB_SCENE_COUNT };
+enum { AMB_SCENE_GARDEN = 11, AMB_SCENE_INN = 12, AMB_SCENE_TIDE_ATLAS = 14, AMB_SCENE_LAST_TRAM = 16, AMB_SCENE_FIRST_FERRY = 17, AMB_SCENE_EVENING_ARRAY, AMB_SCENE_FUMAROLE, AMB_SCENE_WINDOW_LIGHT, AMB_SCENE_LINEN_AND_BOW, AMB_SCENE_UMBRA_MERIDIAN, AMB_SCENE_LONG_LEE, AMB_SCENE_EMBER_MERIDIAN, AMB_SCENE_COLD_DESERT, AMB_SCENE_303_FELLOWS, AMB_SCENE_ANALOG_DAYS, AMB_SCENE_ANALOG_WARM, AMB_SCENE_NIGHT_WIRE, AMB_SCENE_BLUE_HOUR, AMB_SCENE_KILN, AMB_SCENE_COUNT };
 /* Each factory title can carry two lines of preview copy. */
 #define AMB_SONG(name, line1, line2) name "\0" line1 "\0" line2
 /* Archived recipes remain addressable by their original IDs in the host
@@ -153,7 +159,10 @@ static const char *const AMB_SCENE[] = {
     AMB_SONG("Tales of Cold Desert Dunes","Slow FM swells and ice chimes", "over bowed-metal wind"),
     AMB_SONG("303 Fellows","Soft acid bass and linen chords","with harp and ocean beads"),
     AMB_SONG("Analog Days Quartet","Wurli and felt piano trade lines","over a soft pad and a low pulse"),
-    AMB_SONG("Analog Days Warm","Electric keys with warm brass","and rounded analog sub bass")
+    AMB_SONG("Analog Days Warm","Electric keys with warm brass","and rounded analog sub bass"),
+    AMB_SONG("Night Wire","An eight-note acid pulse","under slow Berlin strings"),
+    AMB_SONG("Blue Hour Acid","Electric piano and brushed drums","answer a wandering acid bass"),
+    AMB_SONG("Kiln Echoes","Hollow knocks drift out of step","above a dark, quiet drone")
 };
 #undef AMB_SONG
 #undef AMB_ARCHIVED
@@ -207,7 +216,7 @@ static int amb_acid(const amb_layer_t *l)
     return (l->role==3 && l->patch==11) || (l->role==7 && l->patch==1);
 }
 static int amb_mono_role(const amb_layer_t *l){return l->role==3 || l->role==7;}
-static int amb_acid_phrase(const amb_layer_t *l){return amb.policy.active[1]==AMB_ACID_PHRASE && amb_mono_role(l);}
+static int amb_acid_phrase(const amb_layer_t *l){return amb.policy.active[1]>=AMB_ACID_PHRASE && amb_mono_role(l);}
 static const char *const acid_macro[]={"CUTOFF","RES","ENV MOD","DECAY"};
 static void amb_fill_patch(amb_layer_t *l,unsigned key,unsigned k,unsigned role,unsigned patch)
 {
@@ -320,6 +329,7 @@ static void amb_begin_change(unsigned k)
 {
     unsigned i,frames;
     garden_cancel(k);
+    amb_memory[k].style=0;
     ambr.grid_cue[k]=(amb_grid_cue_t){0};
     if(ambr.handoff[k])return;
     if(!amb_track_active(k)){amb_release(k);ambr.due[k]=0;return;}
@@ -428,6 +438,21 @@ static const struct {
     {"Acid Hocket","Bass and lead trade short pulses.","Focused, gently driving.",{1,8,3,25}},
     {"Passing Lights","Uneven loops trade little motifs.","Open, with a wandering pulse.",{2,2,1,55}},
     {"Slipstream","Staggered lines answer offbeat.","Loose, with a lilting pulse.",{6,5,1,55}},
+    {"Night Circuit","Eight pitches return over a pulse.","Steady, warm and hypnotic.",{1,AMB_LOCKED,0,25}},
+    {"Blue Changes","Lines learn their opening turns.","Smoky, loose and conversational.",{1,AMB_MARKOV,1,38}},
+    {"Kiln Drift","Odd loops slowly trade one hit.","Spacious, earthy and unhurried.",{2,AMB_DRIFT,1,32}},
+    {"Nostalgic New Inn","Drifting pulses breathe together.","Soft-edged, with room to wander.",{0,0,0,40}},
+    {"Last Tram","Offset loops trade two-bar calls.","Restless conversation after dark.",{2,4,1,40}},
+    {"First Ferry","Two-bar replies on uneven loops.","A calmer take on call and answer.",{2,4,1,28}},
+    {"Berlin Mornings","Even pulses thread a roaming line.","Steady motion under long tones.",{1,2,0,30}},
+    {"Acid Konichiwa","Uneven loops enter in succession.","Floating, with little insistence.",{2,2,1,26}},
+    {"Window Light","Cross-rhythms share the accents.","A flowing exchange of phrases.",{3,2,3,30}},
+    {"Iceland Memories","Tidal phrases leave space to reply.","Gentle swells with a clear voice.",{5,2,3,32}},
+    {"Mars Symphonies","Layers ride one slow rhythmic tide.","Wide, suspended and unhurried.",{5,2,0,36}},
+    {"Tales of Sand Dunes","Sparse pulses come up for air.","Long spaces between gestures.",{4,0,0,34}},
+    {"Cold Desert Dunes","Tides trade accents across layers.","More restless than Iceland.",{5,2,3,38}},
+    {"303 Fellows","Short acid cells share a pulse.","Fluid, rounded forward motion.",{1,8,0,28}},
+    {"Analog Days","Even pulses shift their entrances.","Mellow motion with a loose edge.",{1,5,0,24}},
 };
 static void amb_commit_generate(void)
 {
@@ -493,6 +518,7 @@ static void amb_auto_tick(void)
 #include "amb_desert_songs.h"
 #include "amb_303_fellows.h"
 #include "amb_analog_days.h"
+#include "amb_memory_songs.h"
 static void amb_make_scene(amb_piece_t *p,unsigned scene)
 {
 #ifdef AMB_RETAIN_ARCHIVED_SCENES
@@ -543,7 +569,7 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
     scene=requested;
     if(requested==AMB_SCENE_LINEN_AND_BOW)scene=AMB_SCENE_WINDOW_LIGHT;
     if(requested==AMB_SCENE_UMBRA_MERIDIAN || requested==AMB_SCENE_EMBER_MERIDIAN)scene=AMB_SCENE_TIDE_ATLAS;
-    if(requested==AMB_SCENE_LONG_LEE || requested==AMB_SCENE_COLD_DESERT || requested==AMB_SCENE_303_FELLOWS || requested==AMB_SCENE_ANALOG_DAYS || requested==AMB_SCENE_ANALOG_WARM)scene=0;
+    if(requested==AMB_SCENE_LONG_LEE || requested==AMB_SCENE_COLD_DESERT || requested==AMB_SCENE_303_FELLOWS || requested==AMB_SCENE_ANALOG_DAYS || requested>=AMB_SCENE_ANALOG_WARM)scene=0;
     if(scene==AMB_SCENE_INN){
         uint8_t *out=(uint8_t *)p;
         memset(p,0,sizeof *p);
@@ -636,6 +662,7 @@ static void amb_make_scene(amb_piece_t *p,unsigned scene)
     if(requested==AMB_SCENE_303_FELLOWS)amb_303_fellows(p);
     if(requested==AMB_SCENE_ANALOG_DAYS || requested==AMB_SCENE_ANALOG_WARM)
         amb_analog_days(p,requested==AMB_SCENE_ANALOG_WARM);
+    if(requested>=AMB_SCENE_NIGHT_WIRE)amb_memory_song(p,requested-AMB_SCENE_NIGHT_WIRE);
 }
 typedef struct {amb_piece_t piece;amb_take_t take;} amb_take_song_t;
 _Static_assert(sizeof(amb_take_song_t)<=ST_PAYLOAD_MAX,"voice take fits an existing song");
@@ -683,7 +710,7 @@ static void amb_install(const amb_piece_t *p)
     ambr.generate_queued=0;
     memset(ambr.gen_edit,0,sizeof ambr.gen_edit);
     ambr.evolve_open=ambr.evolve_queued=0;memset(&travel,0,sizeof travel);amb_auto_reset();amb_reset_lanes();
-    amb=*p;memcpy(amb_reset_grain,amb.grain,sizeof amb_reset_grain);memcpy(amb_reset_layer,amb.layer,sizeof amb_reset_layer);memcpy(amb_reset_eq,amb.layer_eq,sizeof amb_reset_eq);
+    memset(amb_memory,0,sizeof amb_memory);amb=*p;memcpy(amb_reset_grain,amb.grain,sizeof amb_reset_grain);memcpy(amb_reset_layer,amb.layer,sizeof amb_reset_layer);memcpy(amb_reset_eq,amb.layer_eq,sizeof amb_reset_eq);
     memset(ambr.recent,0,sizeof ambr.recent);
     memset(ambr.recent_valid,0,sizeof ambr.recent_valid);memset(ambr.playhead_valid,0,sizeof ambr.playhead_valid);memset(&ambr.harmony_walk,0,sizeof ambr.harmony_walk);ambr.reset_pending=0;
     ambr.solo=(int8_t)amb.layer[0].solo_plus1-1;ambr.chord_q=ambr.proposal=255;
@@ -1156,6 +1183,7 @@ static int amb_keep_onset(unsigned layer,uint32_t position)
     unsigned thinning=amb_controls.thinning;
     return !thinning || (thinning<100 && amb_hash(amb.policy.seed+position+layer*0x9e3779b9u)%100u>=thinning);
 }
+#include "amb_phrase_memory.h"
 #include "amb_garden.h"
 static void amb_acid_step(unsigned k,unsigned note,unsigned velocity,unsigned speed,int slide)
 {
@@ -1178,13 +1206,21 @@ static void amb_layer_step(unsigned k,unsigned step,unsigned mask)
         ambr.grid_cue[k]=(amb_grid_cue_t){0};return;
     }
     if(!(step%(1u<<speed))){ambr.playhead[k]=(uint8_t)((step>>speed)%16);ambr.playhead_valid[k]=1;}
+    /* Night Wire leaves the tape and bell tails exposed, then brings the
+     * pulse back. Each 32-bar pass draws a different length for the break. */
+    if(l->generated && amb.layer[2].reserved==AMB_BERLIN_PHRASING && amb.policy.active[1]==AMB_LOCKED){
+        unsigned bar_in_pass=bar%32;
+        unsigned return_bar=20+amb_hash(amb.policy.seed+bar/32)%4;
+        if(k==0 && l->role==3 && bar_in_pass>=16 && bar_in_pass<return_bar)return;
+        if(k==1 && l->role==0 && bar_in_pass>=14 && bar_in_pass<18)return;
+    }
     if(l->generated && amb.policy.active[0]==8 && l->role!=5 && !amb_acid_phrase(l)){garden_step(k,step);return;}
     if(l->role==4){
         ambr.playhead[k]=(uint8_t)(step%16);ambr.playhead_valid[k]=1;
         static const uint8_t drum[4]={36,38,42,50};
         if(!amb_keep_onset(k,step))return;
         if(!l->generated){for(i=0;i<4;i++)if((l->drums[i]>>tick)&1u)trk_note_on(&trk[k],drum[i],64+i*4);}
-        else if((mask>>k)&1){unsigned lane=amb_hash(amb.policy.seed+step+k*53+bar*mutation)%4;trk_note_on(&trk[k],drum[lane],52+amb_hash(step)%24);
+        else if((mask>>k)&1){unsigned lane=amb_hash(amb.policy.seed+step+k*53+bar*mutation)%4;trk_note_on(&trk[k],amb_remember(k,drum[lane],1),amb.policy.active[1]>=AMB_LOCKED?37+amb_hash(amb.policy.seed+step+k)%47:52+amb_hash(step)%24);
             if(fill && tick==15 && bar%4==3)trk_note_on(&trk[k],42,45+fill/4);}
         return;
     }
@@ -1226,18 +1262,24 @@ static void amb_layer_step(unsigned k,unsigned step,unsigned mask)
                 slide=(slot%4 && (shape>>12)%3==0 && ambr.held_n[k] && ambr.held[k][0]!=note);
             }
         }
+        int play=note && amb_keep_onset(k,step);
+        if(play && amb.policy.active[1]>=AMB_LOCKED){
+            note=amb_remember(k,note,0);
+            velocity=velocity-14+amb_hash(amb.policy.seed+step*13+k)%25;
+        }
         ambr.recent_slide[k]=(ambr.recent_slide[k]&~bit)|(slide?bit:0);
         ambr.recent[k][slot]=note;ambr.recent_vel[k][slot]=velocity;ambr.recent_valid[k]=1;
-        if(note && amb_keep_onset(k,step))amb_acid_step(k,note,velocity,speed,slide);
+        if(play)amb_acid_step(k,note,velocity,speed,slide);
         else amb_release(k);
         return;
     }
     n=amb_generated_notes(k,step,mask,notes,&gate);
+    if(amb.policy.active[1]>=AMB_LOCKED && n==1 && l->role==2 && amb_keep_onset(k,step))notes[0]=amb_remember(k,notes[0],0);
     if(!(step% (1u<<speed))){i=(step>>speed)%16;ambr.recent[k][i]=n?notes[0]:0;ambr.recent_vel[k][i]=65;ambr.recent_valid[k]=1;}
     if(!n || !amb_keep_onset(k,step))return;
     if(n==1 && (l->role==0 || l->role==1 || l->role==5) && amb_carry_note(k,notes[0],gate))return;
     if(l->role==0 && amb_keep_pad(k,notes,n,gate))return;
-    unsigned velocity=65;
+    unsigned velocity=amb.policy.active[1]>=AMB_LOCKED?53+amb_hash(amb.policy.seed+step*13+k)%27:65;
     if(amb.layer[2].reserved==AMB_PIANO_PHRASING && l->role==2){
         unsigned touch=amb_hash(amb.policy.seed+step*59u+k*71u);
         velocity=54u+touch%20u+(step%16u==0?8u:0u);
@@ -1289,7 +1331,7 @@ static void amb_step(void)
     mask=amb_policy_events(&amb.policy,ambr.step,part);
     for(k=0;k<4;k++) {
         unsigned delay=(ambr.step&1u)?(FS*60u/(unsigned)(amb.global[G_BPM]*4))*amb_routed(k,ROUTE_SWING,amb.layer[k].swing,0,100)/200u:0;
-        if(amb.layer[2].reserved==AMB_PIANO_PHRASING && amb.layer[k].generated && amb.layer[k].role==2){
+        if(amb.layer[k].generated && ((amb.layer[2].reserved==AMB_PIANO_PHRASING && amb.layer[k].role==2) || amb.policy.active[1]==AMB_MARKOV)){
             unsigned touch=amb_hash(amb.policy.seed+ambr.step*151u+k*983u);
             delay+=(FS/1000u)*(3u+touch%22u);
         }
@@ -1327,7 +1369,7 @@ static __attribute__((noinline)) void amb_clock(uint32_t n)
         amb_reset_lanes();ambr.last_play=0;return;
     }
     if(!ambr.last_play){
-        ambr.phase=ambr.step=0;ambr.last_play=1;memset(ambr.grid_cue,0,sizeof ambr.grid_cue);
+        memset(amb_memory,0,sizeof amb_memory);ambr.phase=ambr.step=0;ambr.last_play=1;memset(ambr.grid_cue,0,sizeof ambr.grid_cue);
         for(k=0;k<4;k++)ambr.foundation_pending[k]=(uint8_t)((amb.layer[k].role<2 || amb.layer[k].role==5) && amb.layer[k].generated);
         amb_step();
     }
@@ -1589,7 +1631,7 @@ static unsigned amb_next_piece(unsigned p,int clicks)
     const uint32_t factory_bank=(1u<<AMB_SCENE_GARDEN)|(1u<<AMB_SCENE_INN)|
         (1u<<AMB_SCENE_LAST_TRAM)|(1u<<AMB_SCENE_FIRST_FERRY)|
         (1u<<AMB_SCENE_EVENING_ARRAY)|(1u<<AMB_SCENE_FUMAROLE)|(1u<<AMB_SCENE_WINDOW_LIGHT)|(1u<<AMB_SCENE_LINEN_AND_BOW)|
-        (1u<<AMB_SCENE_UMBRA_MERIDIAN)|(1u<<AMB_SCENE_LONG_LEE)|(1u<<AMB_SCENE_EMBER_MERIDIAN)|(1u<<AMB_SCENE_COLD_DESERT)|(1u<<AMB_SCENE_303_FELLOWS)|(1u<<AMB_SCENE_ANALOG_DAYS)|(1u<<AMB_SCENE_ANALOG_WARM);
+        (1u<<AMB_SCENE_UMBRA_MERIDIAN)|(1u<<AMB_SCENE_LONG_LEE)|(1u<<AMB_SCENE_EMBER_MERIDIAN)|(1u<<AMB_SCENE_COLD_DESERT)|(1u<<AMB_SCENE_303_FELLOWS)|(1u<<AMB_SCENE_ANALOG_DAYS)|(1u<<AMB_SCENE_ANALOG_WARM)|(1u<<AMB_SCENE_NIGHT_WIRE)|(1u<<AMB_SCENE_BLUE_HOUR)|(1u<<AMB_SCENE_KILN);
     int dir=clicks<0?-1:1;
     while(clicks){
         do {

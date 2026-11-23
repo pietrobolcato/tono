@@ -143,3 +143,11 @@ On Acid Undertow and Acid Ribbon the four layer performance knobs are Cutoff, Re
 With GLO → GENERATE → PHRASE set to ACID LINE and a Bass or Lead pattern on AUTO, rhythm cues open short monophonic phrases. The generator takes its tonic from the current chord and snaps melodic turns into the song's note pool. A seeded motif has a recurring opening and a changing ending, then renews after four 16-step cycles. Layer speed sets the subdivision, and density controls how many spaces are filled. Try Euclidean rhythm, Acid Line phrasing and 1/16 at 96 BPM to hear the audition feel. Capturing a playing acid line into a manual pattern carries the notes, velocity accents and slide-in steps into the editor.
 
 GLO → Travel → EDIT → Patterns: K1 CHANGE selects Off, Rotate (one pattern family at a time), or Preset (a complete randomly selected Generate recipe). Both use the same Patterns clock. Preset skips combinations sharing the current three algorithms, including the two Garden variants when already using Garden/Breathe/Blend. The choice is saved with the song.
+
+### Pitch memory in GLO → Generate
+
+K2 selects Locked Loop, Drift Loop or Markov Walk. PRESETS also offers Night Circuit, Kiln Drift and Blue Changes. Preview a recipe, then press REC to accept it. While playing, the shared Generate settings change at the next four-bar boundary.
+
+Locked Loop repeats eight attacks relative to the harmony. Drift Loop replaces an entry on about 16% of attacks. Both can remember percussion choices. Markov Walk listens to the first sixteen generated pitches per melodic layer, then draws from learned one- and two-note transitions within the current scale. The chosen rhythm and interplay still place the attacks. Manual sequences retain their own notes.
+
+The Generate browser has 20 distinct combinations across the 18 factory songs and the additional standalone presets. Garden uses Garden Original. Both Mars songs use Mars Symphonies. Both Analog Days songs use Analog Days. Night Wire uses Night Circuit, Blue Hour Acid uses Blue Changes, and Kiln Echoes uses Kiln Drift. The other song-derived entries carry their song names (Cold Desert Dunes is abbreviated on the display). Recalling one here applies only Rhythm, Phrase, Interplay and Variation.

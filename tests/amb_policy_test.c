@@ -18,7 +18,7 @@ int main(void)
 {
     amb_policy_t p;
     unsigned family, style, j, step;
-    uint64_t hashes[9];
+    uint64_t hashes[sizeof AMB_PHRASES/sizeof *AMB_PHRASES];
     amb_policy_init(&p, 42);
     amb_policy_choose(&p, 0, 5, 1);
     amb_policy_choose(&p, 0, 7, 1);
@@ -35,6 +35,7 @@ int main(void)
             amb_policy_choose(&p, family, style, 0);
             hashes[style] = trace(&p);
             assert(hashes[style] == trace(&p));
+            if(family==1 && style>=AMB_LOCKED){assert(hashes[style]==hashes[AMB_ACID_PHRASE]);continue;}
             for (j = 0; j < style; j++) assert(hashes[style] != hashes[j]);
         }
     }
