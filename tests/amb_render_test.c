@@ -245,8 +245,8 @@ int main(int argc,char **argv)
                 ar_frame(name,dir,1);
                 for(unsigned module=0;module<(view==1 && ambr.page==5?6u:view==2 && ambr.page==3?4u:1u);module++){
                     ambr.fx=module;
-                    if(!amb_page_bank())continue;
-                    for(unsigned choice=1;choice<=3;choice++){
+                    if(!amb_local_count())continue;
+                    for(unsigned choice=1;choice<=amb_local_count();choice++){
                         ambr.local_preset=choice;ar_frame("page_variation",dir,0);
                     }
                     ambr.local_preset=0;

@@ -60,7 +60,7 @@ static void check_page_presets(void)
                 amb_piece_t old=amb;
                 turn(EN_PRESET,index);
                 assert(ambr.view==view && ambr.piece_preview==255 && !memcmp(&amb,&old,sizeof amb));
-                if(!amb_page_bank()){assert(!ambr.local_preset);continue;}
+                if(!amb_local_count()){assert(!ambr.local_preset);continue;}
                 assert(ambr.local_preset==index && amb_rec_action());
                 press(B_HOME);assert(!ambr.local_preset && !memcmp(&amb,&old,sizeof amb));
                 ambr.view=view;ambr.page=page;ambr.fx=fx;
@@ -210,6 +210,16 @@ int AMB_MAIN(int argc,char **argv)
     }
     amb_fixture_scene(0);amb.layer[0].swing=100;ambr.step=1;amb_step();assert(ambr.due[0]>0);
     ambr.view=2;ambr.page=2;before=amb;turn(EN_ALGO,4);press(B_REC);assert(!memcmp(&before,&amb,sizeof amb));
+    seq_start();ambr.step=63;
+    turn(EN_PRESET,-1);
+    assert(ambr.local_preset==NELEM(amb_generate_recipes));
+    press(B_REC);
+    assert(ambr.generate_queued==NELEM(amb_generate_recipes));
+    amb_step();assert(!memcmp(&amb.policy,&before.policy,sizeof amb.policy));
+    amb_step();assert(!ambr.generate_queued);
+    const uint8_t *chosen=amb_generate_recipes[NELEM(amb_generate_recipes)-1].values;
+    assert(!memcmp(amb.policy.active,chosen,3) && amb.policy.variation==chosen[3]);
+    seq_stop();
     amb_fixture_scene(0);ambr.view=0;seq_start();ambr.step=9;ambr.piece_preview=2;amb_rec();
     assert(amb_pending_ready && amb.key==0);
     while(ambr.step<16)amb_step();assert(amb.key==0);

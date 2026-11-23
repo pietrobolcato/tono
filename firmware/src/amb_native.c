@@ -97,6 +97,7 @@ static struct {
     uint8_t help, local_preset, preset_position;
     uint8_t loading, last_play, target, edit_layer, view, page, bank, fx, lane, cursor, recording;
     uint8_t proposal, chord_q, piece_preview, slot, overwrite, dirty, panic, play_used, home_used;
+    volatile uint8_t generate_queued; /* One-based recipe published to the transport. */
     uint8_t gen_candidate[3], gen_edit[3];
     uint32_t gen_time[3];
     uint8_t accent[4];
@@ -658,6 +659,7 @@ static void amb_install(const amb_piece_t *p)
     memcpy(ambr.octave_seen,(const void *)ambr.octave_taps,sizeof ambr.octave_seen);
     ambr.zen_train=amb_controls.flags&1u;
     amb_monitor_requested=(amb_controls.flags>>1)&1u;
+    ambr.generate_queued=0;
     memset(ambr.gen_edit,0,sizeof ambr.gen_edit);
     ambr.evolve_open=ambr.evolve_queued=0;memset(&travel,0,sizeof travel);amb_auto_reset();amb_reset_lanes();
     amb=*p;memcpy(amb_reset_grain,amb.grain,sizeof amb_reset_grain);memcpy(amb_reset_layer,amb.layer,sizeof amb_reset_layer);memcpy(amb_reset_eq,amb.layer_eq,sizeof amb_reset_eq);
@@ -1241,6 +1243,26 @@ static void amb_queue_octave(int direction)
     if(amb_octave_delta(target)*direction<3)ambr.octave_taps[target]+=direction;
     ambr.dirty=1;
 }
+static const struct {
+    const char *name, *gesture, *mood;
+    uint8_t values[4];
+} amb_generate_recipes[]={
+    {"Open Garden","Layers breathe in separate loops.","Gentle and unhurried.",{8,0,0,15}},
+    {"Acid Hocket","Short lines trade the pulse.","Restless, with room to breathe.",{1,8,3,25}},
+    {"Passing Lights","The players take turns in focus.","Suspended and conversational.",{3,2,2,35}},
+    {"Slipstream","Offset phrases drift out of step.","Loose and slightly off balance.",{6,5,1,55}},
+};
+static void amb_commit_generate(void)
+{
+    unsigned queued=ambr.generate_queued;
+    if(!queued)return;
+    const uint8_t *values=amb_generate_recipes[queued-1].values;
+    memcpy(amb.policy.active,values,3);
+    memset(amb.policy.pending,255,3);
+    amb.policy.variation=values[3];
+    ambr.generate_queued=0;
+    ambr.dirty=1;
+}
 static void amb_step(void)
 {
     amb_participation_t part[4]; uint8_t mask; unsigned k,bar=ambr.step/16;
@@ -1256,6 +1278,7 @@ static void amb_step(void)
     }
     {uint8_t before[3];memcpy(before,amb.policy.active,3);
         if(!(ambr.step%16u)){amb_ensemble_downbeat();amb_commit_evolution();}
+        if(!(ambr.step%64u))amb_commit_generate();
         amb_policy_boundary(&amb.policy,ambr.step);
         if(memcmp(before,amb.policy.active,3))for(k=0;k<4;k++)if(amb.layer[k].generated)amb_begin_change(k);
     }
@@ -1297,6 +1320,7 @@ static __attribute__((noinline)) void amb_clock(uint32_t n)
     }
     for(k=0;k<4;k++)garden_advance(k,n);
     if(!song.playing) {
+        amb_commit_generate();
         for(k=0;k<4;k++)ambr.due[k]=0;
         if(ambr.last_play)for(k=0;k<4;k++)amb_release(k);
         amb_reset_lanes();ambr.last_play=0;return;
@@ -2003,6 +2027,7 @@ static void amb_knob(unsigned knob,int delta)
             else return;
             if(knob<2 && (amb.key!=old_key || amb_pool()!=old_pool))amb_revoice();
         } else if(ambr.page==2) {
+            ambr.generate_queued=0;
             if(knob<3) {
                 unsigned cur=ambr.gen_edit[knob]?ambr.gen_candidate[knob]:amb.policy.pending[knob]!=255?amb.policy.pending[knob]:amb.policy.active[knob];
                 ambr.gen_candidate[knob]=(uint8_t)amb_wrap((int)cur+delta,amb_style_count(knob));
@@ -2296,9 +2321,9 @@ static void amb_input(void)
         else amb_browse_proposal(algo);
         ambr.dirty=1;
     }
-    if(pre && amb_page_bank()){
+    if(pre && amb_local_count()){
         ambr.reset_pending=0;ambr.proposal=255;
-        ambr.local_preset=1+amb_wrap((ambr.local_preset?ambr.local_preset-1:pre>0?-1:0)+pre,3);
+        ambr.local_preset=1+amb_wrap((ambr.local_preset?ambr.local_preset-1:pre>0?-1:0)+pre,amb_local_count());
         ambr.dirty=1;
     }else if(pre && ambr.view==0) {
         ambr.reset_pending=0;
@@ -3114,7 +3139,7 @@ static void amb_draw(void)
                     }
                 }
             }
-            cv_bg=ABG;amb_text(10,132,"GENERATOR PREVIEW",ADIM,20);
+            cv_bg=ABG;amb_text(10,132,ambr.generate_queued?"Queued for next four-bar downbeat":"PRESETS  Browse generators",ADIM,36);
         } else if(ambr.view==2 && ambr.page==3) {
             static const char *const modules[4]={"REVERB","DELAY / TAPE","MOTION","WARMTH"};
             amb_display(49,75);
@@ -3197,11 +3222,17 @@ static void amb_draw(void)
         if(role<8)amb_text(15,98,role==6?N_AS_SOURCE[ambr.evolve_patch]:amb_recipe(role,ambr.evolve_patch)->name,AINK,33);
         amb_text(15,114,"ALGO Choose action",ADIM,35);
         amb_text(15,128,ambr.evolve_queued?"Queued for next bar":role==255?"HOME Close":"REC Trigger / HOME Close",AQUEUE,32);
-    }else if(!ambr.help && ambr.local_preset && amb_page_bank()){
+    }else if(!ambr.help && ambr.local_preset && amb_local_count()){
         GFX_HOOK_COVER(8,50,232,145);cv_bg=ASEL;cv_rect(8,50,224,95,cv_bg);
         const char *subject=ambr.page==1 && ambr.view==1?(l->role==6?N_AS_SOURCE[l->base[P_E0]]:amb_patch_name(l)):"PROPOSED VARIATION";
         amb_text(16,62,subject,ADIM,32);
-        cv_text(16,79,&AF_M,amb_page_bank()->name[ambr.local_preset-1],AINK);
+        unsigned index=ambr.local_preset-1;
+        int gen=amb_generate_page();
+        cv_text(16,79,&AF_M,gen?amb_generate_recipes[index].name:amb_page_bank()->name[index],AINK);
+        if(gen){
+            amb_text(16,102,amb_generate_recipes[index].gesture,AINK,38);
+            amb_text(16,118,amb_generate_recipes[index].mood,ADIM,38);
+        }
         if(ambr.view==1 && ambr.page==1){
             static const char *const feel[]={"Up close, with a clearer attack","Rounder, with a softer entrance","A slow swell in a larger space"};
             amb_text(16,103,feel[ambr.local_preset-1],ADIM,36);
@@ -3242,7 +3273,7 @@ static void amb_draw(void)
         amb_text(10,23,second,AINK,39);
         amb_text(10,ambr.view==1?36:44,ambr.view==1 && ambr.page==1?"MASTER controls the edited layer.":"MASTER controls the selected level.",ADIM,39);
         if(!ambr.view)amb_text(10,57,"HOME + PLAY locks the layer sound",ADIM,39);
-        else if(amb_page_bank())amb_text(10,ambr.view==1?49:57,"PRESETS variation / REC apply",ADIM,39);
+        else if(amb_local_count())amb_text(10,ambr.view==1?49:57,"PRESETS variation / REC apply",ADIM,39);
         if(ambr.view==1)amb_text(10,62,"HOME + LFO links last knob edit",ADIM,39);
         amb_text(10,75,"HOME close / HOME + FX bypass",AQUEUE,37);
         cv_blit_cells(0,147);

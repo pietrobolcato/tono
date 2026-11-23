@@ -41,11 +41,23 @@ static const amb_page_bank_t *amb_page_bank(void)
     default:return 0;
     }
 }
+static int amb_generate_page(void){return ambr.view==2 && ambr.page==2;}
+static unsigned amb_local_count(void)
+{
+    return amb_generate_page()?NELEM(amb_generate_recipes):amb_page_bank()?3:0;
+}
 static void amb_apply_page_preset(void)
 {
     const amb_page_bank_t *bank=amb_page_bank();
     const int index=ambr.local_preset-1;
     ambr.local_preset=0;
+    if(amb_generate_page() && (unsigned)index<NELEM(amb_generate_recipes)){
+        memset(ambr.gen_edit,0,sizeof ambr.gen_edit);
+        ambr.generate_queued=(uint8_t)(index+1);
+        if(!song.playing)amb_commit_generate();
+        ambr.dirty=1;
+        return;
+    }
     if(!bank || index<0 || index>=3)return;
     const int8_t *v=bank->values[index];
     unsigned k=ambr.edit_layer;
