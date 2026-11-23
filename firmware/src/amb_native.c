@@ -774,6 +774,22 @@ static __attribute__((noinline)) void amb_prepare_master(void)
     if(amb.global[G_RTYPE]!=3)amb_global_offset(G_RDAMP,heat/2);
     if(echo)song.g[G_DFDBK]=clamp(amb.global[G_DFDBK]+echo/3,0,86);
 }
+static __attribute__((noinline)) void amb_apply_param_route(unsigned k,amb_layer_t *l,track_t *t)
+{
+    unsigned id=amb_route_param[l->lfo_dest-ROUTE_PARAM];
+    const param_desc_t *d=amb_param_desc(l,id);
+    int upper=d->max;
+    /* Preserve the span of SOURCE sweeps saved before the field bank. */
+    if(id==P_E0 && l->engine==ENGI_AMB_SAMPLE && l->base[P_E0]<AMB_FIELD_SOURCE)
+        upper=AMB_FIELD_SOURCE-1;
+    int base=t->p[id],lower=d->min;
+    if(id==P_LRATE && base>=AMB_RANDOM_HZ){
+        lower=amb_rate_min(base);upper=amb_rate_max(base);
+        base=amb_cycle_rate(base,t->lfo_rnd,k);
+    }
+    t->p[id]=amb_routed(k,l->lfo_dest,base,lower,upper);
+    ambr.last_routed_param[k]=(uint8_t)(id+1);
+}
 static __attribute__((noinline)) void amb_prepare(void)
 {
     unsigned k,i; int32_t desired;
@@ -910,16 +926,8 @@ static __attribute__((noinline)) void amb_prepare(void)
             t->p[P_ED_FLT]=clamp(l->base[P_ED_FLT]+bloom+accent,0,63);
             t->p[P_DEC]=clamp(l->base[P_DEC]+space,1,127);
         }
-        if(l->lfo_dest>=ROUTE_PARAM && l->lfo_dest<ROUTE_MACRO){
-            unsigned id=amb_route_param[l->lfo_dest-ROUTE_PARAM];
-            const param_desc_t *d=amb_param_desc(l,id);
-            int upper=d->max;
-            /* Preserve the span of SOURCE sweeps saved before the field bank. */
-            if(id==P_E0 && l->engine==ENGI_AMB_SAMPLE && l->base[P_E0]<AMB_FIELD_SOURCE)
-                upper=AMB_FIELD_SOURCE-1;
-            t->p[id]=amb_routed(k,l->lfo_dest,t->p[id],d->min,upper);
-            ambr.last_routed_param[k]=(uint8_t)(id+1);
-        }
+        if(l->lfo_dest>=ROUTE_PARAM && l->lfo_dest<ROUTE_MACRO)
+            amb_apply_param_route(k,l,t);
     }
     desired=ambr.panic?0:(ambr.piece_transition?ambr.piece_master:amb.master)*256;
     ambr.master_smooth+=(desired-ambr.master_smooth)/32;
@@ -1478,6 +1486,10 @@ static int amb_valid(const amb_piece_t *p)
         for(i=0;i<16;i++) if(l->notes[i]>127 || l->velocity[i]>127) return 0;
         for(i=0;i<P_COUNT;i++) {
             const param_desc_t *d=param_desc_of(l->engine,i);
+            if(i==P_LRATE && l->base[i]>=AMB_RANDOM_HZ){
+                if(amb_rate_min(l->base[i])>amb_rate_max(l->base[i]))return 0;
+                continue;
+            }
             if(l->base[i]<d->min || l->base[i]>d->max) return 0;
         }
     }
@@ -1870,7 +1882,23 @@ static void amb_knob(unsigned knob,int delta)
         if(ambr.page==1) id=amb_sound_id(l,ambr.bank,knob);
         else if(ambr.page==2) id=amb_envelope_id(l,knob);
         else if(ambr.page==3) {
-            if(knob==0)id=P_LWAVE;
+            int rate=l->base[P_LRATE];
+            if(ambr.bank && knob==0){
+                if(delta>0 && rate<AMB_RANDOM_HZ){
+                    int center=rate<0?48:rate;
+                    l->base[P_LRATE]=amb_rate_range(clamp(center-12,0,127),clamp(center+12,0,127));
+                }else if(delta<0 && rate>=AMB_RANDOM_HZ)l->base[P_LRATE]=amb_cycle_rate(rate,trk[ambr.edit_layer].lfo_rnd,ambr.edit_layer);
+                amb_base_revision[ambr.edit_layer]++;
+                amb_remember_edit(ROUTE_COUNT);
+            }else if(rate>=AMB_RANDOM_HZ && (knob==1 || (ambr.bank && knob==2))){
+                int lo=amb_rate_min(rate),hi=amb_rate_max(rate);
+                if(!ambr.bank){int shift=clamp(delta,-lo,127-hi);lo+=shift;hi+=shift;}
+                else if(knob==1)lo=clamp(lo+delta,0,hi);
+                else hi=clamp(hi+delta,lo,127);
+                l->base[P_LRATE]=amb_rate_range(lo,hi);
+                amb_base_revision[ambr.edit_layer]++;
+                amb_remember_edit(amb_param_route(P_LRATE));
+            }else if(knob==0)id=P_LWAVE;
             else if(knob==1)id=P_LRATE;
             else if(knob==2){
                 l->lfo_depth=(uint8_t)clamp(l->lfo_depth+delta*2,0,100);
@@ -2162,7 +2190,7 @@ static void amb_input(void)
             if(ambr.view==0){ambr.edit_layer=ambr.target-1;ambr.view=1;}
             unsigned saved=ambr.last_edit_route[ambr.edit_layer];
             amb_layer_t *l=&amb.layer[ambr.edit_layer];
-            ambr.home_used=1;ambr.reset_pending=ambr.recording=0;ambr.page=3;
+            ambr.home_used=1;ambr.reset_pending=ambr.recording=0;ambr.bank=0;ambr.page=3;
             ambr.proposal=ambr.piece_preview=255;
             if(!saved)amb_say("TURN A LAYER KNOB FIRST");
             else if(saved>ROUTE_COUNT || !amb_route_name(l,saved-1))amb_say("THIS CONTROL CANNOT USE LFO");
@@ -2186,6 +2214,7 @@ static void amb_input(void)
             if(ambr.view==2 && ambr.page>=6){ambr.page=ambr.page==6?7:6;timing_tab=0;}
             else if(ambr.view==1 && ambr.page==0){ambr.reset_pending^=1;ambr.proposal=255;}
             else if(ambr.view==1 && ambr.page==1){ambr.proposal=255;ambr.bank=(uint8_t)((ambr.bank+1)%(amb.layer[ambr.edit_layer].role==6?3:2));}
+            else if(ambr.view==1 && ambr.page==3){ambr.local_preset=0;ambr.bank=!ambr.bank;}
             else if(ambr.view==1 && ambr.page==4) {amb_set_generated(ambr.edit_layer,!amb.layer[ambr.edit_layer].generated);}
             else {ambr.view=ambr.target?1:2;ambr.page=ambr.target?0:3;ambr.bank=0;ambr.detail=0;ambr.proposal=ambr.piece_preview=255;}
         } else if(b==B_GLO) {ambr.view=2;ambr.page=0;ambr.recording=0;ambr.reset_pending=0;ambr.proposal=ambr.piece_preview=255;}
@@ -2202,7 +2231,7 @@ static void amb_input(void)
         }
         else if(b==B_ENV || b==B_LFO || b==B_SEQ || b==B_FX || b==B_ARP) {
             if(ambr.target && b==B_SEQ && ambr.view==1 && ambr.page==4)amb_set_generated(ambr.edit_layer,!amb.layer[ambr.edit_layer].generated);
-            else if(ambr.target) {ambr.reset_pending=0;ambr.recording=0;ambr.view=1;ambr.page=b==B_ENV?2:b==B_LFO?3:b==B_FX?5:4;ambr.proposal=ambr.piece_preview=255;}
+            else if(ambr.target) {ambr.reset_pending=0;ambr.recording=0;ambr.view=1;ambr.bank=0;ambr.page=b==B_ENV?2:b==B_LFO?3:b==B_FX?5:4;ambr.proposal=ambr.piece_preview=255;}
         }
         ambr.dirty=1;
     }
@@ -2302,7 +2331,7 @@ static void amb_leds(void)
     int pcs[4],nt=amb_chord_tones(amb_pool(),amb.key,amb.chord,pcs);
     led_pos_init();
     for(b=0;b<NB;b++) {
-        int edit_action=(ambr.view==1 && (ambr.page==0 || ambr.page==1 || ambr.page==4)) ||
+        int edit_action=(ambr.view==1 && (ambr.page==0 || ambr.page==1 || ambr.page==3 || ambr.page==4)) ||
             (ambr.target?(ambr.view!=1 || ambr.page!=0):(ambr.view!=2 || ambr.page!=3)) || ambr.proposal!=255 || ambr.piece_preview!=255;
         int action=(b==B_FX && ((fm1_in.buttons>>panel.btn[B_HOME])&1u)) || b==B_PLAY || (b==B_SAVE && (ambr.view!=3 || ambr.slot || ambr.overwrite)) ||
             (b==B_GLO && (ambr.view!=2 || ambr.page!=0 || ambr.proposal!=255 || ambr.piece_preview!=255)) ||
@@ -2402,6 +2431,18 @@ static void amb_knob_value(unsigned knob,char *label,char *value)
         else if(ambr.page==2) id=amb_envelope_id(l,knob);
         else if(ambr.page==3) {
             const char *dest=amb_route_name(l,l->lfo_dest);
+            int rate=l->base[P_LRATE];
+            if(ambr.bank && knob==0){
+                str_cpy(label,"RATE MODE",16);str_cpy(value,rate>=AMB_RANDOM_HZ?"Random":"Fixed",24);return;
+            }
+            if(rate>=AMB_RANDOM_HZ && (knob==1 || (ambr.bank && knob==2))){
+                int hz=ambr.bank?(knob==1?amb_rate_min(rate):amb_rate_max(rate)):
+                    amb_cycle_rate(trk[ambr.edit_layer].p[P_LRATE],trk[ambr.edit_layer].lfo_rnd,ambr.edit_layer);
+                str_cpy(label,ambr.bank?(knob==1?"MIN HZ":"MAX HZ"):"LIVE RATE",16);
+                param_format(amb_param_desc(l,P_LRATE),hz,value,&unit);
+                if(unit)str_cpy(value+str_len(value),unit,24-str_len(value));
+                return;
+            }
             if(knob==0)id=P_LWAVE;else if(knob==1)id=P_LRATE;
             else {str_cpy(label,knob==2?"DEPTH":"DEST",16);if(knob==2)v=l->lfo_depth;else {str_cpy(value,dest?dest:"INACTIVE",24);return;}}
         }
@@ -2609,7 +2650,7 @@ static void amb_guidance(const amb_layer_t *l,const char **first,const char **se
             if(l->role==6){a=ambr.bank==0?"SCL PAGE / ALGO SOURCE":"SCL PAGE / KNOBS EDIT";b="EDIT NEXT SAMPLE PAGE";}
             else {a=ambr.bank?"SCL PAGE / SELECT DETAIL GROUP":"SCL PAGE / ALGO PATCH";b=ambr.bank?"EDIT PATCH / KNOBS EDIT":"EDIT DETAILS / KNOBS EDIT";}
             if(amb_sound_picker()){a="ALGO SOUND / PRESETS VARIATION";b="REC APPLY / HOME CANCEL";}
-        }else if(ambr.page==3){a="SELECT GROUP / K4 DESTINATION";b="PRESETS VARIATION / REC APPLY";
+        }else if(ambr.page==3){a="SELECT GROUP / K4 DESTINATION";b=ambr.bank?"RANDOM / NEW HZ EACH CYCLE":"EDIT RATE / FIXED OR RANDOM";
         }else if(ambr.page==4){
             a=l->role==4?"SCL PAGE / SELECT DRUM LANE":!l->generated && l->notes[ambr.cursor]?"SELECT STEP / ARP CLEAR / SCL PAGE":"SCL PAGE / SELECT EDIT STEP";
             b=ambr.recording?(l->role==4?"WHITE KEYS TOGGLE STEPS / REC END":"KEYS SET PITCH / REC END"):l->generated?"EDIT OR SEQ MANUAL / REC CAPTURE":"EDIT OR SEQ AUTO / REC OVERDUB";
@@ -2900,7 +2941,7 @@ static void amb_draw(void)
     } else {
         amb_display(29,20);
         if(ambr.view==1){
-            cv_text(16,30,&AF_M,ambr.page==2 && l->role==4?"HIT SHAPE":AMB_EDIT[ambr.page],SCOPE_INK);
+            cv_text(16,30,&AF_M,ambr.page==2 && l->role==4?"HIT SHAPE":ambr.page==3 && ambr.bank?"LFO / RATE":AMB_EDIT[ambr.page],SCOPE_INK);
             amb_text(151,35,"L",SCOPE_INK,1);amb_number(158,35,ambr.edit_layer+1,SCOPE_INK);
             amb_text(173,35,AMB_ROLE[l->role],SCOPE_INK,8);
         }else cv_text(16,30,&AF_M,ambr.view==2?AMB_GLO[ambr.page]:"SAVE",SCOPE_INK);
@@ -3227,6 +3268,7 @@ static void amb_draw(void)
     else if(ambr.proposal!=255 || ambr.local_preset)hint="REC apply / HOME cancel";
     else if(ambr.view==2 && ambr.page==6)hint="EDIT  Timing and reach";
     else if(ambr.view==2 && ambr.page==7)hint="EDIT  Back to Travel";
+    else if(ambr.view==1 && ambr.page==3)hint=ambr.bank?"EDIT  Back to LFO":"EDIT  Rate settings";
     else if(ambr.view==1 && ambr.page==1)
         hint=l->role==6?"EDIT  Next sound page":ambr.bank?"EDIT  Back to patch":"EDIT  Sound details";
     amb_text(10,78,hint,ADIM,30);

@@ -281,10 +281,17 @@ static __attribute__((noinline)) void track_post(track_t *t, const engine_t *e, 
 }
 
 static uint32_t beat_samples(void);                     /* (fx.c) */
+#if AMBPLUS
+#include "amb_lfo_rate.h"
+#endif
 static void track_lfo_tick(track_t *t)
 {
     uint32_t old = t->lfo_ph;
     int32_t r = t->p[P_LRATE];
+
+#if AMBPLUS
+    if(r>=AMB_RANDOM_HZ)r=amb_cycle_rate(r,t->lfo_rnd,(unsigned)(t-trk));
+#endif
     if (r < 0) {                                        /* (JIANT 0.6.51) in time: 4BAR .. 1/32 (params.c N_LSYNC), on
                                                          * the transport's grid while it plays (PHASE its offset), free
                                                          * while it is stopped */

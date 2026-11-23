@@ -7,6 +7,50 @@ static void settle(void)
     for(unsigned n=0;n<300;n++)amb_prepare();
 }
 
+static void check_random_rate(void)
+{
+    amb_fixture_scene(0);
+    amb_target(1);
+    press(B_LFO);
+    amb_layer_t *l=&amb.layer[0];
+    l->base[P_LRATE]=60;
+    unsigned depth=l->lfo_depth, destination=l->lfo_dest;
+    press(B_EDIT);
+    assert(ambr.page==3 && ambr.bank);
+    amb_knob(0,1);
+    assert(l->base[P_LRATE]==amb_rate_range(48,72));
+    amb_knob(1,100);
+    assert(l->base[P_LRATE]==amb_rate_range(72,72));
+    amb_knob(2,40);
+    press(B_EDIT);
+    amb_knob(1,4);
+    int range=amb_rate_range(76,116);
+    assert(l->base[P_LRATE]==range && !ambr.bank);
+    amb_prepare();
+    track_t *t=&trk[0];
+    unsigned changes=0;
+    for(unsigned n=0;n<24000;n++){
+        uint32_t phase=t->lfo_ph, held=t->lfo_rnd;
+        int rate=amb_cycle_rate(range,held,0);
+        assert(rate>=76 && rate<=116);
+        track_lfo_tick(t);
+        assert(t->lfo_ph-phase==LFO_INC[rate]);
+        if(t->lfo_ph>=phase)assert((uint32_t)t->lfo_rnd==held);
+        else changes+=rate!=amb_cycle_rate(range,t->lfo_rnd,0);
+    }
+    assert(changes>2 && l->lfo_depth==depth && l->lfo_dest==destination);
+    assert(amb_valid(&amb));
+    l->base[P_LRATE]=amb_rate_range(92,91);assert(!amb_valid(&amb));
+    l->base[P_LRATE]=range;
+    ambr.slot=3;amb_save();
+    amb_fixture_scene(0);assert(amb_recall(3));
+    assert(l->base[P_LRATE]==range);
+    amb_target(1);press(B_LFO);press(B_EDIT);
+    int current=amb_cycle_rate(range,t->lfo_rnd,0);
+    amb_knob(0,-1);assert(l->base[P_LRATE]==current);
+    puts("Random LFO UI, cycle timing, bounds and song recall PASS");
+}
+
 static void link_last_edit(void)
 {
     fm1_in.buttons|=1u<<panel.btn[B_HOME];
@@ -139,6 +183,7 @@ int main(void)
     amb_fixture_scene(0);assert(amb_recall(2));
     assert(amb.layer[0].lfo_dest==ROUTE_EQ && amb.release_ms==30000);
     check_layer_shortcut();
+    check_random_rate();
     puts("HOME + LFO uses last actual layer edit, keeps LFO settings and rejects unavailable targets PASS");
     printf("%u patch/source macro sweeps, %u destinations, %u voice Breath sweeps, master reversibility and v4/v5 recall PASS\n",patches,routes,voice_patches);
     return 0;
