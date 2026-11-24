@@ -182,6 +182,44 @@ static void boot_leds(void)
         fm1_led_anim_start(settings_leds == LEDS_DIM || settings_leds == LEDS_DIM_LO);
 }
 
+#if AMBPLUS
+/* Acid Bloom uses the same three patches, notes and slide accents as the audition.
+ * Run it only beneath a clean splash. The factory layers already have a reset copy. */
+static void acid_bloom_start(void)
+{
+    static const uint8_t roles[]={3,2,0}, patches[]={11,11,16}, levels[]={103,51,68};
+    for(unsigned k=0;k<3;k++){
+        amb_patch(k,roles[k],patches[k]);
+        amb_layer_t *l=&amb.layer[k];
+        l->base[P_ATK]=k==2?39:4;
+        l->base[P_REL]=k==2?48:51;
+        l->base[P_REV]=k==2?45:28;
+        l->level=levels[k];
+    }
+    amb.layer[0].macro[1]=87;amb.layer[0].macro[2]=86;
+    amb.layer[0].base[P_GLIDE]=48;
+}
+
+static void acid_bloom_tick(unsigned ms,unsigned *next)
+{
+    static const struct {uint16_t time; uint8_t layer,note,velocity;} score[]={
+        {0,0,50,101},{128,0,53,71},{229,0,60,103},{240,0,50,0},
+        {282,2,65,70},{319,2,69,60},{368,0,53,0},{425,0,57,88},
+        {469,0,60,0},{475,1,64,66},{652,2,65,0},{665,0,57,0},
+        {689,2,69,0},{715,1,64,0}
+    };
+    while(*next<NELEM(score) && ms>=score[*next].time){
+        unsigned i=(*next)++,k=score[i].layer,n=score[i].note,v=score[i].velocity;
+        if(!v)trk_note_off(&trk[k],n);
+        else if(k)trk_note_on(&trk[k],n,v);
+        else{
+            amb.layer[0].macro[0]=n==60?88:n==57?49:65;
+            amb_acid_step(0,n,v,2,n==60 || n==57);
+        }
+    }
+}
+#endif
+
 /* (0.9.12) what the last run left (cpu_safe.c): a crash (a record newer than the last boot saw, boot_leds) or a hang
  * (a watchdog reset: the main loop's breadcrumbs in PC / RETS, felucca_dbg) is logged into the settings (MENU > ABOUT
  * LAST CRASH, the editor's backup); with both cores at work then, MENU > SYSTEM > CPU goes to 1 CORE (0.9.13: for three power-ons, a second time for good). 1: that
@@ -303,6 +341,7 @@ static void fm1_main(void)
 #if AMBPLUS
     /* The scan and core-1 boot can mask interrupts longer than a DMA half.
      * Start the audio clock only once its interrupt can be serviced. */
+    if(boot_clean)acid_bloom_start();
     fm1_audio_start();
 #else
     autosave_boot(boot_clean);                /* (1.2) the last session's music, under the splash */
@@ -312,13 +351,25 @@ static void fm1_main(void)
                                                * followed (MIDI IN plays under it). (0.5.2) On the clock: drawing the
                                                * beings does not make it longer */
         uint32_t t0 = fm1_ms, n;
+#if AMBPLUS
+        unsigned next=0;
+#endif
         for (n = 0; n < 600u && (ms = fm1_ms - t0) < SPL_WRITE + SPL_HOLD; n++) {   /* (600: a stalled clock still
                                                                                    * ends it, in ~2.4 s) */
+#if AMBPLUS
+            /* Let the engines finish their initial patch load before the first note. */
+            if(boot_clean && ms>=48u)acid_bloom_tick(ms-48u,&next);
+#endif
             splash_write(ms);
             fm1_delay_ms(4);
             master_poll();
         }
     }
+#if AMBPLUS
+    if(boot_clean)for(unsigned k=0;k<3;k++){
+        amb.layer[k]=amb_reset_layer[k];amb_apply_patch(k);
+    }
+#endif
     kb_boot_hold = 0;
     lcd_fill(0, 0, 240, 240, T_BG);
     scrn.idle = fm1_ms;                        /* (MENU > SCREEN OFF: from here) */

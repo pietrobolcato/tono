@@ -32,7 +32,7 @@ int main(void)
     amb_master(0,0);amb_master(1023,0);
     assert(amb.layer[3].level==127 && amb.master==master && ambr.target==0);
     ambr.view=0;amb_master(1023,0);assert(amb.master==master);
-    amb_master(923,0);assert(amb.master==master-100 && amb.layer[3].level==127);
+    amb_master(923,0);assert(amb.master==(923*master+511)/1023 && amb.layer[3].level==127);
     /* A captured impulse is re-emitted through the windowed grain heads. */
     memset(&amb_grain[0],0,sizeof amb_grain[0]);amb_grain_controls[0][0]=100;
     amb_grain_controls[0][1]=58;amb_grain_controls[0][2]=7;amb_grain_controls[0][3]=40;

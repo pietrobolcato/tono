@@ -298,6 +298,8 @@ def main():
     ap.add_argument("--tracking", type=float, default=0.0, help="extra advance per glyph in em")
     ap.add_argument("--gamma", type=float, default=1.0, help="coverage curve; <1 thickens light-on-dark text")
     ap.add_argument("--kern-min", type=int, default=1, help="smallest kerning pair kept, in 1/16 px (0 pairs = no kerning)")
+    ap.add_argument("--unkerned", default="", help="faces using unkerned advances (comma list)")
+    ap.add_argument("--pixel-aligned", default="", help="faces drawn on whole-pixel positions only (comma list)")
     ap.add_argument("--huff", default=",".join(HUFF[0]), help="faces stored Huffman-coded (comma list, '' = none)")
     ap.add_argument("--kern-classes", action="store_true", help="losslessly group glyphs with identical kerning")
     a = ap.parse_args()
@@ -310,7 +312,9 @@ def main():
            "#pragma once", "#include <stdint.h>", ""]
     total = 0
     for f in faces:
-        text, c = emit(f, a.tracking, a.gamma, a.kern_min, a.kern_classes)
+        if f[0] in a.pixel_aligned.split(","):
+            f = (*f[:-1], 1)
+        text, c = emit(f, a.tracking, a.gamma, 256 if f[0] in a.unkerned.split(",") else a.kern_min, a.kern_classes)
         out.append(text)
         total += c["total"]
         print(f"face {f[0]}: {c['font']} {c['px']}px h{c['h']} base{c['asc']}  {c['glyphs']} glyphs x {c['phases']}  "

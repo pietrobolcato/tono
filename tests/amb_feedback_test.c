@@ -35,7 +35,7 @@ int main(void)
     for(i=0;i<4;i++)assert((amb_pool()>>((ambr.voicing[i]-amb.key+120)%12))&1u);
     ambr.view=3;ambr.slot=0;amb_save();pool=amb_pool();amb_fixture_scene(2);assert(amb_recall(0));assert(amb_pool()==pool);
     amb_fixture_scene(0);saved=amb.layer[1];amb.layer[1].macro[0]=0;amb.layer[1].notes[2]=72;amb.layer[0].level=17;
-    ambr.edit_layer=1;ambr.view=1;ambr.page=0;press(B_EDIT);assert(ambr.reset_pending);
+    ambr.edit_layer=1;ambr.view=1;ambr.page=0;btn_down(B_HOME);frame();press(B_SAVE);btn_up(B_HOME);frame();assert(ambr.reset_pending);
     press(B_REC);assert(!memcmp(&saved,&amb.layer[1],sizeof saved));assert(amb.layer[0].level==17);
     trk[1].lfo_ph=0x12345678;ambr.step=999;ph=amb_lfo_phase(1);assert(ph==0x12345678);
     amb_fixture_scene(0);saved=amb.layer[0];for(i=0;i<4;i++)ambr.macro_smooth[0][i]=64*256;
@@ -60,7 +60,7 @@ int main(void)
     amb_fixture_scene(0);amb.layer[2].generated=0;amb.layer[2].notes[4]=61;saved=amb.layer[2];
     amb_pool_set(amb_pool()|2u);amb.chord=3;amb_revoice();assert(!memcmp(&saved,&amb.layer[2],sizeof saved));
     /* Cancel restore through a different page before any confirmation. */
-    ambr.view=1;ambr.page=0;press(B_EDIT);assert(ambr.reset_pending);press(B_SCL);assert(!ambr.reset_pending);
+    ambr.view=1;ambr.page=0;btn_down(B_HOME);frame();press(B_SAVE);btn_up(B_HOME);frame();assert(ambr.reset_pending);press(B_SCL);assert(!ambr.reset_pending);
     amb_fixture_scene(0);amb_prepare();for(k=0;k<4;k++){trk[k].engine=trk[k].eng_req;memset(trk[k].v,0,sizeof trk[k].v);}
     song.playing=1;ambr.last_play=0;amb_clock(CTL);assert(ambr.held_n[0] && ambr.held_n[1]);assert(ambr.off[0]>FS*16u);
     amb_release(2);ambr.solo=0;amb_layer_step(2,0,15);assert(!ambr.held_n[2]);song.playing=0;

@@ -263,5 +263,25 @@ int main(int argc,char **argv)
             ar_frame("sound_proposal",dir,0);
         }
     }
+    ambr.proposal=255;
+    for(unsigned theme=0;theme<THEME_COUNT;theme++){
+        while(amb_theme()!=theme)amb_theme_turn(1);
+        amb_patch(0,0,0);ambr.view=1;ambr.page=1;ambr.bank=1;ambr.detail=1;ambr.help=0;ambr.select_until=0;ambr.notice[0]=0;ambr.level_feedback_active=0;
+        snprintf(name,sizeof name,"navigation_%u_idle",theme);ar_frame(name,dir,1);
+        uint16_t orange=host_screen[175*240+12];
+        assert(orange==host_screen[31*240+9] && orange==host_screen[225*240+10]);
+        ambr.select_until=fm1_ms+250;
+        snprintf(name,sizeof name,"navigation_%u_turn",theme);ar_frame(name,dir,1);
+        fm1_ms+=250;ambr.dirty=0;amb_draw();assert(!ambr.select_until);
+        for(role=0;role<NELEM(AMB_ROLE);role++){
+            amb_patch(0,role,0);ambr.view=1;
+            for(page=0;page<7;page++){
+                ambr.page=page;ambr.bank=(page==1 || page==3);
+                unsigned pages=amb_help_pages(0);
+                for(unsigned h=1;h<=pages;h++){ambr.help=h;ar_frame("control_guide",dir,0);}
+                ambr.help=0;
+            }
+        }
+    }
     printf("Tono native bitmap audit: %u frames, %u clipping/bounds/overlap findings\n",ar_frames,ar_bad);return ar_bad?1:0;
 }

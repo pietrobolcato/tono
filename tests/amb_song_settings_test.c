@@ -71,7 +71,7 @@ int main(void)
     for(unsigned step=0;step<1024;step++)assert(!amb_keep_onset(0,step));
     amb_knob(1,25);
     set_travel(1);
-    amb_target(0);amb_master(225,0);assert(amb.master==(unsigned)clamp((int)factory_master+108,0,1023));
+    amb_target(0);amb_master(225,0);assert(amb.master==factory_master+(108*(1023-factory_master)+453)/906);
     ambr.view=0;amb_target(1);
     unsigned layer_level=amb.layer[0].level;
     amb_master(141,0);assert(amb.layer[0].level<layer_level);

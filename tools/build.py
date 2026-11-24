@@ -117,8 +117,9 @@ def generate():
         cmds[0].extend(["--huff", "S,M,L", "--kern-classes"])
         cmds.append([tools / "pack_tono_fir.py", FW / "src/uac_fir.h", GEN / "tono_fir.h"])
         inter = SRC / "assets/fonts/InterTight[wght].ttf"
-        cmds.append([tools / "gen_aa_font.py", GEN / "tono_fonts.h", "--huff", "TONO_LABEL,TONO_LEVEL", "--kern-classes", "--kern-min", "3",
+        cmds.append([tools / "gen_aa_font.py", GEN / "tono_fonts.h", "--huff", "TONO_LABEL,TONO_LEVEL,TONO_NAV", "--pixel-aligned", "TONO_LABEL,TONO_LEVEL,TONO_NAV", "--unkerned", "TONO_NAV", "--kern-classes", "--kern-min", "6",
                      "--face", f"TONO_LABEL={inter}@500:10:32-126",
+                     "--face", f"TONO_NAV={inter}@500:8:32-122",
                      "--face", f"TONO_LEVEL={inter}@600:26:48-57"])
     procs = [subprocess.Popen([sys.executable, *map(str, c)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                               text=True) for c in cmds]

@@ -90,25 +90,27 @@ int AMB_MAIN(int argc,char **argv)
         for(k=0;k<4;k++) for(i=0;i<P_COUNT;i++) {const param_desc_t *d=param_desc_of(amb.layer[k].engine,i);if(amb.layer[k].base[i]<d->min || amb.layer[k].base[i]>d->max) printf("bad k%u %s %d expected %d..%d\n",k,d->label,amb.layer[k].base[i],d->min,d->max);}
     }
     assert(amb_valid(&amb));
-    /* Same small turn at either end of the pot must adjust the stored
-     * layer level by that distance, even on the first turn after selection. */
-    for(unsigned pos=160;pos<=800;pos+=640){
-        amb_target(0);unsigned song_gain=amb.master;amb_master(pos,1);amb.layer[0].level=89; /* 70% */
-        unsigned sibling=amb.layer[1].level;
-        amb_target(1);amb_master(pos,0);amb_master(pos+2,0);
-        assert(amb.layer[0].level==89);
-        amb_master(pos-32,0);assert(amb.layer[0].level==85);
-        amb_master(pos+32,0);assert(amb.layer[0].level==93);
-        amb_master(pos,0);assert(amb.layer[0].level==89);
-        assert(amb.master==song_gain && amb.layer[1].level==sibling);
-    }
-    amb_master(1023,0);amb.layer[0].level=1;
-    amb_master(600,0);assert(amb.layer[0].level==0);
-    amb_master(632,0);assert(amb.layer[0].level==4);
-    amb.layer[0].level=126;amb_master(800,0);assert(amb.layer[0].level==127);
-    amb_master(768,0);assert(amb.layer[0].level==123);
-    amb_target(0);before=amb;amb_master(768,0);assert(amb.master==before.master);
-    amb_master(752,0);assert(amb.master==before.master-16 && amb.layer[0].level==123);
+    /* A pot at mid travel opens on the saved gain and can reach both rails. */
+    ambr.view=0;amb_target(1);amb.layer[0].level=38;amb_master(512,1);
+    unsigned sibling=amb.layer[1].level,main_gain=amb.master;
+    amb_master(514,0);assert(amb.layer[0].level==38);
+    amb_master(768,0);assert(amb.layer[0].level==83);
+    amb_master(1023,0);assert(amb.layer[0].level==127);
+    amb_master(512,0);assert(amb.layer[0].level==38);
+    amb_master(256,0);assert(amb.layer[0].level==19);
+    amb_master(0,0);assert(!amb.layer[0].level);
+    assert(amb.layer[1].level==sibling && amb.master==main_gain);
+    amb_target(0);amb_master(0,0);assert(amb.master==main_gain);
+    amb_master(1023,0);assert(amb.master==1023);
+    amb_master(0,0);assert(!amb.master);
+    amb.master=main_gain;amb_target(1);
+    amb.layer[0].level=127;amb_master(450,1);amb_master(800,0);
+    amb_master(768,0);assert(amb.layer[0].level<127);
+    amb.layer[0].level=0;amb_master(600,0);amb_master(620,0);assert(amb.layer[0].level>0);
+    amb_patch(0,6,0);ambr.view=1;ambr.page=1;ambr.bank=0;
+    press(B_EDIT);assert(ambr.bank==1);turn(EN_SELECT,-1);assert(ambr.bank==2);
+    press(B_EDIT);assert(!ambr.bank);turn(EN_SELECT,1);assert(!ambr.bank);
+    amb_fixture_scene(0);
     ambr.view=2;ambr.page=2;before=amb;
     turn(EN_SELECT,4);assert(!memcmp(before.layer,amb.layer,sizeof amb.layer));
     assert(!memcmp(&before.policy,&amb.policy,sizeof amb.policy));

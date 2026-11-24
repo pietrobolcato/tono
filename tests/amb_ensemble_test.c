@@ -103,7 +103,7 @@ int main(void)
     amb_fixture_scene(7);assert(amb.scale==2 && amb.layer[0].engine==ENGI_VOICE);
     amb_save();saved=amb;amb_fixture_scene(0);assert(amb_recall(0));assert(!memcmp(&saved,&amb,sizeof amb));
     amb_target(1);press(B_EDIT);press(B_SCL);saved=amb;shortcut(B_EDIT);
-    assert(ambr.help && ambr.page==1);turn(EN_SELECT,1);assert(!memcmp(&saved,&amb,sizeof amb));
+    assert(ambr.help && ambr.page==1);turn(EN_SELECT,1);assert(ambr.help==2 && !memcmp(&saved,&amb,sizeof amb));
     press(B_HOME);assert(!ambr.help && ambr.view==1 && ambr.page==1);
     shortcut(B_SEQ);assert(ambr.view==4 && song.grid==2);
     for(k=0;k<4;k++){turn(EN_K1+k,-1);assert(amb.layer[k].level<saved.layer[k].level);}
