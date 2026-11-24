@@ -222,7 +222,13 @@ static void track_dist(track_t *t, int32_t *b, uint32_t n)
 /* master: peak limiter in front of the soft clipper. Fast attack (~0.1 ms),
  * ~150 ms release, threshold where tanh is still nearly linear, so chords
  * get quieter instead of crushed. */
+#if AMBPLUS
+/* Leave space for overlapping patch tails. The louder stereo channel sets
+ * the shared gain, including on the first sample of a new attack. */
+#define LIM_T 16000
+#else
 #define LIM_T 18000
+#endif
 static int32_t lim_env = LIM_T;
 /* (JIANT) CLIP (G_CLIP 0..100): the mix driven x1 .. x4 into the soft clip ahead of the limiter, its level kept near
  * -4 dBFS (as DRUM's DRV); 0: out of the chain. Set each block (master_begin) */
@@ -525,10 +531,20 @@ static inline void master_out(int32_t *l, int32_t *r)
     al = *l < 0 ? -*l : *l;
     ar = *r < 0 ? -*r : *r;
     a = al > ar ? al : ar;
+#if AMBPLUS
+    if (a > lim_env)
+        lim_env = a;
+    else if (lim_env > LIM_T) {
+        /* About 185 ms at 44.1 kHz. A sustained peak holds the gain. */
+        int32_t floor = a > LIM_T ? a : LIM_T;
+        lim_env -= (lim_env - floor + 8191) >> 13;
+    }
+#else
     if (a > lim_env)
         lim_env += (a - lim_env) >> 2;
     else if (lim_env > LIM_T)
         lim_env -= ((lim_env - LIM_T) >> 11) + 1;   /* (0.5.1: ~45 ms back, was ~90) */
+#endif
     if (lim_env > LIM_T) {
         int32_t g = (int32_t)(((uint32_t)LIM_T << 15) / (uint32_t)lim_env);   /* < 32768 */
         *l = ((*l >> 4) * g) >> 11;                      /* >> 4 first: |l| may be far above Q15 */
