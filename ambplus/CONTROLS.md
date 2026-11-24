@@ -42,7 +42,7 @@ On HOME, PRESETS starts at Garden. Turn forward for Nostalgic New Inn, Last Tram
 - HOME held + SELECT in EDIT changes the edited layer on the same page; the volume target stays at the last HOME choice. HOME + OCT− toggles mute for the current layer (the edited layer in EDIT); HOME + OCT+ solos/unsolos it.
 - Emulator combinations: hold either computer **Shift** and press **Z** (or click OCT−) to toggle the current layer’s mute. For other combinations hold computer **7** (HOME), then **Z** (OCT−) / **X** (OCT+), or click the corresponding panel button while holding 7. Hold 7 plus left/right for cross-layer editing. The mouse alone holds one control at a time.
 - PLAY tap starts/stops; hold 800 ms for emergency output fade. A later tap reopens the output. ENV/LFO/FX/SEQ/ARP are layer shortcuts; During PLAY, OCT± queues a lasting octave shift at the next downbeat for the selected layer (all four at Master). The shift stays through later bars and STOP/PLAY. Each tap moves one octave, up to ±3 per layer. Tap the opposite direction to move back. Q+1 means one octave up is queued, O+1 means active. On HOME and ENSEMBLE you can queue the first bar before PLAY. In a stopped editor OCT± shifts the audition keyboard. LEDs indicate available actions; pending REC confirmations breathe, recording REC stays solid.
-- The bottom bar shows the contextual shortcut on the left and HOME + EDIT for Help on the right. Travel timing, sound detail and proposal confirmations use this bar. Transient notices appear above it. Fullscreen Zen keeps its wordmark-only layout.
+- The footer shows active navigation shortcuts and HOME + EDIT for Help. It uses the theme accent when you use a visible control. Transient notices can overlay the footer. Fullscreen Zen keeps its wordmark-only layout.
 
 ## Automatic travel
 
@@ -172,3 +172,11 @@ Gaps and slides identify Acid Line (9), three passes of one motif identify
 Locked Loop (10), highlighted substitutions identify Drift Loop (11), and
 recurring notes with different continuations identify Markov Walk (12).
 These diagrams illustrate each rule and stay steady while browsing.
+
+
+On a HOME layer, hold HOME to reveal the alternate knobs. K1 ATTACK fades
+new notes in. On drums and samples in ONE-SHOT mode K1 LOW EQ adjusts bass
+weight instead. K2 keeps the original role macro. K3 MID EQ cuts or boosts
+the middle band by up to 12 dB. K4 DRIVE adds distortion before the shared
+effects. Each movement edits that layer and can be linked with HOME + LFO.
+Release HOME to return to the normal knobs.

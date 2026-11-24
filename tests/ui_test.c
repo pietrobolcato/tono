@@ -51,10 +51,16 @@ static void fm1_led_dim_level(uint32_t lo) { host_dim_lo = lo; }
 static int host_anim;                             /* hal/fm1_input.h: the power-on sweep running (it has the LEDs) */
 static int fm1_led_anim_on(void) { return host_anim; }
 #define FM1_TICKS_PER_US 1u
-static uint32_t host_ticks, host_pressed, host_notes;
+static uint32_t host_ticks, host_pressed, host_released, host_notes;
 static int32_t host_enc[7];
 static uint32_t fm1_ticks(void) { return host_ticks; }
-static uint32_t fm1_input_edges(int x) { uint32_t p = host_pressed; (void)x; host_pressed = 0; return p; }
+static uint32_t fm1_input_edges(uint32_t *released)
+{
+    uint32_t pressed=host_pressed;
+    if(released)*released=host_released;
+    host_pressed=host_released=0;
+    return pressed;
+}
 static uint32_t fm1_input_note_edges(void) { uint32_t n = host_notes; host_notes = 0; return n; }
 /* host_enc_late: detents the TIMER5 scan counts just after a read (#102: while ui_input runs); the next read has them */
 static int32_t host_enc_late[7];
@@ -220,7 +226,7 @@ static void ui_power_on(void)
     }
     pm_on = 0;
     settings_hold = HOLD_DEF;
-    fm1_in.buttons = fm1_in.notes = 0;
+    fm1_in.buttons = fm1_in.notes = host_released = 0;
     memset(&motion, 0, sizeof motion);                  /* (main.c: no motion at power-on) */
     memset(motion_active, 0, sizeof motion_active);
     memset(motion_locked, 0, sizeof motion_locked);
@@ -248,6 +254,7 @@ static void press(uint32_t label)                 /* a tap: down, a frame, up, a
     host_pressed |= 1u << panel.btn[label];
     frame();
     fm1_in.buttons &= ~(1u << panel.btn[label]);
+    host_released |= 1u << panel.btn[label];
     frame();
 }
 static void frames(uint32_t ms) { uint32_t i; for (i = 0; i < ms / 16u; i++) frame(); }
@@ -259,6 +266,7 @@ static void hold(uint32_t label)                  /* held 0.8 s, then let go */
     for (k = 0; k < 52u; k++)
         frame();
     fm1_in.buttons &= ~(1u << panel.btn[label]);
+    host_released |= 1u << panel.btn[label];
     frame();
 }
 static void turn(uint32_t role, int32_t s)

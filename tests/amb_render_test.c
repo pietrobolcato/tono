@@ -327,6 +327,11 @@ int main(int argc,char **argv)
             if(frame)assert(changed==(frame==1 && theme!=THEME_DIETER));
         }
         ambr.notice[0]=0;
+        unsigned original_target=ambr.target;
+        btn_down(B_HOME);
+        amb_target(0);ar_frame("held_home_master",dir,theme==0);
+        amb_target(1);ar_frame("held_home_layer",dir,theme==0);
+        btn_up(B_HOME);amb_target(original_target);
         ar_frame("home_footer",dir,theme==0);
         static uint16_t home[240*240];
         memcpy(home,host_screen,sizeof home);
@@ -345,13 +350,40 @@ int main(int argc,char **argv)
         ambr.evolve_mode=1;ambr.evolve_role=255;
         ar_frame("evolution_no_role",dir,theme==0);
         ambr.evolve_mode=ambr.evolve_open=0;
-        amb_patch(0,0,0);ambr.view=1;ambr.page=1;ambr.bank=1;ambr.detail=1;ambr.help=0;ambr.select_until=0;ambr.notice[0]=0;ambr.level_feedback_active=0;
+        amb_patch(0,0,0);ambr.view=1;ambr.page=1;ambr.bank=1;ambr.detail=1;ambr.help=0;ambr.control_activity=0;ambr.notice[0]=0;ambr.level_feedback_active=0;
         snprintf(name,sizeof name,"navigation_%u_idle",theme);ar_frame(name,dir,1);
         uint16_t orange=host_screen[166*240+12];
         assert(orange==host_screen[31*240+9] && orange==host_screen[210*240+10]);
-        ambr.select_until=fm1_ms+250;
+        amb_control_activity(1u<<(NB+EN_SELECT));
         snprintf(name,sizeof name,"navigation_%u_turn",theme);ar_frame(name,dir,1);
-        fm1_ms+=250;ambr.dirty=0;amb_draw();assert(!ambr.select_until);
+        assert(amb_nav_active(NC_SELECT) && !amb_nav_active(B_SCL));
+        fm1_in.buttons=1u<<panel.btn[B_SCL];
+        fm1_ms+=250;ambr.dirty=0;amb_draw();
+        assert(!ambr.control_activity && !amb_nav_active(NC_SELECT) && amb_nav_active(B_SCL));
+        fm1_in.buttons=0;
+        host_released=1u<<panel.btn[B_SCL];
+        amb_input();
+        assert(amb_nav_active(B_SCL) && !amb_nav_active(NC_SELECT));
+        fm1_ms+=250;amb_draw();assert(!amb_nav_active(B_SCL));
+        ambr.view=0;ambr.bank=0;
+        turn(EN_PRESET,1);
+        assert(ambr.piece_preview!=255 && amb_nav_active(NC_PRESETS));
+        snprintf(name,sizeof name,"navigation_%u_presets",theme);ar_frame(name,dir,1);
+        press(B_HOME);
+        assert(ambr.piece_preview==255 && amb_nav_active(B_HOME));
+        ambr.view=1;ambr.page=0;
+        turn(EN_ALGO,1);
+        assert(ambr.proposal!=255 && amb_nav_active(NC_ALGO));
+        snprintf(name,sizeof name,"navigation_%u_algo",theme);ar_frame(name,dir,1);
+        press(B_HOME);
+        assert(ambr.proposal==255);
+        for(unsigned knob=EN_K1;knob<=EN_K4;knob++){
+            turn(knob,1);
+            assert(amb_nav_active(NB+knob));
+        }
+        amb_master(512,1);amb_master(768,0);
+        assert(amb_nav_active(AMB_MASTER_CONTROL));
+        ambr.notice[0]=0;
         for(role=0;role<NELEM(AMB_ROLE);role++){
             amb_patch(0,role,0);ambr.view=1;
             for(page=0;page<7;page++){
