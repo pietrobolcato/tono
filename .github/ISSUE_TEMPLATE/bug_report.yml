@@ -1,17 +1,17 @@
 name: Bug report
-description: Something in JIANT doesn't work as it should (one bug per issue)
+description: Report a reproducible problem in Tono
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
-        One bug per issue. Ideas are welcome too: open a blank issue with "idea" in the title. This is JIANT (based on Felucca): report here, not to Felucca.
+        Describe one bug per issue. Keep whole-flash backups and private recordings on your computer.
   - type: input
     id: version
     attributes:
-      label: JIANT version
-      description: Hold HOME > ABOUT on the FM-1
-      placeholder: "v0.6.84"
+      label: Tono version
+      description: Use the version shown on the startup screen
+      placeholder: "v0.65-opt"
     validations:
       required: true
   - type: input
