@@ -64,6 +64,7 @@ static void ar_frame(const char *name,const char *dir,int save)
         assert(ink==(TE_DARK?0xffff:0));
         assert(!ar_n); /* wordmark geometry only; no HUD text in either strip */
     }
+    assert(glyph(&AF_TONO_NAV,'n')==(unsigned)glyph_at(&AF_TONO_NAV,'n'));
     if(!strcmp(name,"sound_proposal") || !strncmp(name,"navigation_",11)){
         unsigned sel=0,cancel=0;
         for(unsigned i=0;i<ar_n;i++){
