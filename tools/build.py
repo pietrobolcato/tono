@@ -114,7 +114,9 @@ def generate():
              GEN / "dice_bars.h", GEN / "gen_bass.h"]]   # (0.9.7)
     if os.environ.get("AMBPLUS") == "1":
         # The shared decoder also reproduces the small face losslessly.
-        cmds[0].extend(["--huff", "S,M,L", "--kern-classes"])
+        # Tono has dedicated label and display faces. Keep the legacy small and
+        # large faces pixel-aligned to store one raster per glyph in this build.
+        cmds[0].extend(["--huff", "S,M,L", "--kern-classes", "--pixel-aligned", "S,L"])
         cmds.append([tools / "pack_tono_fir.py", FW / "src/uac_fir.h", GEN / "tono_fir.h"])
         inter = SRC / "assets/fonts/InterTight[wght].ttf"
         # The footer is a closed vocabulary. Retain digits for generated page counters.

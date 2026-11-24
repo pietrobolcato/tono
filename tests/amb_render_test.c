@@ -23,6 +23,7 @@ static void ar_cover(int a,int b,int c,int d)
 static void ar_text(int a,int b,int c,int d,const char *s,unsigned f)
 {
     if(!strcmp(s,"v" TONO_RELEASE_VERSION))ar_version++;
+    if(ambr.help)assert(strcmp(s,"ON THIS SCREEN"));
     if(!ambr.help){
         assert(!strstr(s,"REC  ") && !strstr(s,"SELECT SLOT") && !strstr(s,"SELECT chooses"));
         assert(!strstr(s,"PRESETS  Browse"));
@@ -229,7 +230,9 @@ int main(int argc,char **argv)
     for(style=0;style<NELEM(AMB_SCENE)+AMB_SLOTS;style++){ambr.piece_preview=(uint8_t)style;snprintf(name,sizeof name,"preset_%u",style);ar_frame(name,dir,style==AMB_SCENE_EVENING_ARRAY || style==AMB_SCENE_FUMAROLE || style==AMB_SCENE_EMBER_MERIDIAN || style==AMB_SCENE_COLD_DESERT || style==AMB_SCENE_303_FELLOWS || style==AMB_SCENE_ANALOG_DAYS || style==AMB_SCENE_ANALOG_WARM);}
     ambr.piece_preview=255;ambr.view=3;for(style=0;style<8;style++){ambr.slot=(uint8_t)style;ambr.overwrite=style%2;snprintf(name,sizeof name,"save_%u",style);ar_frame(name,dir,1);}
     amb_fixture_scene(7);ambr.view=4;ar_frame("ensemble",dir,1);
-    ambr.view=0;ambr.help=1;ar_frame("home_help",dir,1);
+    ambr.view=0;ambr.help=1;
+    assert(amb_screen_card(&amb.layer[0])==H_home+!!ambr.target);
+    ar_frame("home_help",dir,1);
     ambr.view=1;ambr.page=1;ambr.help=1;ar_frame("vowel_help",dir,1);
     for(role=0;role<NELEM(AMB_ROLE);role++){
         amb_patch(0,role,role==0?10:0);
@@ -240,6 +243,23 @@ int main(int argc,char **argv)
     }
     ambr.view=2;for(page=0;page<5;page++){
         ambr.page=page;for(fx=0;fx<(page==3?4u:1u);fx++){ambr.fx=fx;ar_frame("global_help",dir,0);}
+    }
+    for(unsigned view=0;view<=2;view++){
+        ambr.view=view;ambr.bank=0;
+        unsigned pages=view==1?7:view==2?8:1;
+        for(page=0;page<pages;page++){
+            ambr.page=page;
+            unsigned variants=view==0?2:view==2 && page==3?4:1;
+            for(unsigned v=0;v<variants;v++){
+                if(!view)amb_target(v);else ambr.fx=v;
+                unsigned leaves=amb_help_pages(0);
+                if(view==2 && page==2)assert(leaves==16);
+                for(ambr.help=1;ambr.help<=leaves;ambr.help++){
+                    snprintf(name,sizeof name,"manual_%u_%u_%u_%u",view,page,v,ambr.help);
+                    ar_frame(name,dir,!view || (view==2 && page==2) || (view==1 && page==3));
+                }
+            }
+        }
     }
     ambr.help=0;amb_fixture_scene(0);
     for(unsigned theme=0;theme<THEME_COUNT;theme++){

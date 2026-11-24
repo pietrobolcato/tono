@@ -1,7 +1,7 @@
 # Groups occupy consecutive entries. Each line is one card.
 [home]
 Choose Master to shape the whole mix, or a layer to shape one instrument. The level pot follows the selected target.
-Hold HOME for Attack or Low EQ, the role shortcut, Mid EQ and Drive. Release HOME to return to the main controls.
+The level pot follows this layer. The four knobs shape its sound. Hold HOME for the second set of controls shown on the next page.
 [ensemble]
 Read each layer's peak after its gain. NOTE is held, REL is fading and TAIL is a sound handoff. REST can still leave echoes.
 [zen]
@@ -29,7 +29,7 @@ Set a steady cycle or let each cycle pick a speed between two limits.
 [pattern]
 Build phrases from the chord and scale. Set how often notes arrive and how densely the layer plays.
 Generate a drum part. Swing delays offbeats and fills add hits near the end of a phrase.
-Choose a motion for the noise bed. Steady holds a continuous sound.
+STEADY sustains the noise bed. PULSE waits for half-note cues. DRIFT holds longer notes. BURSTS clusters onsets early in a bar. SPARSE waits two bars.
 Place notes or rests one step at a time. Each note has its own velocity.
 Choose a drum lane and toggle its hits on the step keys. Other lanes keep their own hits.
 [fx]
@@ -46,7 +46,7 @@ Adjust the balance of lows, mids and highs across the whole mix. Trim the output
 Set how strongly each aspect of the piece drifts. The interval spaces automatic chord changes.
 Set the root, available notes and tempo for generated parts. Changing scale replaces the note pool.
 Rhythm sets when notes land, phrase sets their path and interplay sets who plays together. Style changes land every four bars during play.
-Choose the screen palette. The same controls and sounds are available in each theme.
+Turn SELECT for Dial, Studio Dark or Studio Light. Dial uses dark markings on a light face. Studio themes colour-code layers.
 Choose how the song changes as you travel. Tail time and handoff shape the switch between sounds.
 [masterfx]
 Set the shared room for all reverb sends. Size changes its space and damping softens its tail.
@@ -79,7 +79,7 @@ Stretch each grain into a longer fragment.
 Transpose the grains in semitones.
 Spread the read positions for a less regular texture.
 [oscillator_waveform]
-Pick the shape that sets the basic harmonic colour.
+SAW buzzes, SQR sounds hollow, TRI is mellow and SIN is pure. PWM shifts pulse width, SYNC resets the second wave, RING multiplies the waves and SAW3 stacks saws.
 [spread_oscillator_tuning]
 Separate the pitches for a wider, beating tone.
 [blend_the_oscillators]
@@ -105,15 +105,15 @@ Sweep the distortion as each note develops.
 [spread_the_two_lines]
 Detune the two lines for a beating sound.
 [combine_the_two_lines]
-Choose how the two phase lines mix.
+MIX adds the two lines. RING multiplies them, adding new frequencies that depend on both pitches.
 [sub_oscillator_level]
 Bring in a lower octave under the main tone.
 [phase_feedback]
 Feed the phase output back for a rougher tone.
 [chip_model]
-Choose the chip synthesis model.
+4BIT steps the level coarsely. 4B/2 halves the update rate. 8BIT is smoother. 1BIT switches between two levels. STEP drops volume in steps.
 [wave_or_formula_family]
-Choose the chip wave or formula family.
+PLS, TRI and SAW give pitched waves. NOIS hisses. WRAM reads a wave table. BYTE and FLOAT turn clock-driven formulas into sound.
 [pulse_width_or_table]
 Change pulse width or table position.
 [crush_or_variation]
@@ -175,7 +175,7 @@ Fold the drum wave for extra harmonics.
 [drum_saturation]
 Drive the drum tone into saturation.
 [noise_generator]
-Choose the source of the noise.
+ANLG gives coloured noise. DUST makes separate crackles. LFSR clocks a long repeating bit sequence. META repeats a short sequence as a metallic pitched tone.
 [noise_brightness]
 Brighten or darken the noise spectrum.
 [noise_filter_frequency]
@@ -191,7 +191,7 @@ Animate the noise inside a sustained note.
 [resolution_or_clock]
 Set the resolution or rate of the noise clock.
 [operator_routing]
-Choose which FM operators modulate each other.
+PAT uses the patch routing. Numbered algorithms reconnect six operators: parallel carriers add tones, while modulators add harmonics to the carriers.
 [operator_feedback]
 Feed an operator back into itself for more bite.
 [modulation_amount]
@@ -205,15 +205,15 @@ Make harder notes produce more FM overtones.
 [spread_carrier_tuning]
 Detune the carriers for a wider sound.
 [fm_voice_source]
-Choose the source of the FM voice.
+Factory slots recall their operator settings. OWN uses the custom operator voice. Changing the algorithm reroutes those operators.
 [bundled_audio_source]
 Choose the recording used by this voice.
 [playback_character]
-Choose how the recording plays when triggered.
+PAD and DRONE pitch the source to the note. TEXTURE adds pitch drift. ONE-SHOT stops at the end. ORIGINAL keeps the recorded speed before transpose.
 [pitch_in_semitones]
 Transpose the recording in semitones.
 [repeat_the_sample]
-Repeat the selected portion of the recording.
+OFF plays once. FORWARD repeats the loop. REVERSE reads backwards. BOUNCE reverses direction at each end. ONE-SHOT always stops.
 [start_of_playback]
 Move the first playback point into the recording.
 [end_of_playback]
@@ -283,13 +283,13 @@ Move the engine's internal filter edge.
 [internal_filter_peak]
 Raise the peak at the internal filter edge.
 [filter_response_shape]
-Choose which frequency band the filter passes.
+LP softens highs. HP removes lows. BP keeps the band around cutoff. COMB adds a series of resonant peaks.
 [emphasize_cutoff]
 Emphasize the tone around the filter edge.
 [drive_intensity]
 Drive the layer harder into saturation.
 [drive_circuit]
-Choose the distortion circuit for this layer.
+SOFT rounds peaks. HARD clips them. FOLD folds them back. CRUSH adds digital grit. RECT rectifies the wave. AMP adds amp-style breakup.
 [drive_brightness]
 Brighten or darken the driven tone.
 [send_to_shared_chorus]
@@ -303,11 +303,11 @@ Set how quickly the layer moves left and right.
 [auto_pan_width]
 Set how far the layer moves left and right.
 [auto_pan_waveform]
-Choose the shape of the stereo movement.
+SIN glides across the field. TRI sweeps evenly. SAW scans then jumps back. SQR switches sides. S&H holds random positions.
 [stereo_position]
 Place this layer between the two speakers.
 [poly_mono_or_legato]
-Choose chords, single notes or joined notes.
+POLY lets notes overlap. MONO plays one at a time. LEG joins held notes. UNI stacks voices on one pitch.
 [time_to_slide_to_a_note]
 Set the time taken to slide between pitches.
 [transpose_the_layer]
@@ -363,7 +363,7 @@ Blend across the join of a repeated sample.
 [stereo_movement]
 Move the recording across the stereo field.
 [chance_of_a_chord_change]
-Set the chance of an automatic chord change.
+Raise the chance that a new chord arrives at the selected interval. At zero the current chord holds.
 [slow_filter_variation]
 Let the filter colour drift over time.
 [vary_generated_density]
@@ -373,11 +373,11 @@ Let the room send drift over time.
 [transpose_the_note_pool]
 Transpose the whole note pool to a new root.
 [replace_the_scale_pool]
-Replace the note pool with the selected scale.
+MINOR has a lowered third. MAJOR brightens it. DORIAN raises the sixth of minor. LYDIAN raises the fourth of major. Keys toggle individual notes.
 [transport_speed]
-Set the tempo in beats per minute.
+40 to 140 BPM. Higher values shorten beats, bars and tempo-synced effects together.
 [auto_chord_interval]
-Set the interval between automatic chords.
+Off holds the chord. The other choices wait 1, 2, 4, 8, 16, 32 or 64 bars before checking Harmony chance.
 [rhythmic_event_grid]
 Choose the grid that places generated notes.
 [phrase_contour]
@@ -385,7 +385,7 @@ Choose the path taken by generated pitches.
 [how_layers_take_turns]
 Choose when layers play together or leave gaps.
 [chance_of_extra_events]
-Raise the chance of extra generated events.
+0 to 100. Adds a chance of extra cues at each layer's offset. Interplay can still suppress a cue. Manual steps keep their own timing.
 [reverb_room_size]
 Set the size of the shared room.
 [reverb_filter]
@@ -393,7 +393,7 @@ Shape the returning reverb tone.
 [high_frequency_decay]
 Make high frequencies fade faster in the tail.
 [reverb_algorithm]
-Choose the type of shared room.
+ROOM gives short reflections. SPRING rings. SHIMR adds a bright pitch tail. RESO emphasizes resonances. CLOUD diffuses them. PLATE gives a dense tail.
 [echo_level]
 Set the level of the returning echoes.
 [echo_interval]
@@ -401,7 +401,7 @@ Set the spacing between repeats.
 [echo_repeats]
 Feed the echo back to make more repeats.
 [delay_algorithm]
-Choose how repeats move and decay.
+ANALOG darkens echoes; DIGITAL stays clear. SHORT ECHO is tight. TWO HEAD adds a tap. ECHO+TAPE adds motion. PING PONG swaps sides. SLAPBACK gives a short reply.
 [chorus_movement_depth]
 Set the width of the chorus pitch movement.
 [chorus_movement_rate]
@@ -427,15 +427,15 @@ Set the level while the note stays held.
 [time_after_note_off]
 Set the time to fade after the note ends.
 [modulation_waveform]
-Choose the shape of each modulation cycle.
+SIN rounds off each turn. TRI rises and falls evenly. SAW ramps then resets. SQR jumps between two levels. S&H holds a new random value each cycle.
 [cycles_per_second]
-Set the number of cycles per second.
+Beat divisions follow tempo. Free rates use Hz: 1 Hz takes one second per cycle. Slower rates give a gradual sweep.
 [amount_of_modulation]
-Increase how far the destination moves.
+Depth runs from 0 to 100. At zero the destination stays put. Start low to hear movement around its saved setting.
 [patch_fx_or_pattern]
-Choose the parameter that will move.
+SELECT picks Basic, Instrument, Envelope, Filter, Drive, Space, Play, LFO, Macros, EQ, Pattern or Grain. Knob 4 picks a target within that group.
 [generated_hit_density]
-Set how often generated drum hits occur.
+0 to 100. Low density leaves gaps. Raise it to give the chosen rhythm more opportunities for drum hits.
 [delay_offbeat_hits]
 Push offbeat hits later for a loping feel.
 [phrase_end_fill_strength]
@@ -443,9 +443,9 @@ Add more hits near the end of a phrase.
 [vary_drum_lane_choices]
 Vary which drum lanes play each phrase.
 [note_selection_pattern]
-Choose how the layer picks its next notes.
+UP and DOWN trace the voicing in order. WALK changes the path. CHORD plays a pair. SPARSE leaves bars open. Pad also offers CHANT for a single line.
 [layer_step_interval]
-Set the time between steps in this layer.
+1/16, 1/8, 1/4 and 1/2 advance the pattern every sixteenth, eighth, quarter or half note.
 [generated_event_density]
 Set how often the layer sounds a step.
 [chance_to_follow_chord]
@@ -457,7 +457,7 @@ Set the pitch stored on this step.
 [strength_of_this_slot]
 Set how hard the note plays on this step.
 [choose_a_drum_voice]
-Choose the drum lane to edit.
+KICK, SNARE, HATS and PERC have independent rows of 16 hits. Choose a lane before toggling its steps.
 [enable_this_slot]
 Choose a hit or a rest for this step.
 [layer_output_level]
@@ -477,34 +477,68 @@ Set the longest wait before another move.
 [farthest_destination]
 Limit the distance to a new destination.
 [enable_this_lane]
-Allow this timing lane to make changes.
+Off pauses this lane. On allows layer evolution. For generators, Rotate changes families and Preset recalls a whole recipe.
 [follow_journey_or_set_interval]
-Share the travel deadline or use a separate clock.
+Follow Travel fires with a travel move. Bars track tempo. Seconds, minutes and hours use elapsed time between MIN and MAX.
 [shortest_interval]
 Set the shortest wait on this lane's clock.
 [longest_interval]
 Set the longest wait on this lane's clock.
 [bounded_or_endless_travel]
-Limit travel to the original range or keep moving beyond it.
+Bounded retraces the journey around its starting sound. Endless continues into new chapters when it reaches the edge.
 [sound_replacement_time]
 Set the time allowed for the old sound to fade.
 [release_or_crossfade]
-Let the old tail release or blend the two sounds.
+Release lets the outgoing voice ring out. Crossfade lowers it while bringing the incoming sound up. Tail Time sets the handoff duration.
 [move_while_playing]
 Allow automatic travel while the song plays.
 [shortest_cycle_in_bars]
-Set the fewest bars in a random cycle.
+Set the shortest cycle in bars. Raising MIN removes fast sweeps. Equal MIN and MAX give a fixed-length cycle.
 [longest_cycle_in_bars]
 Set the most bars in a random cycle.
 [fixed_or_random_per_cycle]
-Keep one rate or pick a new one each cycle.
+Fixed repeats one speed. Rnd Hz picks a frequency between the limits each cycle. Rnd Bars picks a length in bars that follows tempo.
 [lowest_cycle_frequency]
 Set the slowest random cycle frequency.
 [shift_both_rate_limits]
 Move the two random rate limits together.
 [highest_cycle_frequency]
-Set the fastest random cycle frequency.
+Set the fastest cycle in Hz. Keep MAX near MIN for gentle variation; spread them apart for changing speeds.
 [slide_into_selected_step]
 Glide from the previous pitch into this step.
 [shared_delay_algorithm]
-Choose the echo algorithm shared by all layers.
+The delay model affects every send. Try PING PONG for alternating sides, SLAPBACK for a short answer, or DIGITAL for clear repeats.
+[generate_options]
+AMB DRIFT uses odd loops with a three-step gate. Layers rarely strike together.
+EUCLIDEAN spaces hits as evenly as possible over 16 steps. Density adds hits; each layer starts at a different offset.
+ODD LOOPS repeats each layer after 5, 7, 11 or 13 steps. Their accents meet in different places each pass.
+POLYRHYTHM crosses three-step and seven-step pulses and skips the last sixteenth of each beat.
+SPARSE leaves most beats empty. Higher density gives each quarter note a better chance to sound.
+TIDAL swells and recedes on eighth notes. Each layer reaches the crest at a different time.
+BROKEN repeats a syncopated 23-step figure. Density decides whether its last accent sounds.
+SLOW CLOCK gives each layer one cue in two bars, with entrances offset between layers.
+GARDEN gives eligible instruments repeating quarter-note loops. Their scale degrees follow the changing harmony.
+AMB BREATHE gradually opens and closes the chance of a phrase, offset across layers over 24 bars.
+LONG ARC shares one slow swell across the ensemble. Activity rises and falls over 128 bars.
+WANDER shifts the silent bar in a seven-bar pattern. A new offset arrives every three bars.
+BLOOM brings layers in one by one, then withdraws them. The last bar of each 32-bar cycle rests.
+CALL ANSWER trades groups of layers in two-bar blocks, leaving room for the other voices.
+DRIFT SHIFT opens a 24-step window in a 37-step cycle. Its start slips every four bars.
+MEMORY returns to two familiar four-bar windows in each 16-bar cycle, with occasional rests inside.
+MINIMAL allows half-note cues in only the first two bars of each 16-bar cycle.
+ACID LINE turns rhythm cues into short accented runs with slides on automatic Bass and Lead.
+LOCKED LOOP remembers an eight-note cell and repeats its pitches or drum voices as cues arrive.
+DRIFT LOOP repeats a remembered cell and occasionally replaces one member, so the motif changes gradually.
+MARKOV WALK learns transitions from the opening cell and chooses its next move from those connections.
+BLEND lets each layer answer its own cues. Several parts can enter together.
+STAGGER offsets each layer's rhythm and phrase clock by three more steps, splitting their entrances.
+ALTERNATE reserves one bar for each layer in turn. Each still needs its own rhythm cue.
+COMPLEMENT gives priority to the first sounding layer and can fill empty beats with a single reply.
+SPARSE TALK allows one voice at a time and thins each part to a different three-step alignment.
+TIDE TOGETHER swells the layers together and rests them for the last four bars of every twelve.
+[role_jobs]
+Pad spreads chord tones. Drone holds a foundation. Bells answer above it. Bass anchors the root. Drums place hits. Texture adds a bed. Sample plays a recording. Lead carries a line.
+[texture_motion]
+STEADY sustains. PULSE waits for half-note cues. DRIFT holds six-second notes. BURSTS uses a bar's first four steps. SPARSE waits two bars between cues.
+[basic_pitch]
+Pitch moves the sounding note above and below its base pitch. A shallow, slow cycle adds vibrato.

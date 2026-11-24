@@ -85,6 +85,8 @@ FLASH STATUS: NOT AUTHORISED. This is an emulator control card; no physical devi
 
 HOME Master SPACE changes room size, width and layer sends. K2 DENSITY controls how often sequenced notes sound. Hold HOME and turn K2 for ECHO, which changes return level, repeats and sends. MOTION couples chorus, reverb modulation and stereo movement. WARMTH rounds attacks, adds drive and darkens overtones and repeats. Each piece starts from its saved mix. Layer controls use the patch's own synthesis engine and role. On vocal patches VOWEL sweeps the formant, and SAMPLE retains its dedicated pitch control.
 
+Hold HOME on Master for **Low EQ**, **Echo**, **Mid EQ** and **Tempo**. The two EQ knobs adjust the corresponding bands in GLO → EQ by 1 dB per detent, from −12 to +12 dB. Tempo uses the song's 40–140 BPM range in 1 BPM steps. Release HOME to return to Space, Density, Motion and Warmth.
+
 On EDIT → LFO, SELECT jumps between categories and knob 4 browses destinations inside the selected category. For Open Aah choose Instrument → BREATH. For grain amount choose Grain → MIX. Both controls route immediately. Raise DEPTH to hear the movement. Continuous parameters move around the edited value. Pattern changes take effect at their next scheduled event, and note modulation preserves rests. Each layer stores its own route. Changing patch loads the new patch’s default route.
 
 While editing a layer, turn a parameter knob and then hold **HOME** and tap **LFO** to open LFO with that parameter linked. The shortcut keeps the layer’s waveform, rate and depth. Each layer remembers its own last knob edit until its sound is replaced or restored. If the last edited control has no LFO destination, the current destination stays selected and the screen shows a notice.
