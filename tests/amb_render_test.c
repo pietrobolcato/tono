@@ -147,6 +147,24 @@ static void ar_splash(const char *dir)
         assert((c>>11)==(c&31u) && abs((int)((c>>5)&63u)/2-(int)(c&31u))<=1);
     }
     ar_save(ar_name,dir);ar_frames++;
+    settings.palette=UI_JIANT_INDEX;
+    palette_set(settings.palette);
+    for(unsigned theme=THEME_TE_DARK;theme<=THEME_TE_LIGHT;theme++){
+        while(amb_theme()!=theme)amb_theme_turn(1);
+        ui_prefs&=~PREF_ANIM_OFF;
+        draw_splash();
+        assert(swap16(host_screen[0])==ABG);
+        memcpy(settled,host_screen,sizeof settled);
+        splash_write(SPL_WRITE);
+        assert(memcmp(settled,host_screen,sizeof settled));
+        for(unsigned lane=0;lane<4;lane++)
+            assert(swap16(host_screen[(TONO_ART_Y+88)*240+TONO_ART_X+46+lane*23])==amb_accent(lane));
+        ar_save(theme==THEME_TE_DARK?"boot_te_dark":"boot_te_light",dir);
+        memcpy(settled,host_screen,sizeof settled);
+        ui_prefs|=PREF_ANIM_OFF;draw_splash();
+        assert(!memcmp(settled,host_screen,sizeof settled));
+    }
+    amb_theme_turn(1);
     settings.palette=palette;
     palette_set(settings.palette);
     ui_prefs=prefs;
@@ -297,6 +315,17 @@ int main(int argc,char **argv)
     for(unsigned theme=0;theme<THEME_COUNT;theme++){
         while(amb_theme()!=theme)amb_theme_turn(1);
         ambr.view=0;ambr.target=0;ambr.help=0;
+        uint16_t ring[36*36];
+        for(unsigned frame=0;frame<3;frame++){
+            song.playing=frame==1;ambr.step=16;
+            ar_frame("ring_motion",dir,0);
+            int changed=0;
+            for(unsigned y=0;y<36;y++)for(unsigned x=0;x<36;x++){
+                uint16_t px=host_screen[(34+y)*240+185+x];
+                if(frame==0)ring[y*36+x]=px;else changed|=ring[y*36+x]!=px;
+            }
+            if(frame)assert(changed==(frame==1 && theme!=THEME_DIETER));
+        }
         ar_frame("home_footer",dir,theme==0);
         ambr.evolve_open=1;ambr.evolve_layer=0;ambr.evolve_role=0;ambr.evolve_patch=1;
         ar_frame("evolution_keep",dir,theme==0);

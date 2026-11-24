@@ -1891,7 +1891,6 @@ static unsigned amb_envelope_id(const amb_layer_t *l,unsigned knob)
     }
     return P_ATK+knob;
 }
-enum { THEME_DIETER, THEME_TE_DARK, THEME_TE_LIGHT, THEME_COUNT };
 static const char *const theme_names[]={"Dieter","Teenage Engineering / Dark","Teenage Engineering / Light"};
 /* Global PER4 settings, spare engine-15 byte between hint counters and CPU settings. */
 static unsigned amb_theme(void)
@@ -2543,10 +2542,6 @@ static void amb_leds(void)
     if(song.playing) lit[LED_PLAY_GREEN>>3]|=(uint8_t)(1u<<(LED_PLAY_GREEN&7u));
     for(k=0;k<FM1_NCOL;k++) {fm1_led[k]=lit[k];fm1_led_dim[k]=dim[k];fm1_led_breath[k]=breath[k];fm1_led_mid[k]=0;fm1_led_hi[k]=hi[k];}
 }
-#define TE_DARK (amb_theme()==THEME_TE_DARK)
-#define TE_LIGHT (amb_theme()==THEME_TE_LIGHT)
-#define ABG (TE_DARK?RGB(22,22,24):TE_LIGHT?RGB(245,242,234):TONO_PAPER)
-#define AINK (TE_DARK?RGB(244,241,230):TONO_INK)
 #define ADIM (TE_DARK?RGB(191,190,184):RGB(68,69,67))
 #define ALINE (TE_DARK?RGB(76,76,80):RGB(174,175,171))
 #define ASEL (TE_DARK?RGB(52,52,55):RGB(209,210,205))
@@ -2914,12 +2909,15 @@ static void amb_led_number(int x,int y,unsigned value)
 
 static void amb_mix_ring(void)
 {
-    static const int8_t quadrant[][2]={{16,1},{15,5},{13,9},{10,12},{6,15},{1,16}};
+    /* One revolution per eight bars; arc lengths still show layer gain. */
+    unsigned phase=song.playing?ambr.step*8u:0;
+
     for(unsigned k=0;k<4;k++){
         int last_x=0,last_y=0;
-        for(unsigned j=0;j<NELEM(quadrant);j++){
-            int x=quadrant[j][0],y=quadrant[j][1];
-            for(unsigned n=0;n<k;n++){int t=x;x=-y;y=t;}
+        for(unsigned j=0;j<=5;j++){
+            unsigned angle=phase+k*256+8+j*48;
+            int x=(SINE[(angle+256)&1023]+1024)>>11;
+            int y=(SINE[angle&1023]+1024)>>11;
             if(j)cv_line_t(203+last_x,52+last_y,203+x,52+y,
                 (j-1)*127<5u*amb.layer[k].level?amb_accent(k):DISPLAY_GRID,3);
             last_x=x;last_y=y;
