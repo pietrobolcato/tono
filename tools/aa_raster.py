@@ -172,7 +172,7 @@ def raster_icon(spec, px, codepoint, gamma=1.0):
     return pack([alpha4(v, gamma) for v in img.tobytes()]), img.getbbox() is not None
 
 
-def glyph_tables(name, table, phases):
+def glyph_tables(name, table, phases, shared_boxes=False):
     """(0.9.0) a face's glyph table as src/gfx.c reads it (ag): table [(off, adv, bx, by, bw, bh)], phases entries a
     glyph -> (C text, bytes). AF_<N>_GH aagh_t {off, adv} a glyph (its phases' lowest data offset, the advance in 1/16
     px, the same in every phase); AF_<N>_GP uint32_t a glyph and phase: off - GH.off | (bx + 1) << 10 | by << 13 |
@@ -188,6 +188,14 @@ def glyph_tables(name, table, phases):
                 f"{name}: a glyph entry out of the packed table's range: {(off, adv, bx, by, bw, bh)}"
             gp.append((off - off0) | (bx + 1) << 10 | by << 13 | bw << 19 | bh << 26)
     assert max(o for o, _ in gh) < 65536 and max(a for _, a in gh) < 65536
+    if shared_boxes:
+        # Single-phase glyphs often have the same ink box. Keep its index in
+        # the unused high bits of the advance, preserving all raster metrics.
+        boxes = list(dict.fromkeys(gp))
+        assert phases == 1 and len(boxes) <= 128 and all(0 <= adv < 512 for _, adv in gh)
+        gh = [(offset, adv | (boxes.index(box) << 9)) for (offset, adv), box in zip(gh, gp)]
+        assert [boxes[entry >> 9] for _, entry in gh] == gp
+        gp = boxes
     lines = [f"static const aagh_t AF_{name}_GH[{len(gh)}] = {{"]
     for k in range(0, len(gh), 8):
         lines.append("    " + " ".join("{%d, %d}," % e for e in gh[k:k + 8]))

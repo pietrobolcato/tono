@@ -256,7 +256,7 @@ int main(int argc,char **argv)
                 if(view==2 && page==2)assert(leaves==16);
                 for(ambr.help=1;ambr.help<=leaves;ambr.help++){
                     snprintf(name,sizeof name,"manual_%u_%u_%u_%u",view,page,v,ambr.help);
-                    ar_frame(name,dir,!view || (view==2 && page==2) || (view==1 && page==3));
+                    ar_frame(name,dir,!view || (view==2 && page==2) || (view==1 && (page==3 || page==0)));
                 }
             }
         }

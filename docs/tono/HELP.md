@@ -34,6 +34,8 @@ The first page explains the screen. Other pages explain the assigned controls, t
 | Chord, Role and Sound proposals | Confirm what changes in the harmony, layer role or patch and when it takes effect |
 | Layer evolution and restore | Apply the Travel rules to a selected layer or restore its settings from the last loaded song |
 
+On HOME, the overview explains the selected target. Turn SELECT for the held-HOME knobs and performance shortcuts. A selected layer adds a page for mute, solo, LFO linking, evolution and sound lock. In EDIT / Mode, the role guide starts with the edited layer's role and continues through the other seven. You can browse all eight while the layer keeps its current role.
+
 The numbered knob cards follow the active context. Available cards depend on the current role, engine, effect module and edit mode. See the [control card](../../ambplus/CONTROLS.md) for the full control reference.
 
 On Generate, Interplay shows four numbered layer lanes. Each column summarizes a quarter note in an illustrative pattern. Tide Together has its own view of the full twelve-bar cycle. The first eight bars follow the shared density envelope, then all layers rest for four bars.

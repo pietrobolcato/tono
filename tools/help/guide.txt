@@ -7,7 +7,7 @@ Read each layer's peak after its gain. NOTE is held, REL is fading and TAIL is a
 [zen]
 Notes animate the landscape. The transport moves the scene and travel changes its colours. The mix controls still work here.
 [mode]
-Choose what this layer plays. A new role starts its own automatic pattern and keeps the layer level.
+Preview a role with ALGO and confirm with REC. A new role starts its own pattern at the same layer level.
 [sound]
 Browse patches silently before applying one. The four controls shape the current patch immediately.
 Set the oscillator or engine colours before the layer filter and effects.
@@ -331,9 +331,9 @@ Raise the echo return, feedback and sends.
 [chorus_pan_and_room_mod]
 Add chorus, stereo movement and room modulation.
 [body_drive_and_echo_tone]
-Round attacks and darken echoes as drive rises.
+Raise WARMTH for softer attacks, darker echoes and more drive across the mix.
 [drive_attack_and_tone]
-Round the attack and add drive to the tone.
+Raise WARMTH to soften the attack, lower the filter cutoff and add drive.
 [chorus_and_filter_motion]
 Add chorus and move the filter for more motion.
 [hold_notes_raise_sustain]
@@ -537,7 +537,14 @@ COMPLEMENT gives priority to the first sounding layer and can fill empty beats w
 SPARSE TALK allows one voice at a time and thins each part to a different three-step alignment.
 TIDE TOGETHER swells the layers together and rests them for the last four bars of every twelve.
 [role_jobs]
-Pad spreads chord tones. Drone holds a foundation. Bells answer above it. Bass anchors the root. Drums place hits. Texture adds a bed. Sample plays a recording. Lead carries a line.
+Let chord tones overlap for a soft bed. Raise SUSTAIN to carry the harmony between phrases.
+Hold a foundation under the chord changes. Add DRIFT for slow movement in the held tone.
+Use short, bright notes to answer a phrase. Leave space between hits to hear their decay.
+Anchor the harmony with a low line. Add GLIDE to slide between pitches.
+Set the pulse with a kit. Open PATTERN to shape the rhythm or place hits by hand.
+Build a noise bed. In PATTERN, try STEADY for a continuous sound or BURSTS for short clusters.
+Play a recording from the keyboard or pattern. Open SOUND to choose the source and trim its edges.
+Carry a melody above the other parts. Try a sparse phrase and add GLIDE to connect its notes.
 [texture_motion]
 STEADY sustains. PULSE waits for half-note cues. DRIFT holds six-second notes. BURSTS uses a bar's first four steps. SPARSE waits two bars between cues.
 [basic_pitch]

@@ -3135,7 +3135,7 @@ static unsigned amb_help_pages(unsigned *control)
 {
     unsigned count=1;
     if(ambr.view==3 || amb_proposing() || (ambr.view==2 && ambr.page==5))return count;
-    count+=!ambr.view;
+    count+=!ambr.view?2+!!ambr.target:ambr.view==1 && !ambr.page?NELEM(AMB_ROLE):0;
     for(unsigned k=0;k<4;k++){
         char label[16]={0},value[24]={0};
         const param_desc_t *d=amb_knob_value(k,label,value);
@@ -3195,12 +3195,18 @@ static void amb_draw(void)
     _Static_assert(240*147*sizeof(*cv_px)+2*HELP_TEXT_CAP<=sizeof cv_px,"Help text scratch");
     char *overview=(char *)(cv_px+240*147),*hint=overview+HELP_TEXT_CAP;
     unsigned slot=0,part=0;
+    const char *section=0;
     if(ambr.help){
         if(ambr.help>amb_help_pages(&slot))ambr.help=1;
         part=slot/4;slot%=4;
         unsigned first=amb_screen_card(l),second=0;
-        if(ambr.view==1 && !ambr.page && (!amb_proposing() || ambr.proposal!=255))second=H_role_jobs;
-        if(ambr.help>1){
+        if(!ambr.view && ambr.help>1 && ambr.help<=3+!!ambr.target){
+            section=ambr.help==2?"Hold HOME + knobs":ambr.help==3?"Performance shortcuts":"Layer shortcuts";
+            first=0;
+        }else if(ambr.view==1 && !ambr.page && ambr.help>1 && ambr.help<=1+NELEM(AMB_ROLE)){
+            unsigned role=(l->role+ambr.help-2)%NELEM(AMB_ROLE);
+            section=AMB_ROLE[role];first=H_role_jobs+role;
+        }else if(ambr.help>1){
             second=0;
             first=amb_knob_card(l,slot);
             if(ambr.view==1 && ambr.page==3 && !ambr.bank && slot==3)second=amb_route_card(l);
@@ -3247,9 +3253,10 @@ static void amb_draw(void)
             cv_text(12,32,&AF_M,amb_guide_title(l),AINK);
             amb_help_paragraph(54,overview);
             amb_help_actions(0);
-        }else if(!ambr.view && ambr.help==2){
-            cv_text(12,32,&AF_M,"Hold HOME",AINK);
-            amb_help_actions(0);
+        }else if(section){
+            cv_text(12,32,&AF_M,section,AINK);
+            if(ambr.view)amb_help_paragraph(54,overview);
+            else amb_help_actions(0);
         }else{
             char label[16]={0},value[24]={0},key[]="1";
             key[0]+=(char)slot;const param_desc_t *d=amb_knob_value(slot,label,value);
@@ -3601,7 +3608,8 @@ static void amb_draw(void)
     }
     cv_blit_cells(0,0);
     cv_begin(240,93,ABG);
-    cv_rect(8,0,224,1,ALINE);
+    if(!ambr.help || *hint || (ambr.view==1 && ambr.help==1 && !amb_proposing()))
+        cv_rect(8,0,224,1,ALINE);
     int travel_footer=ambr.view==0 && travel.indicator && !ambr.help && !proposal;
     const char *notice=0;
     char gain[18]="LAYER GAIN ";
@@ -3620,7 +3628,7 @@ static void amb_draw(void)
     }
     if(ambr.help){
         if(*hint)amb_help_paragraph(8,hint);
-        else if(ambr.help==1 || (!ambr.view && ambr.help==2))amb_help_actions(1);
+        else if(ambr.help==1)amb_help_actions(1);
     }
     if(!travel_footer)amb_footer(l);
     if(proposal && ambr.evolve_open){

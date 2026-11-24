@@ -27,6 +27,7 @@ typedef struct {
     const uint8_t *hc;                  /* data's Huffman code (cv_alpha_hc), 0 = 2 px per byte (cv_alpha) */
     uint8_t bits;                       /* (0.8.5) 1: data is 1 bit a pixel, no ramp (AF_X: cv_bits) */
     const uint8_t *classes; /* optional left glyph and right character maps */
+    uint8_t shared_boxes; /* single-phase fonts may index common ink boxes via the advance */
 } aafont_t;
 typedef struct { const char *name; uint16_t bg, surf, text, theme, accent; } ui_pal_t;
 typedef struct { uint16_t off; uint8_t w; const char *label; } kc_t;
@@ -764,10 +765,10 @@ static uint32_t glyph(const aafont_t *f, uint32_t ch)
 static aag_t ag(const aafont_t *f, uint32_t i)
 {
     const aagh_t *h = &f->gh[i >> f->psh];
-    uint32_t v = f->gp[i];
+    uint32_t v = f->gp[f->shared_boxes ? h->adv >> 9 : i];
     aag_t g;
     g.off = (uint16_t)(h->off + (v & 1023u));
-    g.adv = h->adv;
+    g.adv = f->shared_boxes ? h->adv & 511u : h->adv;
     g.bx = (int8_t)((int32_t)((v >> 10) & 7u) - 1);
     g.by = (uint8_t)((v >> 13) & 63u);
     g.bw = (uint8_t)((v >> 19) & 127u);
@@ -812,7 +813,8 @@ static int32_t text_w(const aafont_t *f, const char *s)
         uint32_t c = fold(f, (uint8_t)*s);
         if (prev)
             pen += kern(f, prev, c);
-        pen += f->gh[glyph(f, c) >> f->psh].adv;
+        uint16_t advance = f->gh[glyph(f, c) >> f->psh].adv;
+        pen += f->shared_boxes ? advance & 511u : advance;
         prev = c;
     }
     return (pen + 8) >> 4;
