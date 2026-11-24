@@ -77,10 +77,11 @@ def main():
         data, offsets, directory = groups(values, period)
         symbol = 'amb_oct_' + name
         out.write(f'enum {{ {symbol}_length = {len(values)}, {symbol}_period = {period} }};\n')
-        if name=='flute':
+        if name in ('flute','violin'):
             # Each full row spans eight base bytes plus the eight widths.
             # Derive this directory once at boot, keeping playback lookup identical.
-            out.write(f'static uint16_t {symbol}_offsets[{len(offsets)}];\n')
+            placement = ' AMB_DIRECTORY_RAM' if name == 'violin' else ''
+            out.write(f'static uint16_t {symbol}_offsets[{len(offsets)}]{placement};\n')
         else:
             write_array(out, 'uint16_t', symbol+'_offsets', offsets)
         write_array(out, 'uint32_t', symbol+'_widths', directory)

@@ -153,3 +153,16 @@ Locked Loop repeats eight attacks relative to the harmony. Drift Loop replaces a
 The Generate browser has 20 distinct combinations across the 18 factory songs and the additional standalone presets. Garden uses Garden Original. Both Mars songs use Mars Symphonies. Both Analog Days songs use Analog Days. Night Wire uses Night Circuit, Blue Hour Acid uses Blue Changes, and Kiln Echoes uses Kiln Drift. The other song-derived entries carry their song names (Cold Desert Dunes is abbreviated on the display). Recalling one here applies only Rhythm, Phrase, Interplay and Variation.
 
 On GLO → Generate, SAVE opens four global user generator slots. SELECT or PRESETS chooses a slot. REC stores the four displayed generator settings. An occupied slot asks for REC again. HOME cancels. During playback the captured settings persist when playback stops. Recall a user slot after the factory recipes with PRESETS, then REC. A playing song applies the recall on the next four-bar boundary.
+
+On HOME, K2 sets Density for the selected target. Master thins the whole
+score and a layer thins its own new attacks. At 100% the authored rhythm
+plays in full. Existing notes and effect tails finish naturally. Hold HOME
+and turn K2 to reach its original sound macro (Echo on Master). On a layer,
+turn any HOME knob, then press HOME + LFO to link that control. Set DEPTH
+on the LFO page to hear modulation. Each song saves its four layer densities.
+
+GLO → Generate shows a miniature score for the pitch-based phrase modes.
+Gaps and slides identify Acid Line (9), three passes of one motif identify
+Locked Loop (10), highlighted substitutions identify Drift Loop (11), and
+recurring notes with different continuations identify Markov Walk (12).
+These diagrams illustrate each rule and stay steady while browsing.

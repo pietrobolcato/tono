@@ -205,6 +205,26 @@ int main(void)
     amb.layer[0].lfo_dest=ROUTE_EQ;amb.release_ms=30000;ambr.slot=2;amb_save();
     amb_fixture_scene(0);assert(amb_recall(2));
     assert(amb.layer[0].lfo_dest==ROUTE_EQ && amb.release_ms==30000);
+    amb_fixture_scene(0);
+    for(unsigned k=0;k<4;k++){
+        amb_target(k+1);
+        for(unsigned knob=0;knob<4;knob++){
+            ambr.view=0;
+            turn(EN_K1+knob,-25);
+            link_last_edit();
+            assert(amb.layer[k].lfo_dest==(knob==1?ROUTE_HOME_DENSITY:ROUTE_MACRO+knob));
+        }
+        assert(amb_controls.layer_thinning[k]==50);
+    }
+    amb.layer[2].lfo_dest=ROUTE_HOME_DENSITY;
+    amb.layer[2].lfo_depth=100;
+    trk[2].lfo_val=-32767;
+    for(unsigned step=0;step<256;step++)assert(!amb_keep_onset(2,step));
+    trk[2].lfo_val=32767;
+    for(unsigned step=0;step<256;step++)assert(amb_keep_onset(2,step));
+    ambr.slot=7;amb_save();amb_fixture_scene(0);
+    assert(!amb_controls.layer_thinning[2] && amb_recall(7));
+    assert(amb_controls.layer_thinning[2]==50 && amb.layer[2].lfo_dest==ROUTE_HOME_DENSITY);
     check_layer_shortcut();
     check_random_rate();
     puts("HOME + LFO uses last actual layer edit, keeps LFO settings and rejects unavailable targets PASS");

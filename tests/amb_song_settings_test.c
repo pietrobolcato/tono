@@ -131,6 +131,13 @@ int main(void)
     amb_commit_snapshot();assert(amb_recall(5));
     assert(amb_bar_octave[0]==2 && ambr.zen_train);
     /* Checksum-valid objects with a malformed trailer must not install. */
+    /* Extended takes carry layer density after the complete recording.
+     * Non-default controls must round-trip without touching the audio data. */
+    amb_controls.layer_thinning[2]=63;ambr.slot=6;amb_save();
+    assert(!st_head(amb_object(6),0,&hdr) && hdr.len==3672);
+    amb_controls.layer_thinning[2]=0;
+    assert(amb_recall(6) && amb_controls.layer_thinning[2]==63);
+    assert(!memcmp(amb_current_take(),&old.take,sizeof old.take));
     amb_saved_song.extended.octave[0]=7;
     assert(!st_save(amb_object(6),&amb_saved_song,sizeof amb_saved_song));
     assert(!amb_recall(6) && amb_bar_octave[0]==2 && ambr.zen_train);

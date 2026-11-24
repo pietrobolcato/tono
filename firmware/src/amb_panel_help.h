@@ -86,7 +86,12 @@ static const char *amb_knob_hint(const amb_layer_t *l,unsigned knob)
     static const char *const manual_drum[]={"Select an edit slot","Choose a drum voice","Enable this slot","Delay offbeat hits"};
     if(ambr.view==4)return "Layer output level";
     if(ambr.view==0 || (ambr.view==1 && ambr.page==0)){
-        if(!ambr.view){if(!ambr.target)return knob==1 && !amb_home_echo()?"Fewer notes / HOME: echo":master[knob];l=&amb.layer[ambr.target-1];}
+        if(!ambr.view){
+            if(knob==1 && !amb_home_echo())
+                return ambr.target?"Fewer notes / HOME: macro":"Fewer notes / HOME: echo";
+            if(!ambr.target)return master[knob];
+            l=&amb.layer[ambr.target-1];
+        }
         if(!knob && l->engine==ENGI_VOICE)return "Shift the starting vowel";
         if(amb_acid(l))return acid_macro[knob];
         return macro[l->role==7?3:l->role][knob];
