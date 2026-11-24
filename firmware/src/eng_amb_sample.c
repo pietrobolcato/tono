@@ -44,7 +44,11 @@ static amb_seek_t amb_speech_block(const uint8_t *block,amb_seek_t state,int16_t
 static void amb_sample_seek_init(void)
 {
     AMB_INIT_OFFSETS(flute);
+    AMB_INIT_OFFSETS(chime);
+    AMB_INIT_OFFSETS(vowel);
     AMB_INIT_OFFSETS(violin);
+    AMB_INIT_OFFSETS(tenor);
+    AMB_INIT_OFFSETS(cello);
     for(unsigned n=0;n<3;n++){
         const amb_recording_t *r=&amb_recordings[13+n];
         amb_seek_t state={0,1};

@@ -99,12 +99,15 @@ static __attribute__((noinline)) void amb_footer(const amb_layer_t *l)
     /* Keep the two HOME hints together within the same two-row footer. */
     const char *hold="Hold for 2nd fn";
     int hold_width=!ambr.view && !amb_proposing() && !ambr.zen && !ambr.help?amb_nav_width("HOME",hold,0):0;
-    int end=3+amb_nav_width(key,verb,knob);
+    int switch_lfo=!ambr.help && !amb_proposing() && ambr.view==1 && ambr.page==3;
+    int lfo_width=switch_lfo?amb_nav_width("LFO","Switch",0):0;
+    int end=lfo_width+3+amb_nav_width(key,verb,knob);
     if(second)end+=amb_nav_width(second,action,second_knob);
     int y=end+cancel_width+page_width+hold_width+help_width>232?61:76;
     cv_rect(8,y-4,224,1,ALINE);
     int x=amb_nav_item(y,8,key,verb,knob,lit || amb_nav_active(control));
     if(second)x=amb_nav_item(y,x,second,action,second_knob,amb_nav_active(secondary));
+    if(switch_lfo){if(x+lfo_width>232){y=76;x=8;}x=amb_nav_item(y,x,"LFO","Switch",0,amb_nav_active(B_LFO));}
     if(cancel){
         if(x+cancel_width>232){y=76;x=8;}
         x=amb_nav_item(y,x,"HOME","Cancel",0,amb_nav_active(B_HOME));

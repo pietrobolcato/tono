@@ -17,9 +17,18 @@ int main(void)
     for(unsigned i=0;i<CTL;i++)block[i]=i?0:16000;
     amb_scope_target=1;amb_scope_page=5;amb_scope_fill=0;
     amb_layer_process(0,block,CTL);
-    assert(amb_scope_fill==CTL/4 && amb_wave[0][0]==2000 && amb_wave[1][0]<50);
+    assert(amb_scope_fill==CTL && amb_wave[0]==(block[0]>>3));
     assert(block[0]>0 && block[0]<300 && block[1]>0);
     block[0]=16000;amb_layer_process(1,block,CTL);assert(block[0]==16000);
+    /* The displayed input spectrum must place a real signal in its own band. */
+    uint32_t phase=0,step=2000u*(0xffffffffu/FS);
+    for(unsigned i=0;i<AMB_SCOPE_N;i++,phase+=step)amb_wave[i]=osc_sine(phase)>>4;
+    assert(amb_spectrum_height(2000)>amb_spectrum_height(500)+12);
+    memset(amb_wave,0,sizeof amb_wave);
+    assert(amb_spectrum_height(2000)==0);
+    /* Screen y increases downward. LP and HP slope in opposite directions. */
+    assert(amb_response_y(100,1000,0,0,1)<amb_response_y(4000,1000,0,0,1));
+    assert(amb_response_y(100,1000,1,0,1)>amb_response_y(4000,1000,1,0,1));
     amb_knob(0,1);
     for(unsigned n=0;n<100;n++){
         for(unsigned i=0;i<CTL;i++)block[i]=16000;

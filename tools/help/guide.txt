@@ -9,13 +9,13 @@ Notes animate the landscape. The transport moves the scene and travel changes it
 [mode]
 Preview a role with ALGO and confirm with REC. A new role starts its own pattern at the same layer level.
 [sound]
-Browse patches silently before applying one. The four controls shape the current patch immediately.
+Browse patches silently. Auto suggests a sound for the mix. REC applies it with fresh macros, full HOME density and the grain mix off.
 Set the oscillator or engine colours before the layer filter and effects.
-Shape the filter response. Listen for the edge around its cutoff as you add resonance.
+The live spectrum shows the synth sound from low to high. The curve shows how the filter shapes frequencies around cutoff.
 Set how this layer plays its notes and where it sits in stereo.
 Balance the drum voices inside this kit before changing the whole layer level.
 [sample]
-Choose a recording and trim its start and end to play just the part you want.
+Browse recordings or choose Auto for a factory pick. REC loads the source with full HOME density and grain off. Trim its start and end.
 Set the playback mode, tuning and loop. Smooth the join if repeats click.
 Shape the loop edge, filter, stereo motion and room around the recording.
 Record an incoming USB audio stream into this layer's take. Finish the take before editing it.
@@ -24,8 +24,8 @@ Shape a note from its first attack to the tail after release. Try a longer attac
 Shape each percussion hit. Short hits leave room between steps.
 Trim the sample and soften its edges to avoid abrupt starts or stops.
 [lfo]
-Move a destination around its saved value. Choose the group, then the destination. Raise depth to hear it.
-Set a steady cycle or let each cycle pick a speed between two limits.
+Press LFO again to switch LFO 1/2. Both use the same controls. Choose a target and raise depth. Off stops this LFO.
+Set a steady cycle or pick a new rate each cycle for this LFO. Press LFO to switch between LFO 1 and 2.
 [pattern]
 Build phrases from the chord and scale. Set how often notes arrive and how densely the layer plays.
 Generate a drum part. Swing delays offbeats and fills add hits near the end of a phrase.
@@ -39,6 +39,7 @@ Feed this layer into the shared echo. Its delay algorithm affects every layer us
 Feed this layer into the shared room. A higher send leaves more reverb after each note.
 Place the layer left or right or move it repeatedly with auto-pan.
 Overlap small pieces of the layer's recent sound. Blend them into the dry signal for a moving texture.
+The live spectrum shows the layer from low to high. The curve shows which frequencies pass at the selected cutoff.
 [eq]
 Boost or cut lows, mids and highs on this layer. Trim its output if a boost makes it too loud.
 Adjust the balance of lows, mids and highs across the whole mix. Trim the output after boosting a band.
@@ -53,6 +54,7 @@ Set the shared room for all reverb sends. Size changes its space and damping sof
 Set the shared repeats. Time spaces the echoes and feedback determines how long they continue.
 Set chorus movement and stereo width across the mix. Reverb modulation moves the room tail.
 Colour the full mix with filter and saturation. Delay colour and modulation shape its echoes.
+IN and OUT show peaks before and after limiting. GR shows gain reduction on both channels. Deeper dips mean more reduction.
 [timing]
 Set the unit and shortest and longest wait between moves. Equal limits give a regular pulse. Reach limits each new destination.
 Rotate generator families or choose a whole preset. Follow Travel shares its deadline; a separate clock uses the two limits.
@@ -67,7 +69,7 @@ Browse settings for this page. Applying a choice changes this group of controls 
 Save the four generator settings together for recall in another song.
 Preview a new chord before changing the harmony of the generated layers.
 Preview a new role before replacing this layer's instrument and automatic pattern.
-Preview the proposed sound. Applying it replaces this layer's patch and lets the old sound release.
+Auto uses the song's travel palette and favours a different engine from the other audible layers. REC applies the displayed sound.
 [acid]
 Open the resonant low-pass filter.
 Emphasize the tone around the cutoff.
@@ -431,7 +433,7 @@ SIN rounds off each turn. TRI rises and falls evenly. SAW ramps then resets. SQR
 [cycles_per_second]
 Beat divisions follow tempo. Free rates use Hz: 1 Hz takes one second per cycle. Slower rates give a gradual sweep.
 [amount_of_modulation]
-Depth runs from 0 to 100. At zero the destination stays put. Start low to hear movement around its saved setting.
+Off stops this LFO. Raise depth to increase its effect on the destination.
 [patch_fx_or_pattern]
 SELECT picks Basic, Instrument, Envelope, Filter, Drive, Space, Play, LFO, Macros, EQ, Pattern or Grain. Knob 4 picks a target within that group.
 [generated_hit_density]
@@ -549,3 +551,12 @@ Carry a melody above the other parts. Try a sparse phrase and add GLIDE to conne
 STEADY sustains. PULSE waits for half-note cues. DRIFT holds six-second notes. BURSTS uses a bar's first four steps. SPARSE waits two bars between cues.
 [basic_pitch]
 Pitch moves the sounding note above and below its base pitch. A shallow, slow cycle adds vibrato.
+
+[limiter_ceiling]
+Lower the ceiling to catch quieter peaks before master EQ.
+[limiter_release]
+Set how fast gain returns after a peak.
+[layer_filter_mode]
+Low pass softens highs. High pass removes lows. Off passes the whole layer.
+[layer_filter_cutoff]
+Move the cutoff between 80 Hz and 16 kHz. Watch the curve move across the live spectrum.

@@ -102,7 +102,8 @@ static void amb_apply_page_preset(void)
         l->base[P_REV]=clamp(room+v[2],0,127);
         l->base[P_DLY]=clamp(echo+v[3],0,127);
     }else if(bank==&amb_lfo_bank){
-        l->base[P_LWAVE]=v[0];l->base[P_LRATE]=v[1];l->lfo_depth=v[2];
+        if(amb_second_editor()){amb_lfo_settings_t *c=amb_edit_second();c->wave=v[0];c->rate=v[1];c->depth=v[2];}
+        else {l->base[P_LWAVE]=v[0];l->base[P_LRATE]=v[1];l->lfo_depth=v[2];}
     }else if(bank==&amb_eq_bank){
         memcpy(ambr.view==2?amb.eq:amb.layer_eq[k],v,4);
     }else if(ambr.view==2){

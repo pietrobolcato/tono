@@ -13,9 +13,9 @@
  * declicks it); one of the part's own is restarted in place, as before. Extra UNISON
  * voices only start when there is room. */
 static uint32_t vage;                                   /* voice ages: one clock for every part */
-static int32_t lfo_wave(track_t *t, uint32_t ph)
+static int32_t lfo_shape(unsigned shape,uint32_t random,uint32_t ph)
 {
-    switch (t->p[P_LWAVE]) {
+    switch (shape) {
     case 1:
         return osc_tri(ph);
     case 2:
@@ -23,12 +23,13 @@ static int32_t lfo_wave(track_t *t, uint32_t ph)
     case 3:
         return ph < 0x80000000u ? 32767 : -32767;
     case 4:
-        return (int32_t)(t->lfo_rnd >> 16) - 32768;
+        return (int32_t)(random >> 16) - 32768;
     default:
         return osc_sine(ph);
     }
 }
 
+static int32_t lfo_wave(track_t *t,uint32_t ph){return lfo_shape(t->p[P_LWAVE],t->lfo_rnd,ph);}
 /* the S&H value of a new LFO cycle. Parts 1..3 draw it from the shared generator (rng); part 4 has its
  * own xorshift, so the shared sequence, which also seeds the engines' noise (PHYS, VOICE, ..), does not
  * depend on part 4's LFO (the golden renders rely on it) */
@@ -152,6 +153,9 @@ static inline __attribute__((always_inline)) void tf_steady_lowpass(int32_t *sam
     *state1=ic1;*state2=ic2;
 }
 #endif
+#if AMBPLUS
+static int amb_second_cut[NTRK];
+#endif
 static __attribute__((noinline)) void tf_run(track_t *t, int32_t *out, uint32_t n, uint32_t ft, uint32_t fo, int32_t w0,
                                              int32_t dw, uint32_t own, int32_t ccut, int32_t cres)
 {
@@ -177,6 +181,9 @@ static __attribute__((noinline)) void tf_run(track_t *t, int32_t *out, uint32_t 
         if (cut + span > (127 << 8))
             cut = (127 << 8) - span > 0 ? (127 << 8) - span : 0;
     }
+#if AMBPLUS
+    cut+=amb_second_cut[ti];
+#endif
     cut += ((mulq15(t->lfo_val, t->lfo_fade) * p[P_LD_FLT]) >> 7) + ((envq * p[P_ED_FLT]) >> 7);
     {
         uint32_t on = !(ft == FT_LP && fo == TF_DRY && cut >= (127 << 8) && !p[P_FRES]), was = tf_on[ti];
@@ -284,16 +291,13 @@ static uint32_t beat_samples(void);                     /* (fx.c) */
 #if AMBPLUS
 #include "amb_lfo_rate.h"
 #endif
-static void track_lfo_tick(track_t *t)
+static uint32_t lfo_next_phase(uint32_t ph,int r,int offset,uint32_t held,unsigned layer)
 {
-    uint32_t old = t->lfo_ph;
-    int32_t r = t->p[P_LRATE];
-
 #if AMBPLUS
     if(amb_bar_rate(r)){
-        unsigned bars=1u+amb_cycle_rate(r,t->lfo_rnd,(unsigned)(t-trk));
+        unsigned bars=1u+amb_cycle_rate(r,held,layer);
         /* Carry fractional cycle phase across both tempo changes and new draws. */
-        t->lfo_ph+=(uint32_t)(((uint64_t)CTL<<32)/(beat_samples()*4u*bars));
+        ph+=(uint32_t)(((uint64_t)CTL<<32)/(beat_samples()*4u*bars));
     }else
 #endif
     if (r < 0) {                                        /* (JIANT 0.6.51) in time: 4BAR .. 1/32 (params.c N_LSYNC), on
@@ -304,17 +308,32 @@ static void track_lfo_tick(track_t *t)
         if (len < 64u)
             len = 64u;
         if (song.playing)
-            t->lfo_ph = (uint32_t)(((uint64_t)(ms_clock % len) << 32) / len) +
-                        (t->p[P_LPHASE] > 0 ? (uint32_t)t->p[P_LPHASE] << 25 : 0u);
+            ph = (uint32_t)(((uint64_t)(ms_clock % len) << 32) / len) +
+                        (offset > 0 ? (uint32_t)offset << 25 : 0u);
         else
-            t->lfo_ph += (uint32_t)(((uint64_t)CTL << 32) / len);
+            ph += (uint32_t)(((uint64_t)CTL << 32) / len);
     } else
     {
 #if AMBPLUS
-        if(r>=AMB_RANDOM_HZ)r=amb_cycle_rate(r,t->lfo_rnd,(unsigned)(t-trk));
+        if(r>=AMB_RANDOM_HZ)r=amb_cycle_rate(r,held,layer);
 #endif
-        t->lfo_ph += LFO_INC[r & 127];
+        ph += LFO_INC[r & 127];
     }
+    return ph;
+}
+#if AMBPLUS
+typedef struct {int16_t rate; uint8_t wave,depth,dest,pad;} amb_lfo_settings_t;
+static struct {uint32_t phase,rnd;int val,pitch;} amb_second[NTRK];
+static void amb_tick_second(unsigned k);
+#endif
+static void track_lfo_tick(track_t *t)
+{
+    unsigned k=(unsigned)(t-trk);
+    uint32_t old=t->lfo_ph;
+    t->lfo_ph=lfo_next_phase(old,t->p[P_LRATE],t->p[P_LPHASE],t->lfo_rnd,k);
+#if AMBPLUS
+    amb_tick_second(k);
+#endif
     if (t->lfo_ph < old)
         t->lfo_rnd = lfo_rand(t);
     t->lfo_val = lfo_wave(t, t->lfo_ph);
@@ -809,6 +828,9 @@ static void trk_note_on(track_t *t, uint32_t note, uint32_t vel)
                                                          * (0.9.18) FREE (PHASE -1) restarts neither: it runs on, its
                                                          * FADE once from a project's load (lfo_fade_restart) */
         t->lfo_ph = (uint32_t)t->p[P_LPHASE] << 25;
+#if AMBPLUS
+        amb_second[(unsigned)(t-trk)].phase=t->lfo_ph;
+#endif
         t->lfo_fade = 0;
     }
     if (mode == V_POLY) {
@@ -1092,6 +1114,7 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
     int32_t bend, bend16, bend_fine;
     uint32_t ti = (uint32_t)(t - trk);
 #if AMBPLUS
+    tune += amb_second[ti].pitch;
     tune += amb_bar_octave[ti] * 192; /* twelve semitones in pitch16 units */
 #endif
     if (ENGINES[eng_idx(t->eng_req)] == &ENG_DRUM) {
@@ -1203,7 +1226,11 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
         m.fine = fsum;
         if (fsum)                                       /* residual below 1/16 semitone */
             m.inc += (uint32_t)((int32_t)(m.inc >> 12) * fsum);
-        m.cutoff = ((lfo * p[P_LD_FLT]) >> 7) + ((m.envq15 * p[P_ED_FLT]) >> 7) + dcut;
+        m.cutoff =
+#if AMBPLUS
+            amb_second_cut[ti]+
+#endif
+            ((lfo * p[P_LD_FLT]) >> 7) + ((m.envq15 * p[P_ED_FLT]) >> 7) + dcut;
         if (v->vel > 110)                               /* accent opens the filter with the env */
             m.cutoff += (m.envq15 * 24) >> 7;
         m.shape = (64 << 8) + ((lfo * p[P_LD_SHP]) >> 7) + ((m.envq15 * p[P_ED_SHP]) >> 7);
@@ -1215,6 +1242,9 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
     if (nr && e == &ENG_DRUM)                           /* (0.6.16) DRUM-X: DRV and the knee on the kit's sum */
         drum_bus(t, out, n);
     if (nr && (t->p[P_FTYPE] || t->p[P_FCUT] < 127 || t->p[P_FRES] || tf_on[(uint32_t)(t - trk) % NTRK] ||
+#if AMBPLUS
+               amb_second_cut[ti] ||
+#endif
                ((e == &ENG_WHEEL || e == &ENG_DRUM
 #if AMBPLUS
                  || e==&ENG_AMB_A22

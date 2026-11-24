@@ -7,3 +7,5 @@ Tono is the AMBPLUS configuration of JIANT. Start with [architecture](docs/tono/
 - Every physical firmware write is owner-run. Automation uses disposable flash images. Keep user backups, recordings, local emulator state and credentials outside Git and release bundles.
 - For audible changes, follow the [song-starter and listening workflow](docs/tono/SONG_STARTERS.md). Audio review is optional and uses an environment-supplied key. Send only material authorised for external review.
 - Keep upstream attribution and bundled notices. Follow the [release workflow](docs/tono/RELEASING.md).
+
+Keep on-device contextual Help current when changing controls, signal plots or page navigation. Update the packed cards in `tools/help/guide.txt`, regenerate them with `python3 tools/help/pack.py`, and check the overview and active knob cards on each affected page. Describe the signal a plot measures, what its curve or meters represent, and which controls affect it. Cover both LFO slots, including switching and turning modulation off, whenever their operation changes.

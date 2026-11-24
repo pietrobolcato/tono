@@ -9,7 +9,7 @@ for AMB_TEST in amb_pcm_octets_test amb_controls_test amb_policy_test amb_music_
     cc -std=c11 -O2 -Wall -Wextra -Werror "tests/$AMB_TEST.c" -o "build/host/$AMB_TEST"
     "build/host/$AMB_TEST"
 done
-for AMB_TEST in amb_phrase_memory_test amb_song_settings_test amb_a22_bank_test amb_acid_phrase_test amb_evolve_layer_test amb_native_test amb_feedback_test amb_transition_test amb_live_filter_test amb_normal_playback_test amb_handoff_test amb_min_release_test amb_texture_test amb_generation_test amb_garden_test amb_ensemble_test amb_routing_test amb_volume_audio_test amb_overlap_test amb_monitor_test amb_bar_octave_test amb_landscape_test amb_zen_test amb_auto_travel_test amb_take_test amb_ensemble_clocks_test amb_render_test; do
+for AMB_TEST in amb_phrase_memory_test amb_song_settings_test amb_a22_bank_test amb_acid_phrase_test amb_evolve_layer_test amb_native_test amb_feedback_test amb_transition_test amb_live_filter_test amb_dual_lfo_test amb_normal_playback_test amb_handoff_test amb_min_release_test amb_texture_test amb_generation_test amb_garden_test amb_ensemble_test amb_routing_test amb_volume_audio_test amb_overlap_test amb_monitor_test amb_bar_octave_test amb_landscape_test amb_zen_test amb_auto_travel_test amb_take_test amb_ensemble_clocks_test amb_render_test; do
     cc -O1 -w -Ibuild/gen -Ifirmware/src "tests/$AMB_TEST.c" -lm -o "build/host/$AMB_TEST"
     case "$AMB_TEST" in
         amb_volume_audio_test) build/host/amb_volume_audio_test 0 && build/host/amb_volume_audio_test 100 ;;
