@@ -42,7 +42,7 @@ static unsigned amb_param_hint(const amb_layer_t *l,unsigned id)
     default:return 0;
     }
 }
-static unsigned amb_knob_card(const amb_layer_t *l,unsigned knob)
+static unsigned amb_macro_card(const amb_layer_t *l,unsigned knob)
 {
     static const uint8_t macro[][4]={
         {H_drive_attack_and_tone,H_chorus_and_filter_motion,H_hold_notes_raise_sustain,H_room_and_echo_sends},
@@ -53,6 +53,12 @@ static unsigned amb_knob_card(const amb_layer_t *l,unsigned knob)
         {H_darken_the_noise,H_chorus_and_filter_motion,H_noise_drift_and_release,H_room_and_echo_sends},
         {H_transpose_the_sample,H_smooth_loop_boundaries,H_stereo_movement,H_room_and_echo_sends}
     };
+    if(!knob && l->engine==ENGI_VOICE)return H_shift_the_starting_vowel;
+    if(amb_acid(l))return H_acid+knob;
+    return macro[l->role==7?3:l->role][knob];
+}
+static unsigned amb_knob_card(const amb_layer_t *l,unsigned knob)
+{
     static const uint16_t manual[]={H_select_an_edit_slot,H_layer_step_interval,H_pitch_of_this_slot,H_strength_of_this_slot};
     static const uint16_t manual_drum[]={H_select_an_edit_slot,H_choose_a_drum_voice,H_enable_this_slot,H_delay_offbeat_hits};
     if(ambr.view==4)return H_layer_output_level;
@@ -63,9 +69,7 @@ static unsigned amb_knob_card(const amb_layer_t *l,unsigned knob)
             if(!ambr.target)return H_room_size_sends_width+knob;
             l=&amb.layer[ambr.target-1];
         }
-        if(!knob && l->engine==ENGI_VOICE)return H_shift_the_starting_vowel;
-        if(amb_acid(l))return H_acid+knob;
-        return macro[l->role==7?3:l->role][knob];
+        return amb_macro_card(l,knob);
     }
     if(ambr.view==2 && ambr.page==7)return (timing_tab?H_enable_this_lane:H_count_bars_or_seconds)+knob;
     if(ambr.view==2 && ambr.page==6)return H_bounded_or_endless_travel+knob;
@@ -85,6 +89,7 @@ static unsigned amb_knob_card(const amb_layer_t *l,unsigned knob)
     if(ambr.page==4){
         unsigned id=amb_pattern_param(l,knob);
         if(id)return amb_param_hint(l,id);
+        if(!knob && l->generated && l->role==5 && !amb_legacy_texture(l))return H_texture_motion;
         if(!l->generated && amb_mono_role(l) && !knob)return H_slide_into_selected_step;
         if(!l->generated)return (l->role==4?manual_drum:manual)[knob];
         return (l->role==4?H_generated_hit_density:H_note_selection_pattern)+knob;
@@ -92,6 +97,25 @@ static unsigned amb_knob_card(const amb_layer_t *l,unsigned knob)
     if(ambr.page==5 && ambr.fx==2 && knob==3)return H_shared_delay_algorithm;
     if(ambr.page==5 && ambr.fx==5)return H_grain+knob;
     return ambr.page==5?amb_param_hint(l,amb_fx_id(l,knob)):H_low_band_gain+knob;
+}
+
+/* The target uses the same description as its edit page. */
+static unsigned amb_route_card(const amb_layer_t *l)
+{
+    unsigned r=l->lfo_dest;
+    static const uint16_t basic[]={H_filter_cutoff,H_basic_pitch,H_stereo_position,H_layer_output_level};
+    static const uint16_t pattern[]={H_note_selection_pattern,H_layer_step_interval,H_generated_event_density,H_chance_to_follow_chord,H_delay_offbeat_hits,H_phrase_end_fill_strength,H_vary_drum_lane_choices,H_pitch_of_this_slot,H_strength_of_this_slot};
+    if(r<4)return basic[r];
+    if(r<ROUTE_MACRO){
+        unsigned id=amb_route_param[r-4];
+        if(id>=P_ATK && id<=P_REL)return H_time_to_full_level+id-P_ATK;
+        if(id==P_LRATE || id==P_LWAVE)return id==P_LRATE?H_cycles_per_second:H_modulation_waveform;
+        return amb_param_hint(l,id);
+    }
+    if(r<ROUTE_EQ)return amb_macro_card(l,r-ROUTE_MACRO);
+    if(r<ROUTE_MODE)return H_low_band_gain+r-ROUTE_EQ;
+    if(r<ROUTE_GRAIN)return pattern[r-ROUTE_MODE];
+    return r==ROUTE_HOME_DENSITY?H_fewer_notes_home_macro:H_grain+r-ROUTE_GRAIN;
 }
 
 typedef struct { unsigned bit; } amb_help_reader_t;

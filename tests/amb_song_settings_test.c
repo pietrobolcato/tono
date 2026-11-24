@@ -15,8 +15,20 @@ static void check_held_home(void)
         for(unsigned k=0;k<4;k++){
             amb_knob_value(k,label,value);
             if(!target){
-                static const char *const master[]={"SPACE","ECHO","MOTION","WARMTH"};
-                assert(!strcmp(label,master[k]));continue;
+                static const char *const master[]={"LOW EQ","ECHO","MID EQ","TEMPO"};
+                assert(!strcmp(label,master[k]));
+                turn(EN_K1+k,1);
+                assert(ambr.home_used && !memcmp(&controls,&amb_controls,sizeof controls));
+                if(k==0 || k==2)assert(amb.eq[k/2]==saved.eq[k/2]+1);
+                if(k==1)assert(amb.global[G_DMIX]==saved.global[G_DMIX]+4);
+                if(k==3){
+                    assert(amb.global[G_BPM]==saved.global[G_BPM]+1);
+                    amb_knob(3,200);amb_knob_value(3,label,value);
+                    assert(!strcmp(value,"140 BPM"));
+                    amb_knob(3,-200);amb_knob_value(3,label,value);
+                    assert(!strcmp(value,"40 BPM"));
+                }
+                continue;
             }
             if(k==2)assert(!strcmp(label,"MID EQ"));
             if(k==3)assert(!strcmp(label,"DRIVE"));
@@ -33,7 +45,11 @@ static void check_held_home(void)
         }
         btn_up(B_HOME);frame();
         amb_knob_value(1,label,value);assert(!strcmp(label,"DENSITY") && ambr.target==target);
-        for(unsigned k=0;k<4;k++)assert(!memcmp(saved.layer[k].macro,amb.layer[k].macro,4));
+        if(!target){
+            assert(!memcmp(saved.layer,amb.layer,sizeof amb.layer));
+            assert(!memcmp(saved.layer_eq,amb.layer_eq,sizeof amb.layer_eq));
+            assert(!memcmp(saved.grain,amb.grain,sizeof amb.grain));
+        }else for(unsigned k=0;k<4;k++)assert(!memcmp(saved.layer[k].macro,amb.layer[k].macro,4));
         amb=saved;
     }
     amb_target(1);

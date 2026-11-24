@@ -2,10 +2,12 @@
 
 Hold **HOME** and press **EDIT** from the screen you want to learn. Turn **SELECT** to move through its guide. Press **HOME** to close Help and return to the same screen. The guide uses the same button and knob caps as the footer.
 
+The first page explains the screen. Other pages explain the assigned controls, their setting ranges, and what their choices do. For example, Generate lists its rhythms, phrases and interplay choices by name, and LFO explains waveforms, rate modes and modulation targets. Turn SELECT while reading to browse the manual without changing the song.
+
 | Where you open Help | What the guide covers |
 |---|---|
-| HOME / Master | Mix target, master effects, live travel and song presets, plus Space, Density, Motion and Warmth |
-| HOME / Layer | Layer selection and editing, sound locking and LFO linking, plus the selected role’s main and held-HOME macros |
+| HOME / Master | Mix, live travel and shared HOME shortcuts. The second bank offers Low EQ, Echo, Mid EQ and Tempo |
+| HOME / Layer | Layer shortcuts for mute, solo, sound lock, LFO linking and evolution. The second bank depends on the selected role |
 | Ensemble | Activity states, individual layer levels and return to HOME |
 | Zen | Contour and Train Ride, landscape changes and return to HOME |
 | EDIT / Mode | Layer roles, sound editing, source replacement and layer macros |

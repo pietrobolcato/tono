@@ -19,7 +19,8 @@ SRC = _ROOT / "firmware" / "src" if (_ROOT / "firmware" / "src").is_dir() else _
 # other file without DSP: USB, MIDI, the sequencer, the drawing, the LCD, OTA, ... Of those, what an interrupt
 # reaches (ISR_ROOTS and everything they call or name, from the IR) keeps -Os (isr_reach)
 # Factory construction runs on song selection. Keep its recipes compact.
-SIZE_FILES = ["amb_page_presets.h", "amb_palette.h", "amb_auto_travel.h", "amb_landscape.h", "amb_303_fellows.h", "amb_first_ferry.h", "amb_three_songs.h",
+SIZE_FILES = ["amb_memory_songs.h", "amb_analog_days.h", "amb_patch_character.h",
+              "amb_page_presets.h", "amb_palette.h", "amb_auto_travel.h", "amb_landscape.h", "amb_303_fellows.h", "amb_first_ferry.h", "amb_three_songs.h",
               "amb_desert_songs.h", "amb_linen_and_bow.h", "amb_umbra_meridian.h", "amb_native.c", "amb_panel_help.h", "amb_navigation.h", "ui_tono_splash.h", "amb_zen.h", "ui.c", "favorites.c", "menu_items.c", "cpu_safe.c", "icons.c", "ui_graph.c", "ui_draw.c", "ui_menu.c", "ui_input.c",
               "storage.c", "upreset.c", "project.c", "settings_persist.c",
               "editor.c", "editor_preferences.c", "editor_backup.c", "editor_menu.c", "console.c",

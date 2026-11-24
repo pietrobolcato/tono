@@ -2012,16 +2012,24 @@ static int amb_home_low_eq(const amb_layer_t *l)
 }
 static int amb_home_alt(unsigned knob,int delta,const char **name,int *percent)
 {
-    unsigned layer=ambr.target-1;
+    int master=!ambr.target;
+    unsigned layer=master?0:ambr.target-1;
     amb_layer_t *l=&amb.layer[layer];
     int value,lo,hi;
     const char *label;
-    if(knob==2 || (!knob && amb_home_low_eq(l))){
+    if(knob==2 || (!knob && (master || amb_home_low_eq(l)))){
         unsigned band=knob!=0;
-        int8_t *eq=amb.layer_eq[layer];
+        int8_t *eq=master?amb.eq:amb.layer_eq[layer];
         lo=-12;hi=12;label=band?"MID EQ":"LOW EQ";
         value=clamp(eq[band]+delta,lo,hi);
-        if(delta){eq[band]=(int8_t)value;ambr.last_edit_route[layer]=ROUTE_EQ+band+1;}
+        if(delta){
+            eq[band]=(int8_t)value;
+            if(!master)ambr.last_edit_route[layer]=ROUTE_EQ+band+1;
+        }
+    }else if(master){
+        lo=40;hi=140;label="TEMPO";
+        value=clamp(amb.global[G_BPM]+delta,lo,hi);
+        if(delta)amb.global[G_BPM]=(int16_t)value;
     }else{
         unsigned id=knob?P_DIST:P_ATK;
         lo=0;hi=amb_param_desc(l,id)->max;label=knob?"DRIVE":"ATTACK";
@@ -2041,7 +2049,7 @@ static uint8_t *amb_home_thinning(void)
 }
 static int amb_home_alt_active(unsigned knob)
 {
-    return !ambr.view && ambr.target && knob!=1 && amb_home_echo();
+    return !ambr.view && knob!=1 && amb_home_echo();
 }
 static void amb_knob(unsigned knob,int delta)
 {
@@ -2647,14 +2655,15 @@ static void amb_number(int x,int y,int n,uint16_t color)
 }
 /* The HOME meter uses the same value snapshot as its numeric readout. */
 static int amb_home_meter;
-static void amb_knob_value(unsigned knob,char *label,char *value)
+static const param_desc_t *amb_knob_value(unsigned knob,char *label,char *value)
 {
     amb_layer_t *l=&amb.layer[ambr.edit_layer]; const param_desc_t *d=0;int v=0;unsigned id=0;
     const char *unit=0;
     if(amb_home_alt_active(knob)){
         const char *name;
         v=amb_home_alt(knob,0,&name,&amb_home_meter);str_cpy(label,name,16);
-        if(knob==2 || (!knob && amb_home_low_eq(&amb.layer[ambr.target-1])))unit="dB";
+        if(!ambr.target)unit=knob==3?" BPM":"dB";
+        else if(knob==2 || (!knob && amb_home_low_eq(&amb.layer[ambr.target-1])))unit="dB";
         else {v=amb_home_meter;unit="%";}
     }else if(ambr.view==4){
         label[0]='L';label[1]=(char)('1'+knob);str_cpy(label+2," GAIN",14);v=amb.layer[knob].level*100/127;
@@ -2663,7 +2672,7 @@ static void amb_knob_value(unsigned knob,char *label,char *value)
             str_cpy(label,"DENSITY",16);
             amb_home_meter=100-*amb_home_thinning();
             fmt_int(value,amb_home_meter);
-            str_cpy(value+str_len(value),"%",2);return;
+            str_cpy(value+str_len(value),"%",2);return 0;
         }
         if(ambr.view==0 && ambr.target==0) {
             static const char *const labels[4]={"SPACE","ECHO","MOTION","WARMTH"};
@@ -2680,9 +2689,9 @@ static void amb_knob_value(unsigned knob,char *label,char *value)
             const char *dest=amb_route_name(l,l->lfo_dest);
             int rate=l->base[P_LRATE];
             int bars=amb_bar_rate(rate);
-            if(ambr.bank && (knob==3 || (knob==2 && rate<AMB_RANDOM_BARS))){label[0]=value[0]=0;return;}
+            if(ambr.bank && (knob==3 || (knob==2 && rate<AMB_RANDOM_BARS))){label[0]=value[0]=0;return 0;}
             if(ambr.bank && knob==0){
-                str_cpy(label,"MODE",16);str_cpy(value,bars?"Rnd Bars":rate>=AMB_RANDOM_HZ?"Rnd Hz":"Fixed",24);return;
+                str_cpy(label,"MODE",16);str_cpy(value,bars?"Rnd Bars":rate>=AMB_RANDOM_HZ?"Rnd Hz":"Fixed",24);return 0;
             }
             if(rate>=AMB_RANDOM_BARS && (knob==1 || (ambr.bank && knob==2))){
                 int chosen=ambr.bank?(knob==1?amb_rate_min(rate):amb_rate_max(rate)):
@@ -2693,10 +2702,10 @@ static void amb_knob_value(unsigned knob,char *label,char *value)
                     param_format(amb_param_desc(l,P_LRATE),chosen,value,&unit);
                     if(unit)str_cpy(value+str_len(value),unit,24-str_len(value));
                 }
-                return;
+                return 0;
             }
             if(knob==0)id=P_LWAVE;else if(knob==1)id=P_LRATE;
-            else {str_cpy(label,knob==2?"DEPTH":"DEST",16);if(knob==2)v=l->lfo_depth;else {str_cpy(value,dest?dest:"INACTIVE",24);return;}}
+            else {str_cpy(label,knob==2?"DEPTH":"DEST",16);if(knob==2)v=l->lfo_depth;else {str_cpy(value,dest?dest:"INACTIVE",24);return 0;}}
         }
         else if(ambr.page==4) {
             static const char *const drums[4]={"DENSITY","SWING","FILL","MUTATE"};
@@ -2705,21 +2714,21 @@ static void amb_knob_value(unsigned knob,char *label,char *value)
             static const char *const texture[5]={"STEADY","PULSE","DRIFT","BURSTS","SPARSE"};
             id=amb_pattern_param(l,knob);
             if(!l->generated){
-                if(!knob && amb_mono_role(l)){str_cpy(label,"SLIDE IN",16);str_cpy(value,(l->drums[3]>>ambr.cursor)&1?"ON":"OFF",24);return;}
-                if(!knob && l->role!=4){label[0]=value[0]=0;return;}
+                if(!knob && amb_mono_role(l)){str_cpy(label,"SLIDE IN",16);str_cpy(value,(l->drums[3]>>ambr.cursor)&1?"ON":"OFF",24);return 0;}
+                if(!knob && l->role!=4){label[0]=value[0]=0;return 0;}
                 static const char *const pitched_manual[]={"","SPEED","NOTE","VELOCITY"};
                 static const char *const drum_manual[]={"STEP","LANE","HIT","SWING"};
                 str_cpy(label,(l->role==4?drum_manual:pitched_manual)[knob],16);
                 if(knob==0)v=ambr.cursor+1;
-                else if(knob==1){str_cpy(value,l->role==4?amb_drum_lanes[ambr.lane]:amb_speeds[l->speed],24);return;}
-                else if(knob==2 && l->role==4){str_cpy(value,((l->drums[ambr.lane]>>ambr.cursor)&1u)?"ON":"REST",24);return;}
-                else if(knob==2 && !l->notes[ambr.cursor]){str_cpy(value,"REST",24);return;}
+                else if(knob==1){str_cpy(value,l->role==4?amb_drum_lanes[ambr.lane]:amb_speeds[l->speed],24);return 0;}
+                else if(knob==2 && l->role==4){str_cpy(value,((l->drums[ambr.lane]>>ambr.cursor)&1u)?"ON":"REST",24);return 0;}
+                else if(knob==2 && !l->notes[ambr.cursor]){str_cpy(value,"REST",24);return 0;}
                 else v=knob==2?l->notes[ambr.cursor]:l->role==4?l->swing:l->velocity[ambr.cursor];
             }else if(!id){
                 str_cpy(label,l->role==4?drums[knob]:pitched[knob],16);
                 if(l->role==4) v=knob==0?l->density:knob==1?l->swing:knob==2?l->fill:l->mutation;
-                else if(knob==0) {str_cpy(value,l->role==5 && !amb_legacy_texture(l)?texture[l->mode]:modes[l->mode],24);return;}
-                else if(knob==1) {str_cpy(value,amb_speeds[l->speed],24);return;}
+                else if(knob==0) {str_cpy(value,l->role==5 && !amb_legacy_texture(l)?texture[l->mode]:modes[l->mode],24);return 0;}
+                else if(knob==1) {str_cpy(value,amb_speeds[l->speed],24);return 0;}
                 else v=knob==2?l->density:l->follow;
             }
         } else if(ambr.page==6){static const char *const labels[4]={"LOW","MID","HIGH","OUTPUT"};str_cpy(label,labels[knob],16);v=amb.layer_eq[ambr.edit_layer][knob];}
@@ -2737,11 +2746,11 @@ static void amb_knob_value(unsigned knob,char *label,char *value)
     } else if(ambr.view==2) {
         if(ambr.page==0) {static const char *const labels[4]={"HARMONY","TIMBRE","RHYTHM","FX"};str_cpy(label,labels[knob],16);v=amb.evolve[knob];}
         else if(ambr.page==1) {
-            if(knob==3){label[0]=value[0]=0;return;}
+            if(knob==3){label[0]=value[0]=0;return 0;}
             static const char *const labels[]={"KEY","SCALE","TEMPO"};
             static const char *const scales[4]={"MINOR","MAJOR","DORIAN","LYDIAN"};str_cpy(label,labels[knob],16);
-            if(knob==0) {str_cpy(value,N_NOTE[amb.key],24);return;}
-            if(knob==1) {str_cpy(value,scales[amb.scale],24);return;}
+            if(knob==0) {str_cpy(value,N_NOTE[amb.key],24);return 0;}
+            if(knob==1) {str_cpy(value,scales[amb.scale],24);return 0;}
             v=amb.global[G_BPM];
         } else if(ambr.page==7){
             if(timing_tab){
@@ -2756,20 +2765,20 @@ static void amb_knob_value(unsigned knob,char *label,char *value)
                 else if(knob==1)str_cpy(value,unit==LANE_FOLLOW?"Follow Travel":amb_walk_clocks[unit],24);
                 else if(unit==LANE_FOLLOW)str_cpy(value,"-",24);
                 else fmt_int(value,amb_lane_value(lane,knob));
-                return;
+                return 0;
             }
             str_cpy(label,amb_walk_labels[knob],16);
-            if(!knob){str_cpy(value,amb_walk_clocks[amb_walk_unit()],24);return;}
+            if(!knob){str_cpy(value,amb_walk_clocks[amb_walk_unit()],24);return 0;}
             v=amb_walk_value(knob);
         } else if(ambr.page==6){
-            if(!knob){str_cpy(label,"TRAVEL",16);str_cpy(value,amb_endless()?"Endless":"Bounded",24);return;}
-            if(knob==2){str_cpy(label,"HANDOFF",16);str_cpy(value,amb_crossfade()?"Crossfade":"Release",24);return;}
-            if(knob==3){str_cpy(label,"AUTO",16);str_cpy(value,amb_walk_value(0)?"On":"Off",24);return;}
+            if(!knob){str_cpy(label,"TRAVEL",16);str_cpy(value,amb_endless()?"Endless":"Bounded",24);return 0;}
+            if(knob==2){str_cpy(label,"HANDOFF",16);str_cpy(value,amb_crossfade()?"Crossfade":"Release",24);return 0;}
+            if(knob==3){str_cpy(label,"AUTO",16);str_cpy(value,amb_walk_value(0)?"On":"Off",24);return 0;}
             str_cpy(label,"TAIL TIME",16);
             static const char *const fraction[]={" s",".25 s",".5 s",".75 s"};
             fmt_int(value,amb.release_ms/1000);
             str_cpy(value+str_len(value),fraction[amb.release_ms%1000/250],12);
-            return;
+            return 0;
         } else if(ambr.page==2) {
             static const char *const labels[4]={"RHYTHM","PHRASE","INTERPLAY","VARIATION"};str_cpy(label,labels[knob],16);
             v=knob==3?amb.policy.variation:ambr.gen_edit[knob]?ambr.gen_candidate[knob]+1:amb.policy.pending[knob]!=255?amb.policy.pending[knob]+1:amb.policy.active[knob]+1;
@@ -2779,6 +2788,7 @@ static void amb_knob_value(unsigned knob,char *label,char *value)
     }
     if(d) {str_cpy(label,d->label,16);param_format(d,v,value,&unit);if(unit && str_len(value)+str_len(unit)<10)str_cpy(value+str_len(value),unit,24-str_len(value));}
     else {if(v<0) {value[0]='-';fmt_int(value+1,-v);}else fmt_int(value,v);if(unit)str_cpy(value+str_len(value),unit,8);}
+    return d;
 }
 static void amb_chord_label(unsigned degree,char *text)
 {
@@ -2891,7 +2901,7 @@ static unsigned amb_screen_card(const amb_layer_t *l)
     if(ambr.evolve_open)return H_modal+4;
     if(ambr.reset_pending)return H_modal+3;
     if(ambr.piece_preview!=255)return H_modal;
-    if(ambr.overwrite)return H_modal+2;
+    if(ambr.overwrite && (ambr.view==3 || ambr.local_preset))return H_modal+2;
     if(ambr.local_preset)return H_modal+5+(amb_generate_page() && ambr.local_preset>AMB_ALL_GENERATE);
     if(ambr.proposal!=255)return H_modal+7+(ambr.view==1?(ambr.page==0?1:2):0);
     if(ambr.view==3)return H_modal+1;
@@ -3110,16 +3120,60 @@ static void amb_draw_home_status(void)
     }
 }
 
-/* Page one covers navigation. Only assigned physical knobs get a page. */
+/* Some engine parameters divide their numeric range among named choices. */
+static unsigned amb_help_choices(const param_desc_t *d)
+{
+    if(!d || !d->names)return 0;
+    if(d->fmt==F_ENUM)return d->max-d->min+1;
+    unsigned n=0;
+    if(d->fmt==F_INT)while(d->names[n])n++;
+    return n;
+}
+
+/* The low two bits identify the physical knob. The rest select its reference leaf. */
 static unsigned amb_help_pages(unsigned *control)
 {
     unsigned count=1;
     if(ambr.view==3 || amb_proposing() || (ambr.view==2 && ambr.page==5))return count;
+    count+=!ambr.view;
     for(unsigned k=0;k<4;k++){
-        char label[16]={0},value[24]={0};amb_knob_value(k,label,value);
-        if(*label && ++count==ambr.help && control)*control=k;
+        char label[16]={0},value[24]={0};
+        const param_desc_t *d=amb_knob_value(k,label,value);
+        if(!*label)continue;
+        unsigned leaves=1;
+        if(amb_generate_page() && k<3)leaves=(amb_style_count(k)+1)/2;
+        else {unsigned n=amb_help_choices(d);if(n)leaves=(n+5)/6;}
+        if(control && ambr.help>count && ambr.help<=count+leaves)
+            *control=k+4*(ambr.help-count-1);
+        count+=leaves;
     }
     return count;
+}
+
+static __attribute__((noinline)) void amb_help_append(char *out,const char *text)
+{
+    unsigned end=str_len(out);
+    str_cpy(out+end,text,HELP_TEXT_CAP-end);
+}
+
+static void amb_help_limits(char *out,const param_desc_t *d,unsigned part)
+{
+    if(!d)return;
+    unsigned n=amb_help_choices(d);
+    if(n){
+        for(unsigned i=6*part;i<n && i<6*(part+1);i++){
+            if(*out)amb_help_append(out," / ");
+            amb_help_append(out,d->names[i+(d->fmt==F_ENUM?d->min:0)]);
+        }
+    }else{
+        char val[24];const char *unit=0;
+        for(unsigned end=0;end<2;end++){
+            param_format(d,end?d->max:d->min,val,&unit);
+            if(end)amb_help_append(out," to ");
+            amb_help_append(out,val);
+            if(unit)amb_help_append(out,unit);
+        }
+    }
 }
 #include "amb_navigation.h"
 static void amb_draw(void)
@@ -3140,10 +3194,24 @@ static void amb_draw(void)
     /* Both drawing strips leave the final three canvas rows untouched. */
     _Static_assert(240*147*sizeof(*cv_px)+2*HELP_TEXT_CAP<=sizeof cv_px,"Help text scratch");
     char *overview=(char *)(cv_px+240*147),*hint=overview+HELP_TEXT_CAP;
-    unsigned slot=0;
+    unsigned slot=0,part=0;
     if(ambr.help){
         if(ambr.help>amb_help_pages(&slot))ambr.help=1;
-        amb_help_read(overview,hint,amb_screen_card(l),ambr.help==1?0:amb_knob_card(l,slot));
+        part=slot/4;slot%=4;
+        unsigned first=amb_screen_card(l),second=0;
+        if(ambr.view==1 && !ambr.page && (!amb_proposing() || ambr.proposal!=255))second=H_role_jobs;
+        if(ambr.help>1){
+            second=0;
+            first=amb_knob_card(l,slot);
+            if(ambr.view==1 && ambr.page==3 && !ambr.bank && slot==3)second=amb_route_card(l);
+            if(amb_generate_page() && slot<3){
+                unsigned offset=slot?amb_style_count(0):0;
+                if(slot==2)offset+=amb_style_count(1);
+                first=H_generate_options+offset+2*part;
+                if(2*part+1<amb_style_count(slot))second=first+1;
+            }
+        }
+        amb_help_read(overview,hint,first,second);
     }
     cv_begin(240,147,ABG);
 
@@ -3178,14 +3246,22 @@ static void amb_draw(void)
         if(ambr.help==1){
             cv_text(12,32,&AF_M,amb_guide_title(l),AINK);
             amb_help_paragraph(54,overview);
-            amb_help_actions();
+            amb_help_actions(0);
+        }else if(!ambr.view && ambr.help==2){
+            cv_text(12,32,&AF_M,"Hold HOME",AINK);
+            amb_help_actions(0);
         }else{
             char label[16]={0},value[24]={0},key[]="1";
-            key[0]+=(char)slot;amb_knob_value(slot,label,value);
+            key[0]+=(char)slot;const param_desc_t *d=amb_knob_value(slot,label,value);
+            amb_help_limits(hint,d,part);
+            if(amb_generate_page() && slot<3){
+                unsigned style=amb_gen_style(slot);
+                str_cpy(value,(slot==0?AMB_RHYTHMS:slot==1?AMB_PHRASES:AMB_INTERPLAY)[style],sizeof value);
+            }
             int x=amb_nav_cap(34,12,key,1,0);
             amb_text(x+3,37,label,AINK,16);
-            amb_help_paragraph(62,hint);
-            amb_text(12,119,"CURRENT",ADIM,8);amb_text(75,119,value,AINK,23);
+            amb_text(12,56,"CURRENT",ADIM,8);amb_text(75,56,value,AINK,23);
+            amb_help_paragraph(76,overview);
         }
     }else if(proposal && (!ambr.view || ambr.proposal==255)){
         /* Standalone preview content is drawn below. */
@@ -3543,15 +3619,10 @@ static void amb_draw(void)
         }
     }
     if(ambr.help){
-        if(ambr.help==1){
-            amb_text(12,7,"ON THIS SCREEN",ADIM,18);
-            amb_footer(l,1);
-        }else{
-            amb_text(12,7,amb_guide_title(l),ADIM,20);
-            amb_help_paragraph(20,overview);
-        }
+        if(*hint)amb_help_paragraph(8,hint);
+        else if(ambr.help==1 || (!ambr.view && ambr.help==2))amb_help_actions(1);
     }
-    if(!travel_footer)amb_footer(l,0);
+    if(!travel_footer)amb_footer(l);
     if(proposal && ambr.evolve_open){
         if(ambr.evolve_queued)amb_text(15,10,"Queued for next bar",AQUEUE,24);
         else if(ambr.evolve_role==255)amb_text(15,10,"No eligible role",ADIM,24);
