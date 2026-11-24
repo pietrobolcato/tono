@@ -230,6 +230,21 @@ static void track_dist(track_t *t, int32_t *b, uint32_t n)
 #define LIM_T 18000
 #endif
 static int32_t lim_env = LIM_T;
+#if AMBPLUS
+static int32_t lim_ceiling=LIM_T;
+static uint8_t lim_shift=13;
+static volatile uint8_t lim_meter_on;
+static volatile int32_t lim_peak_in,lim_peak_out,lim_peak_env;
+static void amb_limiter_settings(int ceiling,int release)
+{
+    static const uint16_t thresholds[]={4125,5827,8231,11627,LIM_T,23198,32767};
+    lim_ceiling=thresholds[ceiling+4];
+    lim_shift=13+release;
+}
+#define LIM_CEILING lim_ceiling
+#else
+#define LIM_CEILING LIM_T
+#endif
 /* (JIANT) CLIP (G_CLIP 0..100): the mix driven x1 .. x4 into the soft clip ahead of the limiter, its level kept near
  * -4 dBFS (as DRUM's DRV); 0: out of the chain. Set each block (master_begin) */
 static int32_t clip_g, clip_mk;
@@ -534,10 +549,10 @@ static inline void master_out(int32_t *l, int32_t *r)
 #if AMBPLUS
     if (a > lim_env)
         lim_env = a;
-    else if (lim_env > LIM_T) {
+    else if (lim_env > lim_ceiling) {
         /* About 185 ms at 44.1 kHz. A sustained peak holds the gain. */
-        int32_t floor = a > LIM_T ? a : LIM_T;
-        lim_env -= (lim_env - floor + 8191) >> 13;
+        int32_t floor = a > lim_ceiling ? a : lim_ceiling;
+        lim_env -= (lim_env - floor + ((1<<lim_shift)-1)) >> lim_shift;
     }
 #else
     if (a > lim_env)
@@ -545,13 +560,22 @@ static inline void master_out(int32_t *l, int32_t *r)
     else if (lim_env > LIM_T)
         lim_env -= ((lim_env - LIM_T) >> 11) + 1;   /* (0.5.1: ~45 ms back, was ~90) */
 #endif
-    if (lim_env > LIM_T) {
-        int32_t g = (int32_t)(((uint32_t)LIM_T << 15) / (uint32_t)lim_env);   /* < 32768 */
+    if (lim_env > LIM_CEILING) {
+        int32_t g = (int32_t)(((uint32_t)LIM_CEILING << 15) / (uint32_t)lim_env);   /* < 32768 */
         *l = ((*l >> 4) * g) >> 11;                      /* >> 4 first: |l| may be far above Q15 */
         *r = ((*r >> 4) * g) >> 11;
     }
     *l = softclip(*l);
     *r = softclip(*r);
+#if AMBPLUS
+    if(lim_meter_on){
+        int out=al>=ar?*l:*r;
+        if(out<0)out=-out;
+        if(out>lim_peak_out)lim_peak_out=out;
+        if(a>lim_peak_in)lim_peak_in=a;
+        if(lim_env>lim_peak_env)lim_peak_env=lim_env;
+    }
+#endif
 }
 
 /* length of one division (N_DIV order) in samples at the song tempo */
@@ -2119,6 +2143,8 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
 #endif
         track_dist(t, b, n);
 #if AMBPLUS
+        if(amb_scope_target==ti+1 && amb_scope_page==1 && amb_scope_fill<64)
+            amb_scope_sound(b,n);
         amb_layer_process(ti,b,n);
 #endif
         int32_t pm0 = 32768, pm1 = 32768;               /* (0.6.48: drum_mix's; pf.mg counts only while muting) */
@@ -2563,7 +2589,7 @@ static __attribute__((noinline)) int master_rest(uint32_t n)
 {
     uint32_t i;
     int32_t a = 0;
-    if (dc_l || dc_r || (lev_env >> 11) || ((32768 - lev_g) >> 5) || lev_dg || lim_env > LIM_T || song.g[G_DJF] ||
+    if (dc_l || dc_r || (lev_env >> 11) || ((32768 - lev_g) >> 5) || lev_dg || lim_env > LIM_CEILING || song.g[G_DJF] ||
         djf.mode)
         return 0;
     if (fx_lowcut)                                      /* (SPEAKER EQ LOWCUT / BASS+: their states can settle off 0, */

@@ -190,7 +190,7 @@ int main(int argc,char **argv)
     fm1_ms+=1200;ar_frame("master_after_level_feedback",dir,1);
     for(role=0;role<NELEM(AMB_ROLE);role++){
         amb_patch(0,role,0);ambr.target=1;ambr.edit_layer=0;ambr.view=1;
-        for(page=0;page<7;page++)for(bank=0;bank<(page==1?(role==6?3u:2u):1u);bank++)for(fx=0;fx<(page==5?6u:1u);fx++){
+        for(page=0;page<7;page++)for(bank=0;bank<(page==1?(role==6?3u:2u):1u);bank++)for(fx=0;fx<(page==5?7u:1u);fx++){
             ambr.page=(uint8_t)page;ambr.bank=(uint8_t)bank;ambr.fx=(uint8_t)fx;
             snprintf(name,sizeof name,"role_%u_page_%u_bank_%u_fx_%u",role,page,bank,fx);ar_frame(name,dir,role==0 || role==6);
         }
@@ -206,7 +206,7 @@ int main(int argc,char **argv)
         amb.layer[0].base[P_LWAVE]=(int16_t)style;trk[0].p[P_LWAVE]=(int16_t)style;trk[0].lfo_ph=0xc0000000u;
         snprintf(name,sizeof name,"lfo_shape_%u",style);ar_frame(name,dir,1);
     }
-    ambr.view=2;for(page=0;page<5;page++)for(fx=0;fx<(page==3?4u:1u);fx++){
+    ambr.view=2;for(page=0;page<5;page++)for(fx=0;fx<(page==3?5u:1u);fx++){
         ambr.page=(uint8_t)page;ambr.fx=(uint8_t)fx;snprintf(name,sizeof name,"global_%u_fx_%u",page,fx);ar_frame(name,dir,1);
     }
     ambr.page=2;
@@ -238,11 +238,11 @@ int main(int argc,char **argv)
         amb_patch(0,role,role==0?10:0);
         for(page=0;page<7;page++)for(bank=0;bank<(page==1?(role==6?3u:2u):1u);bank++){
             ambr.page=page;ambr.bank=bank;
-            for(fx=0;fx<(page==5?6u:1u);fx++){ambr.fx=fx;ar_frame("layer_help",dir,0);}
+            for(fx=0;fx<(page==5?7u:1u);fx++){ambr.fx=fx;ar_frame("layer_help",dir,0);}
         }
     }
     ambr.view=2;for(page=0;page<5;page++){
-        ambr.page=page;for(fx=0;fx<(page==3?4u:1u);fx++){ambr.fx=fx;ar_frame("global_help",dir,0);}
+        ambr.page=page;for(fx=0;fx<(page==3?5u:1u);fx++){ambr.fx=fx;ar_frame("global_help",dir,0);}
     }
     for(unsigned view=0;view<=2;view++){
         ambr.view=view;ambr.bank=0;
@@ -311,7 +311,7 @@ int main(int argc,char **argv)
             for(ambr.page=0;ambr.page<pages;ambr.page++){
                 snprintf(name,sizeof name,"theme_%u_view_%u_page_%u",theme,view,ambr.page);
                 ar_frame(name,dir,1);
-                for(unsigned module=0;module<(view==1 && ambr.page==5?6u:view==2 && ambr.page==3?4u:1u);module++){
+                for(unsigned module=0;module<(view==1 && ambr.page==5?7u:view==2 && ambr.page==3?5u:1u);module++){
                     ambr.fx=module;
                     if(!amb_local_count())continue;
                     for(unsigned choice=1;choice<=amb_local_count();choice++){
