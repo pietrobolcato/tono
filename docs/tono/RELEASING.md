@@ -1,0 +1,6 @@
+# Publish a Tono release
+
+1. Review the complete diff from the last release tag. Update the version header and release notes. Select checks using AGENTS.md and record the results on a manual install card. Retain known issues and the exact artifact used for the checks.
+2. From a clean checkout, build the firmware and name it `tono-VERSION.fwsc`. Keep the release's toolchain, SDK and firmware hashes in SOURCES_LOCK.json. Archive the tagged Git tree with `git archive`. If the firmware was compiled from an earlier commit, record both commits and compare the clean tag build to the distributed firmware byte for byte.
+3. Stage the firmware, source archive, license notices, provenance and SHA256SUMS in an empty directory. Review any additional asset before adding it. Build the optional desktop ZIP separately with the firmware, version file, public launcher, emulator binary, source revision and patch, and notices. Boot it from a fresh state before publishing. For a new release, keep the supplied release ZIPs free of emulator save files, personal takes, device backups and credentials.
+4. Create the GitHub release from the checked source tag using `gh release create` with a notes file and the explicit staged assets. Check the remote tag and public downloads. Compare downloaded assets with SHA256SUMS.

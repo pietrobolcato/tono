@@ -6,4 +6,4 @@ Tono is the AMBPLUS configuration of JIANT. Start with [architecture](docs/tono/
 - Use the [iteration](.agents/skills/fm1-safe-iteration/SKILL.md), [optimisation](.agents/skills/fm1-optimisation-gate/SKILL.md) and [release](.agents/skills/fm1-release-gate/SKILL.md) workflows where relevant.
 - Every physical firmware write is owner-run. Automation uses disposable flash images. Keep user backups, recordings, local emulator state and credentials outside Git and release bundles.
 - For audible changes, follow the [song-starter and listening workflow](docs/tono/SONG_STARTERS.md). Audio review is optional and uses an environment-supplied key. Send only material authorised for external review.
-- Keep upstream attribution and bundled notices. Package the versioned firmware, matching source, build provenance, checksums and manual install notes.
+- Keep upstream attribution and bundled notices. Follow the [release workflow](docs/tono/RELEASING.md).
