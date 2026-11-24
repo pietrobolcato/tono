@@ -24,7 +24,7 @@ static int amb_nav_width(const char *key,const char *verb,int knob)
 {
     return text_w(&AF_TONO_NAV,key)+text_w(&AF_TONO_NAV,verb)+(knob?31:16);
 }
-static void amb_footer(const amb_layer_t *l)
+static __attribute__((noinline)) void amb_footer(const amb_layer_t *l)
 {
     const char *key="SEL",*verb="Page",*second=0,*action=0;
     int knob=0,lit=0,second_knob=0,cancel=0;
