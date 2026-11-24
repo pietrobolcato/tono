@@ -3029,8 +3029,8 @@ static void amb_draw_home(void)
     char label[16]="MASTER",chord[16];
     if(target){label[0]='L';label[1]=(char)('0'+target);label[2]=' ';str_cpy(label+3,AMB_ROLE[amb.layer[target-1].role],sizeof label-3);}
     amb_display(29,56);
-    if(!ambr.target){
-        cv_bg=TONO_ORANGE;cv_rect(14,32,53,13,cv_bg);
+    if(!ambr.target || (target && amb_theme())){
+        cv_bg=TONO_ORANGE;cv_rect(14,32,target?text_w(&AF_TONO_LABEL,label)+6:53,13,cv_bg);
         amb_text(17,35,label,TONO_INK,14);cv_bg=SCOPE_BG;
     }else amb_text(17,35,label,SCOPE_INK,14);
     amb_text(98,35,"CHORD",SCOPE_INK,7);
@@ -3052,9 +3052,13 @@ static void amb_draw_home(void)
         if(amb_theme()){
             uint16_t accent=amb_accent(k);cv_bg=ABG;
             amb_role_symbol(left,y+1,l->role,accent);
-            if(ambr.target==k+1)cv_rect(left,y+14,12,2,accent);
-            amb_number(left+19,y,k+1,amb_accent_text(k));
-            amb_text(left+28,y,AMB_ROLE[l->role],amb_accent_text(k),8);
+            uint16_t ink=amb_accent_text(k);
+            if(ambr.target==k+1){
+                cv_bg=TONO_ORANGE;ink=TONO_INK;
+                cv_rect(left+16,y-2,15+text_w(&AF_TONO_LABEL,AMB_ROLE[l->role]),13,cv_bg);
+            }
+            amb_number(left+19,y,k+1,ink);
+            amb_text(left+28,y,AMB_ROLE[l->role],ink,8);cv_bg=ABG;
         }else{
             cv_bg=ambr.target==k+1?TONO_ORANGE:AINK;cv_rect(left,y,14,13,cv_bg);
             amb_number(left+4,y+2,k+1,ABG);cv_bg=ABG;
@@ -3266,7 +3270,7 @@ static void amb_draw(void)
                 str_cpy(value,(slot==0?AMB_RHYTHMS:slot==1?AMB_PHRASES:AMB_INTERPLAY)[style],sizeof value);
             }
             int x=amb_nav_cap(34,12,key,1,0);
-            amb_text(x+3,37,label,AINK,16);
+            cv_text(x+3,32,&AF_M,label,AINK);
             amb_text(12,56,"CURRENT",ADIM,8);amb_text(75,56,value,AINK,23);
             amb_help_paragraph(76,overview);
         }
@@ -3608,7 +3612,7 @@ static void amb_draw(void)
     }
     cv_blit_cells(0,0);
     cv_begin(240,93,ABG);
-    if(!ambr.help || *hint || (ambr.view==1 && ambr.help==1 && !amb_proposing()))
+    if(!ambr.help || *hint || (ambr.view==1 && ambr.page!=0 && ambr.help==1 && !amb_proposing()))
         cv_rect(8,0,224,1,ALINE);
     int travel_footer=ambr.view==0 && travel.indicator && !ambr.help && !proposal;
     const char *notice=0;
