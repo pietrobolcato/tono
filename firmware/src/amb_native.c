@@ -3469,7 +3469,7 @@ static void amb_draw(void)
         int position=travel.wanted;
         cv_rect(8,57,224,1,ALINE);
         amb_text(10,65,"TRAVEL",ADIM,7);
-        cv_text(53,60,&AF_M,amb_landscape_name(position),AINK);
+        amb_text(53,65,amb_landscape_name(position),AINK,20);
         if(position>0)amb_text(184,65,"+",AQUEUE,1);
         amb_number(192,65,position,AQUEUE);
         int marker=120+clamp(position,-18,18)*6;
