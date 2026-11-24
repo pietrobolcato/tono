@@ -1,5 +1,5 @@
 # Owner-approved checkpoint cadence
 
-Use targeted/native host tests and short (typically 15–90 second) exact-.fwsc emulator checks for incremental features, with relevant storage/variant coverage and short FM1_STRICT checks for DSP changes. Keep the mandatory baseline/full-host regression and source/resource checks required by AGENTS.md. Human playing can assess a concrete checkpoint once short checks pass.
+Start with the changelog and the diff since the last packaged source. Follow **Choose release checks from the changelog** in AGENTS.md. For a small UI-only release, build and verify the package and record any skipped tests. For changes to behavior, use targeted host and short exact-firmware emulator checks for the affected paths.
 
-Do not run a 20-minute functional soak for every incremental change. Reserve longer soaks for release milestones or investigations of crashes, leaks, long-run transport/storage or timing instability. Previous-software soak evidence must not be attributed to a new artifact. Human playing/short checks do not authorize physical installation. Record source/artifact SHA, results and a STOP condition for every checkpoint.
+Use longer runs when needed to measure real-time headroom, evolution over time, or suspected instability. Record source and artifact hashes, any earlier evidence with its version, and the result of the checks selected for this release. The owner decides on physical installation.
