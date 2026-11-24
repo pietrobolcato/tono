@@ -3383,11 +3383,13 @@ static void amb_draw(void)
         if(gen && index>=AMB_FACTORY_GENERATE){
             unsigned slot=(index-AMB_FACTORY_GENERATE)%AMB_USER_GENERATE;
             const uint8_t *v=amb_user_recipe(slot);
-            amb_text(16,79,"USER",AINK,4);amb_number(52,79,slot+1,AINK);
+            char title[]="User 1";
+            title[5]+=(char)slot;
+            cv_text(16,79,&AF_M,title,AINK);
             if(amb_recipe_used(v)){
                 amb_text(16,102,AMB_RHYTHMS[v[0]],AINK,20);amb_text(100,102,AMB_PHRASES[v[1]],AINK,20);
                 amb_text(16,118,AMB_INTERPLAY[v[2]],ADIM,20);amb_number(100,118,v[3]&127,ADIM);
-            }else amb_text(16,102,"Empty slot",ADIM,12);
+            }else amb_text(16,102,"Empty slot",AINK,12);
         }else cv_text(16,79,&AF_M,gen?amb_generate_recipes[index].name:amb_page_bank()->name[index],AINK);
         if(gen && index<AMB_FACTORY_GENERATE){
             amb_text(16,102,amb_generate_recipes[index].gesture,AINK,38);
