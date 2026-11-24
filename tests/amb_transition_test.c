@@ -5,6 +5,18 @@ int main(void)
 {
     unsigned i,k,seen=1,last=99,current=0;int32_t out[CTL*2];int64_t wet=0;
     amb_layer_t manual;uint64_t hashes[8];
+    /* A one-sided entrance must control both channels on the first sample. */
+    {
+        int32_t left=64000,right=8000;
+        master_out(&left,&right);
+        assert(left<=softclip(LIM_T) && right<=softclip(LIM_T/8));
+        assert(left>softclip(LIM_T-64) && right>softclip(LIM_T/8-32));
+        int32_t peak=lim_env;
+        left=right=0;master_out(&left,&right);
+        assert(lim_env<peak && lim_env>peak*99/100);
+        for(i=0;i<2*FS;i++){left=right=0;master_out(&left,&right);}
+        assert(lim_env==LIM_T);
+    }
     memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();amb_fixture_scene(0);amb.auto_index=0;
     /* The actual runtime AUTO path must not reproduce the old 0 <-> 3 loop. */
     amb.auto_index=1;amb.evolve[0]=100;
