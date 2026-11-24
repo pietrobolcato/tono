@@ -10,7 +10,7 @@ Open-source generative ambient firmware for the M-VAVE FM-1. Four layers share a
 
 - **Play** · Garden opens at startup. Explore the factory arrangements, Generate presets, the A22 sound bank and sampled textures.
 - **Perform** · Turn ALGORITHM on HOME to travel through the piece. Hold HOME and turn it with a layer selected to evolve that layer. Use HOME + EDIT for contextual help.
-- **Watch** · The Contour and Train Ride displays respond to the music. Choose Dieter, TE Dark or TE Light in GLO.
+- **Watch** · The Contour and Train Ride displays respond to the music. Choose Studio Dark, Studio Light or Dial in GLO.
 
 **[Play in your browser](https://pietrobolcato.github.io/tono/)** · [Download firmware or the macOS emulator](https://github.com/pietrobolcato/tono/releases) · [Install and recover](docs/tono/INSTALL.md) · [Controls](ambplus/CONTROLS.md) · [Build from source](docs/tono/BUILD.md)
 

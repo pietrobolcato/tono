@@ -49,6 +49,17 @@ static void check_manual_density(void)
 int main(void)
 {
     memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();
+    settings_fresh();
+    assert(amb_theme()==THEME_TE_DARK);
+    for(unsigned choice=0;choice<THEME_COUNT;choice++){
+        persist_t saved={0};
+        favorites.factory[15][14]=(uint8_t)choice;
+        settings_export(&saved);
+        settings_fresh();
+        assert(settings_import(&saved,sizeof saved));
+        assert(amb_theme()==choice);
+    }
+    favorites.factory[15][14]=THEME_DIETER;
     check_manual_density();
     const unsigned scene=AMB_SCENE_GARDEN;
     amb_factory(scene);
