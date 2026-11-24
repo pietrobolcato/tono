@@ -3240,7 +3240,7 @@ static void amb_draw(void)
     }
     if(home_header)amb_draw_home_status();
     else{
-        if(ambr.view!=4){
+        if(ambr.view!=4 && !ambr.help){
             amb_number(146,8,ambr.view==0?ambr.target+1:ambr.view==3?ambr.slot+1:ambr.view==2?amb_global_index(ambr.page)+1:ambr.page+1,AINK);
             amb_text(155,8,ambr.view==0?"/5":ambr.view==3?"/8":"/7",AINK,3);
         }

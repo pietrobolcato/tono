@@ -345,7 +345,7 @@ Soften the bright edge at the start of a note.
 [lengthen_the_ring]
 Let each bell ring out for longer.
 [darken_the_bass_tone]
-Soften the upper harmonics of the bass.
+Turn up to round off the attack and darken the tone. Turn down for a brighter line that cuts through the mix.
 [portamento_and_release]
 Add pitch slides and lengthen the release.
 [soften_hit_brightness]
