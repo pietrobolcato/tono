@@ -1043,7 +1043,7 @@ static void amb_set_generated(unsigned k,unsigned on)
     if(amb.layer[k].generated==!!on)return;
     amb.layer[k].generated=(uint8_t)!!on;
     ambr.grid_cue[k]=(amb_grid_cue_t){0};ambr.recording=0;
-    amb_say(on?"AUTO RESUMED / MANUAL NOTES KEPT":"MANUAL PATTERN / EDIT FOR AUTO");
+    amb_say(on?"AUTO RESUMED / MANUAL NOTES KEPT":"MANUAL PATTERN");
 }
 /* Project a free pedal into the selected note pool when FOLLOW is low. */
 static unsigned amb_pool_nearest(unsigned note)
@@ -1702,9 +1702,9 @@ static void amb_save(void)
 #endif
     if(amb_save_slot){amb_say("SAVE QUEUED UNTIL STOP");return;}
     for(unsigned k=0;k<4;k++)if(amb.layer[k].engine==ENGI_AMB_SAMPLE && amb.layer[k].base[P_E0]==AMB_MIC_SOURCE && !amb_current_take()->length){
-        amb_say("RECORD A TAKE BEFORE SAVING");return;
+        amb_say("NO RECORDING TO SAVE");return;
     }
-    if(amb_occupied(ambr.slot) && !ambr.overwrite){ambr.overwrite=1;amb_say("OCCUPIED - REC AGAIN");return;}
+    if(amb_occupied(ambr.slot) && !ambr.overwrite){ambr.overwrite=1;amb_say("SLOT OCCUPIED");return;}
 #if FELUCCA_FLASH
     uint32_t flags=irq_save();
 #endif
@@ -2177,7 +2177,7 @@ static void amb_rec(void)
         amb_layer_t *l=&amb.layer[ambr.edit_layer];
         if(!ambr.recording && l->generated && l->role!=4)amb_capture_generated(ambr.edit_layer);
         ambr.recording=!ambr.recording;l->generated=0;ambr.dirty=1;
-        amb_say(!ambr.recording?"RECORDING STOPPED":l->role==4?"WHITE KEYS TOGGLE STEPS":"SELECT STEP / KEYS SET PITCH");return;
+        amb_say(!ambr.recording?"RECORDING STOPPED":"STEP ENTRY ACTIVE");return;
     }
     if(ambr.piece_preview!=255) {
         unsigned p=ambr.piece_preview;ambr.preset_position=(uint8_t)p;
@@ -2194,10 +2194,10 @@ static void amb_rec(void)
     if(amb_mic_page() && ambr.proposal==255 && !amb_pending_ready){
         if(amb_capture_page){amb_end_capture();return;}
         if(amb_current_take()->length && !amb_replace_take){
-            amb_replace_take=1;amb_say("REPLACE TAKE? REC AGAIN");return;
+            amb_replace_take=1;amb_say("REPLACE CURRENT TAKE?");return;
         }
         amb_replace_take=0;amb_take_start();amb_input_seen=0;amb_input_ms=fm1_ms;amb_capture_page=1;
-        amb_say("SING NOW / REC TO FINISH");return;
+        amb_say("CAPTURE STARTED");return;
     }
     if(ambr.proposal==255) {if(amb_pending_ready){amb_pending_ready=0;amb_say("QUEUED RECALL CANCELLED");}else if(ambr.chord_q!=255){ambr.chord_q=255;amb_say("QUEUED CHORD CANCELLED");}return;}
 
@@ -2269,7 +2269,7 @@ static void amb_input(void)
                 amb_travel_rebase(layer);
                 ambr.loading=0;
                 amb_say(locks&bit?"SOUND LOCKED":"SOUND UNLOCKED");
-            }else amb_say("SELECT A LAYER TO LOCK");
+            }else amb_say("MASTER HAS NO LAYER LOCK");
         }
     }
     if(algo && !home && !ambr.evolve_open && ambr.view==0)amb_auto_reset();else amb_auto_tick();
@@ -2359,7 +2359,7 @@ static void amb_input(void)
             amb_layer_t *l=&amb.layer[ambr.edit_layer];
             ambr.home_used=1;ambr.reset_pending=ambr.recording=0;ambr.bank=0;ambr.page=3;
             ambr.proposal=ambr.piece_preview=255;
-            if(!saved)amb_say("TURN A LAYER KNOB FIRST");
+            if(!saved)amb_say("NO RECENT LAYER CONTROL");
             else if(saved>ROUTE_COUNT || !amb_route_name(l,saved-1))amb_say("THIS CONTROL CANNOT USE LFO");
             else {l->lfo_dest=(uint8_t)(saved-1);amb_say("LAST EDIT LINKED TO LFO");}
         }else if((home && b==B_SEQ) || (b==B_SCL && (ambr.view==0 || ambr.view==4))){
@@ -3148,7 +3148,7 @@ static void amb_draw(void)
                 cv_text(12,76,&AF_M,amb_current_sound(l),AINK);
                 if(amb_mic_page()){
                     const amb_take_t *t=amb_current_take();
-                    amb_text(12,103,amb_capture_page?(take_rec.frames?"Recording":"Waiting for USB audio"):t->length?"REC  Replace take":"REC  Record USB audio",AINK,32);
+                    amb_text(12,103,amb_capture_page?(take_rec.frames?"Recording":"Waiting for USB audio"):t->length?"Recorded take":"No recording",AINK,32);
                     if(amb_capture_page)cv_rect(12,123,210*take_rec.frames/AMB_TAKE_FRAMES,3,TONO_ORANGE);
                     else if(t->length){
                         char note[8];str_cpy(note,N_NOTE[t->root%12],6);
@@ -3286,7 +3286,7 @@ static void amb_draw(void)
                     }
                 }
             }
-            cv_bg=ABG;amb_text(10,132,ambr.generate_queued?"Queued for next four-bar downbeat":"PRESETS  Browse generators",ADIM,36);
+            cv_bg=ABG;if(ambr.generate_queued)amb_text(10,132,"Queued for next four-bar downbeat",ADIM,36);
         } else if(ambr.view==2 && ambr.page==3) {
             static const char *const modules[4]={"REVERB","DELAY / TAPE","MOTION","WARMTH"};
             amb_display(49,75);
@@ -3330,8 +3330,7 @@ static void amb_draw(void)
                     amb_text(12,98,"Each tick advances one setting.",ADIM,40);
                     amb_text(12,111,"Rhythm, then Phrase, then Interplay.",ADIM,40);
                 }else amb_text(12,100,mode?"Pick a different Generate preset":"Keep current generator settings.",ADIM,40);
-            }else if(timing)amb_text(12,100,"SELECT chooses lane",ADIM,40);
-            else{
+            }else if(!timing){
                 const char *const *hint=hints[amb_journey_style()];
                 amb_text(12,98,hint[0],ADIM,40);
                 amb_text(12,111,hint[1],ADIM,40);
@@ -3377,7 +3376,7 @@ static void amb_draw(void)
     }else if(!ambr.help && ambr.local_preset && amb_local_count()){
         cv_bg=ABG;
         const char *subject=ambr.page==1 && ambr.view==1?(amb_current_sound(l)):"PROPOSED VARIATION";
-        if(amb_generate_page() && ambr.local_preset>AMB_ALL_GENERATE)subject="SAVE GENERATOR / SELECT SLOT";
+        if(amb_generate_page() && ambr.local_preset>AMB_ALL_GENERATE)subject="SAVE GENERATOR";
         amb_text(16,62,subject,ADIM,32);
         unsigned index=ambr.local_preset-1;
         int gen=amb_generate_page();
@@ -3433,11 +3432,7 @@ static void amb_draw(void)
         cv_blit_cells(0,147);
         return;
     }
-    if(ambr.view==2 && ambr.page==5){
-        amb_text(10,5,"SELECT",ADIM,16);
-        cv_text(10,19,&AF_M,"Display theme",AINK);
-
-    }else if(ambr.view==3) {
+    if(ambr.view==3) {
         for(i=0;i<8;i++){
             int x=11+i*28;unsigned selected=i==ambr.slot;
             cv_bg=selected?AINK:ASEL;
@@ -3445,7 +3440,7 @@ static void amb_draw(void)
             amb_number(x+7,23,i+1,selected?ABG:AINK);
             if(selected)cv_rect(x,41,22,3,TONO_ORANGE);
         }
-    }else for(k=0;k<4;k++) {
+    }else if(!(ambr.view==2 && ambr.page==5))for(k=0;k<4;k++) {
         char label[16]={0},value[24]={0};amb_knob_value(k,label,value);if(!label[0])continue;cv_bg=ABG;
         int left=9+k*57;
         if(k)cv_rect(left-4,4,1,39,ALINE);

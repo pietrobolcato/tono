@@ -119,7 +119,7 @@ static void check_layer_shortcut(void)
     uint8_t previous=amb.layer[1].lfo_dest;
     link_last_edit();
     assert(amb.layer[1].lfo_dest==previous);
-    assert(!strcmp(ambr.notice,"TURN A LAYER KNOB FIRST"));
+    assert(!strcmp(ambr.notice,"NO RECENT LAYER CONTROL"));
     held_turn(B_HOME,-1);
     assert(ambr.edit_layer==0);
 
@@ -149,7 +149,7 @@ static void check_layer_shortcut(void)
     amb_patch(0,0,1);
     link_last_edit();
     assert(l->lfo_dest==0);
-    assert(!strcmp(ambr.notice,"TURN A LAYER KNOB FIRST"));
+    assert(!strcmp(ambr.notice,"NO RECENT LAYER CONTROL"));
 }
 
 int main(void)

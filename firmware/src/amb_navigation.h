@@ -52,7 +52,7 @@ static void amb_footer(const amb_layer_t *l)
         case 1:
             key="EDIT";verb=ambr.bank?"Exit":"Details";lit=!!ambr.bank;
             if(ambr.bank){page=l->role==6?(ambr.bank==1?"1/2":"2/2"):(const char*[]){"1/3","2/3","3/3"}[ambr.detail];}
-            else if(amb_mic_page()){second="REC";action=amb_capture_page?"Finish":"Record";}
+            else if(amb_mic_page()){second="REC";action=amb_capture_page?"Finish":amb_replace_take?"Confirm":amb_current_take()->length?"Replace":"Record";}
             else{second="ALGO";action="Browse";second_knob=1;}break;
         case 3:key="EDIT";verb=ambr.bank?"Exit rate":"Rate";lit=!!ambr.bank;
             if(!ambr.bank){second="SELECT";action="Group";second_knob=1;}break;

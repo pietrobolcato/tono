@@ -23,6 +23,10 @@ static void ar_cover(int a,int b,int c,int d)
 static void ar_text(int a,int b,int c,int d,const char *s,unsigned f)
 {
     if(!strcmp(s,"v" TONO_RELEASE_VERSION))ar_version++;
+    if(!ambr.help){
+        assert(!strstr(s,"REC  ") && !strstr(s,"SELECT SLOT") && !strstr(s,"SELECT chooses"));
+        assert(!strstr(s,"PRESETS  Browse"));
+    }
     if(ambr.evolve_open && !ambr.help){
         assert(strcmp(s,"AUTO") && strcmp(s,"ALGO Choose action"));
         if(ambr.evolve_role<8)assert(strcmp(s,amb_proposed_sound(ambr.evolve_role,ambr.evolve_patch)));
