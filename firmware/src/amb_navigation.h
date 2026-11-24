@@ -140,30 +140,29 @@ static void amb_help_actions(int lower)
 {
     if(amb_proposing() || ambr.view==3)return;
     if(!ambr.view){
+        if(lower)return;
         if(ambr.help==2){
-            if(!lower){
-                const amb_layer_t *l=&amb.layer[ambr.target?ambr.target-1:0];
-                for(unsigned k=0;k<4;k++){
-                    char cap[]="1";cap[0]+=(char)k;
-                    const char *name;
-                    if(k==1)name=ambr.target?(amb_acid(l)?acid_macro[1]:AMB_MACRO[l->role][1]):"ECHO";
-                    else amb_home_alt(k,0,&name,0);
-                    amb_help_shortcut(58+20*k,cap,name,1,1);
-                }
-            }else if(ambr.target){
-                amb_help_shortcut(5,"OCT-","Toggle mute",1,0);
-                amb_help_shortcut(21,"OCT+","Toggle solo",1,0);
-                amb_help_shortcut(37,"LFO","Link last layer control",1,0);
-                if(!ambr.zen)amb_help_shortcut(53,"ALGO","Preview layer evolution",1,1);
+            const amb_layer_t *l=&amb.layer[ambr.target?ambr.target-1:0];
+            for(unsigned k=0;k<4;k++){
+                char cap[]="1";cap[0]+=(char)k;
+                const char *name;
+                if(k==1)name=ambr.target?(amb_acid(l)?acid_macro[1]:AMB_MACRO[l->role][1]):"ECHO";
+                else amb_home_alt(k,0,&name,0);
+                amb_help_shortcut(58+18*k,cap,name,1,1);
             }
-        }else if(lower){
-            amb_help_shortcut(5,"EDIT","Open or close Help",1,0);
-            amb_help_shortcut(23,"FX","Bypass or restore all FX",1,0);
-            amb_help_shortcut(41,"SEQ","Open Ensemble meters",1,0);
-            amb_help_shortcut(59,"ARP",ambr.zen?"Leave Zen":"Open Zen",1,0);
-        }else{
-            amb_help_shortcut(109,ambr.zen?"SEL":"ALGO",ambr.zen?"Switch landscape":"Travel through the song",0,!ambr.zen);
-            if(ambr.target && !ambr.zen)amb_help_shortcut(128,"PLAY","Lock or unlock this sound",1,0);
+        }else if(ambr.help==3){
+            amb_help_shortcut(58,"FX","Bypass or restore all FX",1,0);
+            amb_help_shortcut(76,"SEQ","Open Ensemble meters",1,0);
+            amb_help_shortcut(94,"ARP",ambr.zen?"Leave Zen":"Open Zen",1,0);
+            amb_help_shortcut(112,ambr.zen?"SEL":"ALGO",ambr.zen?"Switch landscape":"Travel through the song",0,!ambr.zen);
+        }else if(ambr.help==4 && ambr.target){
+            amb_help_shortcut(56,"OCT-","Toggle mute",1,0);
+            amb_help_shortcut(74,"OCT+","Toggle solo",1,0);
+            amb_help_shortcut(92,"LFO","Link last control",1,0);
+            if(!ambr.zen){
+                amb_help_shortcut(110,"ALGO","Preview evolution",1,1);
+                amb_help_shortcut(128,"PLAY","Toggle sound lock",1,0);
+            }
         }
     }else if(ambr.view==1){
         if(lower){

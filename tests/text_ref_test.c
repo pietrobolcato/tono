@@ -80,8 +80,9 @@ static uint32_t ref_gi(const aafont_t *f, uint32_t ch)      /* the glyph's numbe
  * phase: offset - gh's (10 bits), bx + 1 (3), by (6), bw (7), bh (6) */
 static aag_t ref_entry(const aafont_t *f, uint32_t gi, uint32_t ph)
 {
-    uint32_t v = f->gp[(gi << f->psh) + ph];
-    aag_t g = {(uint16_t)(f->gh[gi].off + v % 1024u), f->gh[gi].adv, (int8_t)((int)(v / 1024u % 8u) - 1),
+    uint16_t advance = f->gh[gi].adv;
+    uint32_t v = f->gp[f->shared_boxes ? advance / 512u : (gi << f->psh) + ph];
+    aag_t g = {(uint16_t)(f->gh[gi].off + v % 1024u), f->shared_boxes ? advance % 512u : advance, (int8_t)((int)(v / 1024u % 8u) - 1),
                (uint8_t)(v / 8192u % 64u), (uint8_t)(v / 524288u % 128u), (uint8_t)(v / 67108864u)};
     return g;
 }
@@ -89,6 +90,12 @@ static int32_t ref_kern(const aafont_t *f, uint32_t a, uint32_t b)   /* (0.9.0: 
 {
     int32_t ga = ref_at(f, a);
     if (ga < 0 || (uint32_t)ga >= f->nk) return 0;
+    if (f->classes) {
+        int32_t gb = ref_at(f, b);
+        if (gb < 0) return 0;
+        b = f->classes[f->nk + gb];
+        ga = f->classes[ga];
+    }
     for (uint32_t m = f->ki[ga]; m < f->ki[ga + 1]; m++)
         if (f->kp[2u * m] == b) return (int8_t)f->kp[2u * m + 1u];
     return 0;

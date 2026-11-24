@@ -268,14 +268,16 @@ def emit(face, tracking, gamma, kern_min, compact=False):
     lines.append(ar.c_array(f"AF_{name}_DATA", "uint8_t", list(data), 24, "0x{:02x}"))
     if hc:
         lines.append(ar.c_array(f"AF_{name}_HC", "uint8_t", hc, 24))
-    gtext, gsize = ar.glyph_tables(name, table, phases)
+    shared_boxes = compact and phases == 1
+    gtext, gsize = ar.glyph_tables(name, table, phases, shared_boxes)
     lines.append(gtext)
     if keys:
         lines.append(ar.c_array(f"AF_{name}_KI", "uint16_t", ki, 12))
         lines.append(ar.c_array(f"AF_{name}_KP", "uint8_t", kp, 24))
     ex = ", ".join(str(CODE.get(c, c)) for c in extras) or "0"
     lines.append(f"static const uint8_t AF_{name}_EX[{max(1, len(extras))}] = {{{ex}}};")
-    extra = f", 0, AF_{name}_CLASSES" if classes else ""
+    class_table = f"AF_{name}_CLASSES" if classes else "0"
+    extra = f", 0, {class_table}, {int(shared_boxes)}"
     lines.append(f"static const aafont_t AF_{name} = {{{r['h']}, {r['asc']}, {first}, {last}, {len(extras)}, {nki}, "
                  f"AF_{name}_GH, AF_{name}_GP, AF_{name}_DATA, {'AF_%s_KI' % name if keys else '0'}, "
                  f"{'AF_%s_KP' % name if keys else '0'}, AF_{name}_EX, {psh}, {'AF_%s_HC' % name if hc else '0'}{extra}}};")
