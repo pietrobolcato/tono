@@ -18,7 +18,11 @@ static int check(const uint8_t *ref,unsigned size,const uint8_t *data,
                               amb_oct_##name##_widths,amb_oct_##name##_period)
 int main(void)
 {
+    AMB_INIT_OFFSETS(chime);
+    AMB_INIT_OFFSETS(vowel);
     AMB_INIT_OFFSETS(violin);
+    AMB_INIT_OFFSETS(tenor);
+    AMB_INIT_OFFSETS(cello);
     return CHECK(AMB_SAMPLES[0],chime) || CHECK(AMB_SAMPLES[1],vowel) ||
            CHECK(amb_pcm_violin,violin) || CHECK(amb_pcm_tenor,tenor);
 }

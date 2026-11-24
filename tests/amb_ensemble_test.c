@@ -14,14 +14,18 @@ static void check_knobs(void)
 {
     amb_piece_t piece=amb;
     __typeof__(ambr) runtime=ambr;
+    amb_song_controls_t controls=amb_controls;
     for(unsigned knob=0;knob<4;knob++){
         char label[16]={0},before[24]={0},after[24]={0};
         if((ambr.view==1 && ambr.page==4 && !amb.layer[0].generated && amb.layer[0].role!=4 && !amb_mono_role(&amb.layer[0]) && knob==0) ||
            (ambr.view==1 && ambr.page==3 && ambr.bank &&
-            (knob==3 || (knob==2 && amb.layer[0].base[P_LRATE]<AMB_RANDOM_BARS))) ||
-           (ambr.view==2 && ambr.page==1 && knob==3)){
+            (knob==3 || (knob==2 && amb_edit_rate(&amb.layer[0])<AMB_RANDOM_BARS))) ||
+           (ambr.view==2 && ambr.page==1 && knob==3) ||
+           (knob>1 && ((ambr.view==2 && ambr.page==3 && ambr.fx==4) ||
+                       (ambr.view==1 && ambr.page==5 && ambr.fx==6)))){
             amb_knob(knob,2);amb_knob_value(knob,label,after);
             assert(!*label && !*after && !memcmp(&amb,&piece,sizeof amb) && ambr.cursor==runtime.cursor);
+            assert(!memcmp(&amb_controls,&controls,sizeof controls));
             continue;
         }
         unsigned card=amb_knob_card(&amb.layer[0],knob);
@@ -34,7 +38,7 @@ static void check_knobs(void)
         }
         if(!strcmp(before,after))fprintf(stderr,"inert display view %u page %u bank %u detail %u role %u knob %u %s %s\n",
             ambr.view,ambr.page,ambr.bank,ambr.detail,amb.layer[0].role,knob,label,after);
-        assert(strcmp(before,after));amb=piece;ambr=runtime;checks++;
+        assert(strcmp(before,after));amb=piece;ambr=runtime;amb_controls=controls;checks++;
     }
 }
 /* Check the actual firmware reader against every authored paragraph, including
@@ -50,6 +54,7 @@ static void audit_help_text(void)
         if(!line[0] || line[0]=='#' || line[0]=='[')continue;
         assert(card<HELP_COUNT);
         amb_help_read(overview,hint,card,card);
+        if(strcmp(line,overview) || strcmp(line,hint))fprintf(stderr,"Help card %u: expected [%s], read [%s] and [%s]\n",card,line,overview,hint);
         assert(!strcmp(line,overview) && !strcmp(line,hint));
         card++;
     }
@@ -70,24 +75,30 @@ static void audit_controls(void)
                 for(ambr.bank=0;ambr.bank<(role==6?3:2);ambr.bank++)
                     for(ambr.detail=0;ambr.detail<(ambr.bank && role!=6?3:1);ambr.detail++)check_knobs();
             }else if(page==3){
-                check_knobs();
-                int rate=amb.layer[0].base[P_LRATE];
-                ambr.bank=1;check_knobs();
-                amb_knob(0,1);check_knobs();
-                amb_knob(0,1);check_knobs();
-                amb.layer[0].base[P_LRATE]=rate;
+                for(unsigned lane=0;lane<2;lane++){
+                    amb_lfo_page[0]=lane;
+                    ambr.bank=0;check_knobs();
+                    for(unsigned mode=0;mode<3;mode++){
+                        ambr.bank=1;
+                        int rate=mode==0?0:(mode==1?AMB_RANDOM_HZ:AMB_RANDOM_BARS)|(2<<7)|4;
+                        if(lane)amb_controls.second[0].rate=rate;
+                        else amb.layer[0].base[P_LRATE]=rate;
+                        check_knobs();
+                    }
+                }
+                amb_lfo_page[0]=0;
             }else if(page==4){
                 for(unsigned gen=0;gen<2;gen++)for(unsigned mode=0;mode<(role==0?AMB_CHANT+1:5);mode++){
                     amb.layer[0].generated=gen;amb.layer[0].mode=mode;check_knobs();
                 }
-            }else if(page==5){for(ambr.fx=0;ambr.fx<6;ambr.fx++)check_knobs();}
+            }else if(page==5){for(ambr.fx=0;ambr.fx<7;ambr.fx++)check_knobs();}
             else check_knobs();
         }
     }
     ambr.view=0;amb_target(0);check_knobs();
     ambr.view=2;
     for(ambr.page=0;ambr.page<5;ambr.page++)
-        for(ambr.fx=0;ambr.fx<(ambr.page==3?4:1);ambr.fx++)check_knobs();
+        for(ambr.fx=0;ambr.fx<(ambr.page==3?5:1);ambr.fx++)check_knobs();
     ambr.view=4;check_knobs();
     printf("%u context-specific knob bindings passed\n",checks);
 }

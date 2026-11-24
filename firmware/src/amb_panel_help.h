@@ -73,11 +73,12 @@ static unsigned amb_knob_card(const amb_layer_t *l,unsigned knob)
     }
     if(ambr.view==2 && ambr.page==7)return (timing_tab?H_enable_this_lane:H_count_bars_or_seconds)+knob;
     if(ambr.view==2 && ambr.page==6)return H_bounded_or_endless_travel+knob;
+    if(ambr.view==2 && ambr.page==3 && ambr.fx%5==4)return knob<2?H_limiter_ceiling+knob:0;
     if(ambr.view==2)return ambr.page<3?H_chance_of_a_chord_change+ambr.page*4+knob:ambr.page==3?H_reverb_room_size+(ambr.fx%4)*4+knob:H_low_band_gain+knob;
     if(ambr.page==1)return amb_param_hint(l,amb_sound_id(l,ambr.bank,knob));
     if(ambr.page==2)return l->role==4 || (l->role==6 && l->base[P_E1]==3)?amb_param_hint(l,amb_envelope_id(l,knob)):H_time_to_full_level+knob;
     if(ambr.page==3){
-        int rate=l->base[P_LRATE],random=rate>=AMB_RANDOM_BARS;
+        int rate=amb_edit_rate(l),random=rate>=AMB_RANDOM_BARS;
         if(ambr.bank && (knob==3 || (!random && knob==2)))return 0;
         if(amb_bar_rate(rate) && ambr.bank && knob==1)return H_shortest_cycle_in_bars;
         if(amb_bar_rate(rate) && ambr.bank && knob==2)return H_longest_cycle_in_bars;
@@ -95,6 +96,7 @@ static unsigned amb_knob_card(const amb_layer_t *l,unsigned knob)
         return (l->role==4?H_generated_hit_density:H_note_selection_pattern)+knob;
     }
     if(ambr.page==5 && ambr.fx==2 && knob==3)return H_shared_delay_algorithm;
+    if(ambr.page==5 && ambr.fx==6)return knob<2?H_layer_filter_mode+knob:0;
     if(ambr.page==5 && ambr.fx==5)return H_grain+knob;
     return ambr.page==5?amb_param_hint(l,amb_fx_id(l,knob)):H_low_band_gain+knob;
 }
@@ -102,7 +104,7 @@ static unsigned amb_knob_card(const amb_layer_t *l,unsigned knob)
 /* The target uses the same description as its edit page. */
 static unsigned amb_route_card(const amb_layer_t *l)
 {
-    unsigned r=l->lfo_dest;
+    unsigned r=amb_edit_dest(l);
     static const uint16_t basic[]={H_filter_cutoff,H_basic_pitch,H_stereo_position,H_layer_output_level};
     static const uint16_t pattern[]={H_note_selection_pattern,H_layer_step_interval,H_generated_event_density,H_chance_to_follow_chord,H_delay_offbeat_hits,H_phrase_end_fill_strength,H_vary_drum_lane_choices,H_pitch_of_this_slot,H_strength_of_this_slot};
     if(r<4)return basic[r];

@@ -2143,7 +2143,7 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
 #endif
         track_dist(t, b, n);
 #if AMBPLUS
-        if(amb_scope_target==ti+1 && amb_scope_page==1 && amb_scope_fill<64)
+        if(amb_scope_target==ti+1 && amb_scope_page==1 && amb_scope_fill<AMB_SCOPE_N)
             amb_scope_sound(b,n);
         amb_layer_process(ti,b,n);
 #endif

@@ -14,6 +14,63 @@ static void compare_focused_with_auto(unsigned style,int direction)
     for(unsigned i=0;i<18 && amb.layer[0].patch==start;i++)amb_landscape_turn(direction);
     assert(amb.layer[0].patch==proposed);
 }
+static void auto_sound_browser(void)
+{
+    amb_fixture_scene(AMB_SCENE_GARDEN);
+    amb_target(1);press(B_EDIT);press(B_EDIT);
+    assert(amb_sound_picker());
+    for(unsigned role=0;role<8;role++){
+        amb_replace_role(0,role,0);
+        unsigned count=amb_sound_count(role);
+        amb.layer[0].macro[2]=120;
+        amb.layer[0].base[P_REV]=123;
+        amb.layer_eq[0][2]=11;
+        amb.grain[0][0]=97;
+        amb_controls.layer_thinning[0]=90;
+        amb_controls.filter[0]=18;
+        amb_controls.second[0].depth=70;
+        amb_piece_t before=amb;
+        /* The last named entry, then Auto, then the first named entry. */
+        amb_browse_proposal(count-1);
+        assert(ambr.proposal==count-1);
+        amb_browse_proposal(1);
+        unsigned choice=amb_auto_sound;
+        assert(ambr.proposal==count && choice>0 && choice<count);
+        assert(amb_controls.layer_thinning[0]==90 && amb_controls.second[0].depth==70);
+        assert(role!=6 || choice!=AMB_MIC_SOURCE);
+        assert(!memcmp(&amb,&before,sizeof before));
+        amb_browse_proposal(1);
+        assert(ambr.proposal==255);
+        amb_browse_proposal(-1);
+        press(B_HOME);
+        assert(ambr.proposal==255 && !memcmp(&amb,&before,sizeof before));
+        amb_browse_proposal(-1);
+        assert(amb_auto_sound==choice);
+        ambr.step+=48;
+        press(B_REC);
+        assert(ambr.proposal==255 && amb.layer[0].role==role);
+        assert(!amb_controls.layer_thinning[0] && !amb_controls.second[0].depth && !amb_controls.filter[0]);
+        assert(!amb.layer_eq[0][2] && !amb.grain[0][0]);
+        assert(amb.layer[0].macro[2]==64 && amb.layer[0].base[P_REV]!=123);
+        assert(!memcmp(&before.layer[1],&amb.layer[1],3*sizeof(amb_layer_t)));
+        assert((role==6?amb.layer[0].base[P_E0]:amb.layer[0].patch)==choice);
+    }
+    amb_fixture_scene(AMB_SCENE_GARDEN);
+    /* With the bright candidate already present, a different engine wins. */
+    unsigned chapter=0,bright,dark;
+    for(;chapter<64;chapter++){
+        bright=amb_chapter_sound(0,0,1,chapter,0,0);
+        dark=amb_chapter_sound(0,0,-1,chapter,0,0);
+        if(amb_recipe(0,bright)->engine!=amb_recipe(0,dark)->engine)break;
+    }
+    assert(chapter<64);
+    ambr.step=chapter*16;
+    for(unsigned j=1;j<4;j++){amb.layer[j].engine=amb_recipe(0,bright)->engine;amb.layer[j].base[P_MUTE]=0;amb.layer[j].level=80;}
+    assert(amb_pick_auto_sound(0,0)==dark);
+    for(unsigned j=1;j<4;j++)amb.layer[j].base[P_MUTE]=1;
+    assert(amb_pick_auto_sound(0,0)==bright);
+    puts("Auto sound follows the mix, browses silently, wraps, cancels and commits the displayed recommendation for all roles PASS");
+}
 int main(void)
 {
     memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();amb_target(1);
@@ -70,6 +127,7 @@ int main(void)
         amb.layer[0].base[P_E0]:amb.layer[0].patch)==proposed_patch);
     amb.layer[0].role=6;amb.layer[0].base[P_E0]=AMB_MIC_SOURCE;
     assert(!amb_role_proposal(0,0,&proposed_role,&proposed_patch));
+    auto_sound_browser();
     puts("Focused sound matches the first selected-seat Auto destination in all three journeys and both directions PASS");
     puts("EDIT MODE Texture to Pad restores role timing, octave, grain and EQ; gain and siblings preserved PASS");
     puts("Layer evolution browse, manual patch retention, queued role replacement and sibling isolation PASS");

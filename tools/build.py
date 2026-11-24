@@ -116,7 +116,7 @@ def generate():
         # The shared decoder also reproduces the small face losslessly.
         # Tono has dedicated label and display faces. Keep the shared faces
         # pixel-aligned to store one raster per glyph in this build.
-        cmds[0].extend(["--huff", "S,M,L", "--kern-classes", "--pixel-aligned", "S,M,L"])
+        cmds[0].extend(["--huff", "S,M,L", "--kern-classes", "--pixel-aligned", "S,M,L", "--kern-min", "8"])
         cmds.append([tools / "pack_tono_fir.py", FW / "src/uac_fir.h", GEN / "tono_fir.h"])
         inter = SRC / "assets/fonts/InterTight[wght].ttf"
         # The footer is a closed vocabulary. Retain digits for generated page counters.
