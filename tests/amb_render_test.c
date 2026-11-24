@@ -23,6 +23,11 @@ static void ar_cover(int a,int b,int c,int d)
 static void ar_text(int a,int b,int c,int d,const char *s,unsigned f)
 {
     if(!strcmp(s,"v" TONO_RELEASE_VERSION))ar_version++;
+    if(ambr.evolve_open && !ambr.help){
+        assert(strcmp(s,"AUTO") && strcmp(s,"ALGO Choose action"));
+        if(ambr.evolve_role<8)assert(strcmp(s,amb_proposed_sound(ambr.evolve_role,ambr.evolve_patch)));
+        assert(strcmp(s,amb_current_sound(&amb.layer[ambr.evolve_layer])));
+    }
     if(!strcmp(s,"SELECT TARGET / EDIT / SCL ENSEMBLE") ||
        !strcmp(s,"MASTER controls the selected level."))assert(ambr.help);
     if(!strcmp(s,"EDIT  Timing and reach") || !strcmp(s,"EDIT  Back to Travel") ||
@@ -81,6 +86,9 @@ static void ar_frame(const char *name,const char *dir,int save)
             if(!strcmp(ar_boxes[i].s,"Help"))help=ar_boxes[i].y0;
         }
         assert(target==ensemble && help>ensemble);
+    }
+    if(ambr.evolve_open || ambr.proposal!=255 || ambr.local_preset || ambr.reset_pending || ambr.piece_preview!=255){
+        for(unsigned i=0;i<ar_n;i++)assert(strcmp(ar_boxes[i].s,"WARMTH") && strcmp(ar_boxes[i].s,"DENSITY") && strcmp(ar_boxes[i].s,"SUSTAIN"));
     }
     if(save)ar_save(name,dir);
 }
@@ -286,6 +294,11 @@ int main(int argc,char **argv)
         while(amb_theme()!=theme)amb_theme_turn(1);
         ambr.view=0;ambr.target=0;ambr.help=0;
         ar_frame("home_footer",dir,theme==0);
+        ambr.evolve_open=1;ambr.evolve_layer=0;ambr.evolve_role=0;ambr.evolve_patch=1;
+        ar_frame("evolution_keep",dir,theme==0);
+        ambr.evolve_mode=1;ambr.evolve_role=255;
+        ar_frame("evolution_no_role",dir,theme==0);
+        ambr.evolve_mode=ambr.evolve_open=0;
         amb_patch(0,0,0);ambr.view=1;ambr.page=1;ambr.bank=1;ambr.detail=1;ambr.help=0;ambr.select_until=0;ambr.notice[0]=0;ambr.level_feedback_active=0;
         snprintf(name,sizeof name,"navigation_%u_idle",theme);ar_frame(name,dir,1);
         uint16_t orange=host_screen[166*240+12];

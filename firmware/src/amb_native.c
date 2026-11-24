@@ -2728,12 +2728,17 @@ static void amb_chord_label(unsigned degree,char *text)
 static uint32_t amb_lfo_phase(unsigned k){return trk[k].lfo_ph;}
 /* Compare the programmed destination to the current edited baseline. */
 #include "amb_patch_character.h"
+static __attribute__((noinline)) const char *amb_current_sound(const amb_layer_t *l)
+{return l->role==6?N_AS_SOURCE[l->base[P_E0]]:amb_patch_name(l);}
+static __attribute__((noinline)) const char *amb_proposed_sound(unsigned role,unsigned patch)
+{return role==6?N_AS_SOURCE[patch]:amb_recipe(role,patch)->name;}
+
 static void amb_sound_preview(const amb_layer_t *current,unsigned next)
 {
-    const int sample=current->role==6;
-    amb_text(12,55,"CURRENT",ADIM,9);amb_text(83,55,sample?N_AS_SOURCE[current->base[P_E0]]:amb_patch_name(current),AINK,22);
+
+    amb_text(12,55,"CURRENT",ADIM,9);amb_text(83,55,amb_current_sound(current),AINK,22);
     amb_text(12,72,"PROPOSED",ADIM,9);
-    cv_text(83,68,&AF_M,sample?N_AS_SOURCE[next]:amb_recipe(current->role,next)->name,AINK);
+    cv_text(83,68,&AF_M,amb_proposed_sound(current->role,next),AINK);
     amb_patch_character(current->role,next);
 
 }
@@ -2798,11 +2803,17 @@ static void amb_fx_diagram(unsigned k,unsigned module)
 }
 #include "amb_panel_help.h"
 
+static __attribute__((noinline)) int amb_proposing(void)
+{
+    return ambr.evolve_open || ambr.local_preset || ambr.proposal!=255 ||
+           ambr.reset_pending || ambr.piece_preview!=255;
+}
+
 /* Contextual shortcuts belong to the modal guide. */
 static void amb_guidance(const amb_layer_t *l,const char **first,const char **second)
 {
     const char *a="SEL next page / HOME return",*b="PLAY start or stop";
-    if(ambr.evolve_open || ambr.local_preset || ambr.proposal!=255 || ambr.reset_pending || ambr.piece_preview!=255 || ambr.view==3){
+    if(amb_proposing() || ambr.view==3){
         a="REC confirms / HOME cancels";b="PLAY start or stop";
     }else if(!ambr.view){
         a="SELECT target / EDIT open";
@@ -2829,17 +2840,18 @@ static const char *amb_screen_help(void)
         "Adjust the layer EQ."
     };
     static const char *const global[]={
-        "Set how the piece changes as it plays.", "Set the key and scale.",
-        "Choose how the layers generate music.", "Adjust shared effects.",
+        "Set how the piece evolves.", "Set the key and scale.",
+        "Choose the generators.", "Adjust shared effects.",
         "Adjust the master EQ.", "Choose a display theme.", "Set travel and sound transitions.", "Steer the song automatically."
     };
-    if(ambr.reset_pending)return "Restore the layer from the loaded piece.";
+    if(ambr.evolve_open)return "Choose what Auto changes.";
+    if(ambr.reset_pending)return "Restore the saved layer.";
     if(ambr.piece_preview!=255)return "Load a factory piece or a saved slot.";
     switch(ambr.view){
     case 1:return edit[ambr.page];
     case 2:return global[ambr.page];
     case 3:return "Store the current piece in a song slot.";
-    case 4:return "Watch the level and state of each layer.";
+    case 4:return "Watch each layer play.";
     default:return "Mix the layers and guide the harmony.";
     }
 }
@@ -2971,7 +2983,7 @@ static void amb_draw_home(void)
             amb_number(left+4,y+2,k+1,ABG);cv_bg=ABG;
             amb_text(left+19,y,AMB_ROLE[l->role],AINK,8);
         }
-        amb_text(left+19,y+13,l->role==6?N_AS_SOURCE[l->base[P_E0]]:amb_patch_name(l),ADIM,l->engine==ENGI_AMB_A22?20:14);
+        amb_text(left+19,y+13,amb_current_sound(l),ADIM,l->engine==ENGI_AMB_A22?20:14);
         if(locks&(1u<<k)){
             cv_frame(left+91,y+1,5,6,AQUEUE);
             cv_rect(left+90,y+5,7,5,AQUEUE);
@@ -3035,8 +3047,7 @@ static void amb_draw_home_status(void)
 static unsigned amb_help_pages(unsigned *control)
 {
     unsigned count=1;
-    if(ambr.view==3 || ambr.reset_pending || ambr.evolve_open || ambr.local_preset ||
-       ambr.proposal!=255 || ambr.piece_preview!=255 || (ambr.view==2 && ambr.page==5))return count;
+    if(ambr.view==3 || amb_proposing() || (ambr.view==2 && ambr.page==5))return count;
     for(unsigned k=0;k<4;k++){
         char label[16]={0},value[24]={0};amb_knob_value(k,label,value);
         if(*label && ++count==ambr.help && control)*control=k;
@@ -3061,6 +3072,9 @@ static void amb_draw(void)
 
 
     tono_logo(8,6,3,ABG,AINK);
+    int proposal=amb_proposing() && !ambr.help;
+    if(proposal)cv_text(60,5,&AF_M,ambr.evolve_open?"Layer evolution":"Preview",AINK);
+    else{
     amb_text(60,8,ambr.help?"HELP":ambr.view==4?"ENSEMBLE":ambr.view==0?(ambr.zen?(ambr.zen_train?"TRAIN RIDE":"CONTOUR"):"HOME"):ambr.view==1?"EDIT":ambr.view==2?"GLOBAL":"SAVE",ADIM,10);
     int home_header=!ambr.view && !ambr.help;
     if(!ambr.help && (ambr.view==0 || ambr.view==1 || ambr.view==4)){
@@ -3082,6 +3096,7 @@ static void amb_draw(void)
         }
         amb_text(177,8,song.playing?">":"-",song.playing?TONO_ORANGE:ADIM,1);amb_number(188,8,amb.global[G_BPM],AINK);amb_text(211,8,"BPM",ADIM,3);
     }
+    }
     cv_rect(8,25,224,1,ALINE);cv_bg=ABG;
     if(ambr.help){
         unsigned slot=0,pages=amb_help_pages(&slot);
@@ -3090,14 +3105,16 @@ static void amb_draw(void)
         if(ambr.help==1){
             const char *first,*second;amb_guidance(l,&first,&second);
             amb_text(10,58,first,AINK,39);amb_text(10,78,second,AINK,39);
-            if(ambr.view==1 || (!ambr.view && ambr.target))amb_text(10,99,"HOME + LFO links the last control",ADIM,36);
-            if(!ambr.view && ambr.target)amb_text(10,119,"HOME + PLAY locks this sound",ADIM,36);
+            if(!amb_proposing() && (ambr.view==1 || (!ambr.view && ambr.target)))amb_text(10,99,"HOME + LFO links the last control",ADIM,36);
+            if(!amb_proposing() && !ambr.view && ambr.target)amb_text(10,119,"HOME + PLAY locks this sound",ADIM,36);
         }else{
             char label[16]={0},value[24]={0};amb_knob_value(slot,label,value);
             amb_text(12,58,"K",ADIM,1);amb_number(19,58,slot+1,ADIM);
             cv_text(34,51,&AF_M,label,AINK);amb_text(146,58,value,AINK,12);
             amb_text(12,87,amb_knob_hint(l,slot),AINK,39);
         }
+    }else if(proposal && (!ambr.view || ambr.proposal==255)){
+        /* Standalone preview content is drawn below. */
     }else if(ambr.view==4){
         amb_draw_ensemble();
     }else if(ambr.view==0) {
@@ -3128,7 +3145,7 @@ static void amb_draw(void)
             }else{
                 
                 amb_text(12,60,l->role==6?(ambr.bank==0?"SOURCE":ambr.bank==1?"PLAYBACK":"CHARACTER"):"PATCH",ADIM,12);
-                cv_text(12,76,&AF_M,l->role==6?N_AS_SOURCE[l->base[P_E0]]:amb_patch_name(l),AINK);
+                cv_text(12,76,&AF_M,amb_current_sound(l),AINK);
                 if(amb_mic_page()){
                     const amb_take_t *t=amb_current_take();
                     amb_text(12,103,amb_capture_page?(take_rec.frames?"Recording":"Waiting for USB audio"):t->length?"REC  Replace take":"REC  Record USB audio",AINK,32);
@@ -3346,21 +3363,20 @@ static void amb_draw(void)
         }
     }
     if(ambr.evolve_open && !ambr.help){
-        GFX_HOOK_COVER(8,29,232,145);cv_bg=ASEL;cv_rect(8,29,224,116,cv_bg);
+        cv_bg=ABG;
         amb_text(15,34,"LAYER",ADIM,8);amb_number(48,34,ambr.evolve_layer+1,AINK);
         amb_text(66,34,AMB_ROLE[amb.layer[ambr.evolve_layer].role],AINK,15);
-        unsigned role=ambr.evolve_role;
-        amb_text(15,53,"1  Keep layer / change sound",ambr.evolve_mode?ADIM:AINK,34);
-        amb_text(15,68,"2  Change layer",ambr.evolve_mode?AINK:ADIM,24);
-        cv_rect(10,ambr.evolve_mode?69:54,2,8,AQUEUE);
-        amb_text(15,84,"AUTO",ADIM,4);
-        amb_text(47,84,role<8?AMB_ROLE[role]:"No eligible role",ADIM,22);
-        if(role<8)amb_text(15,98,role==6?N_AS_SOURCE[ambr.evolve_patch]:amb_recipe(role,ambr.evolve_patch)->name,AINK,33);
-        amb_text(15,114,"ALGO Choose action",ADIM,35);
-        amb_text(15,128,ambr.evolve_queued?"Queued for next bar":role==255?"HOME Close":"REC Trigger / HOME Close",AQUEUE,32);
+
+        for(unsigned option=0;option<2;option++){
+            int y=64+option*45,selected=ambr.evolve_mode==option;
+            cv_bg=selected?ASEL:ABG;
+            if(selected){cv_rect(8,y,224,34,cv_bg);cv_rect(8,y,3,34,AQUEUE);}
+            cv_text(18,y+8,&AF_M,option?"Change layer type":"Keep type / change sound",AINK);
+        }
+        cv_bg=ABG;
     }else if(!ambr.help && ambr.local_preset && amb_local_count()){
-        GFX_HOOK_COVER(8,50,232,145);cv_bg=ASEL;cv_rect(8,50,224,95,cv_bg);
-        const char *subject=ambr.page==1 && ambr.view==1?(l->role==6?N_AS_SOURCE[l->base[P_E0]]:amb_patch_name(l)):"PROPOSED VARIATION";
+        cv_bg=ABG;
+        const char *subject=ambr.page==1 && ambr.view==1?(amb_current_sound(l)):"PROPOSED VARIATION";
         if(amb_generate_page() && ambr.local_preset>AMB_ALL_GENERATE)subject="SAVE GENERATOR / SELECT SLOT";
         amb_text(16,62,subject,ADIM,32);
         unsigned index=ambr.local_preset-1;
@@ -3381,12 +3397,12 @@ static void amb_draw(void)
 
 
     }else if(!ambr.help && ambr.reset_pending){
-        GFX_HOOK_COVER(8,50,232,145);cv_bg=ASEL;cv_rect(8,50,224,95,cv_bg);
+        cv_bg=ABG;
         amb_text(16,61,"RESTORE THIS TRACK?",AQUEUE,30);
         amb_text(16,81,"LAST LOADED PIECE VERSION",ADIM,31);
         amb_text(16,101,"SOUND / MACROS / PATTERN",ADIM,31);
     }else if(!ambr.help && ambr.piece_preview!=255) {
-        GFX_HOOK_COVER(8,29,232,145);cv_bg=ASEL;cv_rect(8,29,224,116,cv_bg);
+        cv_bg=ABG;
         unsigned preview=ambr.piece_preview;
         amb_text(16,44,"PRESET",ADIM,30);
         if(preview<AMB_SCENE_COUNT){
@@ -3402,14 +3418,18 @@ static void amb_draw(void)
             amb_number(113,69,preview-AMB_SCENE_COUNT+1,AINK);
         }
     } else if(!ambr.help && ambr.view==0 && ambr.proposal!=255) {
-        GFX_HOOK_COVER(8,86,232,146);cv_bg=ASEL;cv_rect(8,86,224,60,cv_bg);amb_text(18,91,"NEXT HARMONY",ADIM,24);
-        amb_chord_label(ambr.proposal,b);amb_text(18,112,b,AINK,16);amb_text(115,112,AMB_MOOD[ambr.proposal],ADIM,16);
+        amb_text(18,58,"NEXT HARMONY",ADIM,24);
+        amb_chord_label(ambr.proposal,b);amb_text(18,86,b,AINK,16);amb_text(115,86,AMB_MOOD[ambr.proposal],ADIM,16);
     }
     cv_blit_cells(0,0);
     cv_begin(240,93,ABG);
     cv_rect(8,0,224,1,ALINE);
     amb_footer(l);
-    if(ambr.help){
+    if(proposal && ambr.evolve_open){
+        if(ambr.evolve_queued)amb_text(15,10,"Queued for next bar",AQUEUE,24);
+        else if(ambr.evolve_role==255)amb_text(15,10,"No eligible role",ADIM,24);
+    }
+    if(ambr.help || proposal){
         cv_blit_cells(0,147);
         return;
     }
@@ -3425,7 +3445,7 @@ static void amb_draw(void)
             amb_number(x+7,23,i+1,selected?ABG:AINK);
             if(selected)cv_rect(x,41,22,3,TONO_ORANGE);
         }
-    }else if(!ambr.reset_pending && ambr.piece_preview==255)for(k=0;k<4;k++) {
+    }else for(k=0;k<4;k++) {
         char label[16]={0},value[24]={0};amb_knob_value(k,label,value);if(!label[0])continue;cv_bg=ABG;
         int left=9+k*57;
         if(k)cv_rect(left-4,4,1,39,ALINE);

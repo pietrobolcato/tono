@@ -39,9 +39,10 @@ static void amb_footer(const amb_layer_t *l)
     else if(ambr.reset_pending || ambr.view==3 || (amb_generate_page() && ambr.local_preset>AMB_ALL_GENERATE)){
         if(ambr.reset_pending || ambr.overwrite){key="REC";verb=ambr.reset_pending?"Restore":"Replace";second="HOME";action="Cancel";}
         else{key="SELECT";knob=1;verb="Slot";second="REC";action="Save";cancel=1;}
-    }else if(ambr.evolve_open && (ambr.evolve_queued || ambr.evolve_role==255)){key="HOME";verb="Cancel";}
+    }else if(ambr.evolve_open && ambr.evolve_queued){key="HOME";verb="Cancel";}
     else if(ambr.local_preset || ambr.piece_preview!=255 || ambr.proposal!=255 || ambr.evolve_open){
-        cancel=1;key=ambr.local_preset || ambr.piece_preview!=255?"PRESETS":"ALGO";knob=1;verb=ambr.evolve_open?"Choose":ambr.local_preset?"Pick":"Browse";second="REC";action=ambr.piece_preview!=255?"Recall":"Apply";
+        cancel=1;key=ambr.local_preset || ambr.piece_preview!=255?"PRESETS":"ALGO";knob=1;verb=ambr.evolve_open?"Choose":ambr.local_preset?"Pick":"Browse";second="REC";action=ambr.evolve_open?"Trigger":ambr.piece_preview!=255?"Recall":"Apply";
+        if(ambr.evolve_open && ambr.evolve_role==255){second="HOME";action="Cancel";cancel=0;}
         if(amb_generate_page() && ambr.local_preset>AMB_FACTORY_GENERATE && !amb_recipe_used(amb_user_recipe(ambr.local_preset-1-AMB_FACTORY_GENERATE))){second="HOME";action="Cancel";cancel=0;}
     }else if(ambr.view==0){key="SELECT";verb="Target";knob=1;second="EDIT";action=ambr.target?"Open":"FX";}
     else if(ambr.view==4){verb="Home";}
