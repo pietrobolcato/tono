@@ -2548,7 +2548,7 @@ static void amb_leds(void)
 #define AQUEUE (TE_DARK?TONO_ORANGE:RGB(145,54,9))
 #define SCOPE_BG (TE_LIGHT?RGB(237,238,236):TONO_INK)
 #define SCOPE_INK (TE_LIGHT?TONO_INK:TONO_PAPER)
-static uint16_t amb_accent(unsigned n)
+static __attribute__((noinline)) uint16_t amb_accent(unsigned n)
 {
     static const uint16_t bright[]={RGB(255,105,57),RGB(114,188,214),RGB(224,130,175),RGB(239,190,95)};
     static const uint16_t vivid[]={RGB(255,66,32),RGB(0,148,246),RGB(245,53,146),RGB(255,167,0)};
@@ -2556,7 +2556,7 @@ static uint16_t amb_accent(unsigned n)
 }
 
 /* Use the same primary ink for the title stripe, K1 rule and active keycaps. */
-static uint16_t amb_primary_accent(void)
+static __attribute__((noinline)) uint16_t amb_primary_accent(void)
 {
     return amb_theme()?amb_accent(0):TONO_ORANGE;
 }
@@ -3422,7 +3422,20 @@ static void amb_draw(void)
     cv_begin(240,93,ABG);
     cv_rect(8,0,224,1,ALINE);
     int travel_footer=ambr.view==0 && travel.indicator && !ambr.help && !proposal;
-    if(!travel_footer)amb_footer(l);
+    const char *notice=0;
+    char gain[18]="LAYER GAIN ";
+    if(!ambr.help && !proposal && !travel_footer){
+        if(ambr.view==1 && ambr.page==1 && ambr.level_feedback_active &&
+           ambr.level_feedback_target==ambr.edit_layer+1 && fm1_ms-ambr.level_feedback_ms<1200u){
+            fmt_int(gain+11,l->level*100/127);
+            char *end=gain+11+str_len(gain+11);end[0]='%';end[1]=0;
+            notice=gain;
+        }else if(ambr.notice[0] && fm1_ms-ambr.notice_ms<2500u)notice=ambr.notice;
+        else if(amb_tail_any())notice=ambr.handoff[4] || ambr.handoff[5]?"Crossfade":"Old sound releasing";
+        else if(amb_monitor_requested)notice="FX bypassed";
+    }
+    int toast_left=notice?236-text_w(&AF_TONO_LABEL,notice)-12:240;
+    if(!travel_footer)amb_footer(l,toast_left);
     if(proposal && ambr.evolve_open){
         if(ambr.evolve_queued)amb_text(15,10,"Queued for next bar",AQUEUE,24);
         else if(ambr.evolve_role==255)amb_text(15,10,"No eligible role",ADIM,24);
@@ -3460,10 +3473,7 @@ static void amb_draw(void)
         }
     }
     cv_bg=ABG;
-    if(ambr.view==1 && ambr.page==1 && ambr.level_feedback_active &&
-       ambr.level_feedback_target==ambr.edit_layer+1 && fm1_ms-ambr.level_feedback_ms<1200u){
-        amb_text(10,44,"LAYER GAIN",ADIM,10);amb_number(70,44,amb.layer[ambr.edit_layer].level*100/127,AQUEUE);
-    }else if(travel_footer){
+    if(travel_footer){
         int position=travel.wanted;
         cv_rect(8,57,224,1,ALINE);
         amb_text(10,65,"TRAVEL",ADIM,7);
@@ -3474,11 +3484,12 @@ static void amb_draw(void)
         cv_rect(12,84,217,1,ALINE);
         cv_rect(120,82,1,5,ADIM);
         cv_rect(marker-2,81,5,7,TONO_ORANGE);
-    }else if(ambr.notice[0] && fm1_ms-ambr.notice_ms<2500u)
-        amb_text(10,44,ambr.notice,ADIM,39);
-    else if(amb_tail_any())
-        amb_text(10,44,ambr.handoff[4] || ambr.handoff[5]?"CROSSFADE":"OLD SOUND RELEASING / NEXT QUEUED",ADIM,39);
-    else if(amb_monitor_requested)amb_text(10,44,"FX BYPASSED",AQUEUE,13);
+    }else if(notice){
+        cv_bg=AINK;
+        tono_round(toast_left,76,236-toast_left,13,2,cv_bg);
+        cv_rect(toast_left,78,2,9,amb_primary_accent());
+        amb_text(toast_left+7,79,notice,ABG,39);
+    }
 
     cv_blit_cells(0,147);
     (void)b;
