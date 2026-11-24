@@ -341,7 +341,7 @@ static void fm1_main(void)
 #if AMBPLUS
     /* The scan and core-1 boot can mask interrupts longer than a DMA half.
      * Start the audio clock only once its interrupt can be serviced. */
-    if(boot_clean)acid_bloom_start();
+    if(boot_clean){acid_bloom_start();acid_bloom_playing=1;}
     fm1_audio_start();
 #else
     autosave_boot(boot_clean);                /* (1.2) the last session's music, under the splash */
@@ -369,6 +369,7 @@ static void fm1_main(void)
     if(boot_clean)for(unsigned k=0;k<3;k++){
         amb.layer[k]=amb_reset_layer[k];amb_apply_patch(k);
     }
+    acid_bloom_playing=0;
 #endif
     kb_boot_hold = 0;
     lcd_fill(0, 0, 240, 240, T_BG);

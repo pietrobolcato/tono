@@ -73,6 +73,15 @@ static void ar_frame(const char *name,const char *dir,int save)
         }
         assert(sel && (strcmp(name,"sound_proposal") || cancel));
     }
+    if(!strcmp(name,"home_footer")){
+        int target=-1,ensemble=-2,help=-3;
+        for(unsigned i=0;i<ar_n;i++){
+            if(!strcmp(ar_boxes[i].s,"Target"))target=ar_boxes[i].y0;
+            if(!strcmp(ar_boxes[i].s,"Ensemble"))ensemble=ar_boxes[i].y0;
+            if(!strcmp(ar_boxes[i].s,"Help"))help=ar_boxes[i].y0;
+        }
+        assert(target==ensemble && help>ensemble);
+    }
     if(save)ar_save(name,dir);
 }
 static void ar_splash(const char *dir)
@@ -275,6 +284,8 @@ int main(int argc,char **argv)
     ambr.proposal=255;
     for(unsigned theme=0;theme<THEME_COUNT;theme++){
         while(amb_theme()!=theme)amb_theme_turn(1);
+        ambr.view=0;ambr.target=0;ambr.help=0;
+        ar_frame("home_footer",dir,theme==0);
         amb_patch(0,0,0);ambr.view=1;ambr.page=1;ambr.bank=1;ambr.detail=1;ambr.help=0;ambr.select_until=0;ambr.notice[0]=0;ambr.level_feedback_active=0;
         snprintf(name,sizeof name,"navigation_%u_idle",theme);ar_frame(name,dir,1);
         uint16_t orange=host_screen[166*240+12];

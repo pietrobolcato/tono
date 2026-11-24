@@ -72,20 +72,26 @@ static void amb_footer(const amb_layer_t *l)
     int turn=(int32_t)(ambr.select_until-fm1_ms)>0 && ambr.select_until;
     int paging=!ambr.help && !ambr.evolve_open && (ambr.view<3) && !str_eq(key,"SEL");
     const char *page_action=ambr.view?"Page":"Ensemble";
-    int width=3+amb_nav_width(key,verb,knob);
-    if(second)width+=amb_nav_width(second,action,second_knob);
-    if(cancel)width+=amb_nav_width("HOME","Cancel",0);
-    if(paging)width+=amb_nav_width("SEL",page_action,0);
-    if(!ambr.help)width+=amb_nav_width("HOME","+",0)+amb_nav_width("EDIT","Help",0)-7;
-    int wrap=width>232;
-    int y=wrap?61:76;
+    int cancel_width=cancel?amb_nav_width("HOME","Cancel",0):0;
+    int page_width=paging?amb_nav_width("SEL",page_action,0):0;
+    /* Composite cap, plus sign and Help form a single command. */
+    int help_width=ambr.help?0:27+text_w(&AF_TONO_NAV,"HOME")+text_w(&AF_TONO_NAV,"EDIT")+text_w(&AF_TONO_NAV,"Help");
+    int end=3+amb_nav_width(key,verb,knob);
+    if(second)end+=amb_nav_width(second,action,second_knob);
+    int y=end+cancel_width+page_width+help_width>232?61:76;
     cv_rect(8,y-4,224,1,ALINE);
     int x=amb_nav_item(y,8,key,verb,knob,lit || (turn && str_eq(key,"SELECT")));
     if(second)x=amb_nav_item(y,x,second,action,second_knob,turn && str_eq(second,"SELECT"));
-    if(wrap){y=76;x=8;}
-    if(cancel)x=amb_nav_item(y,x,"HOME","Cancel",0,0);
-    if(paging)x=amb_nav_item(y,x,"SEL",page_action,0,0);
+    if(cancel){
+        if(x+cancel_width>232){y=76;x=8;}
+        x=amb_nav_item(y,x,"HOME","Cancel",0,0);
+    }
+    if(paging){
+        if(x+page_width>232){y=76;x=8;}
+        x=amb_nav_item(y,x,"SEL",page_action,0,0);
+    }
     if(!ambr.help){
+        if(x+help_width>232){y=76;x=8;}
         if(x>8){cv_rect(x,y+6,2,2,ADIM);x+=5;}
         x=amb_nav_cap(y,x,"HOME",0,0);cv_text(x,y+4-AF_TONO_NAV_CAP_Y,&AF_TONO_NAV,"+",ADIM);
         x=amb_nav_cap(y,x+6,"EDIT",0,0);cv_text(x,y+4-AF_TONO_NAV_CAP_Y,&AF_TONO_NAV,"Help",AINK);
