@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Play Tono's generative ambient firmware in your browser.">
+  <title>Play Tono</title>
+  <link rel="stylesheet" href="play.css">
+  <script type="module" src="play.js"></script>
+</head>
+<body>
+  <main>
+    <header>
+      <a href="https://github.com/pietrobolcato/tono" class="brand" aria-label="Tono on GitHub">
+        <svg viewBox="0 0 119 33" width="119" height="33" aria-hidden="true">
+          <path fill="currentColor" fill-rule="evenodd" d="M0 0h30v6H18v27h-6V6H0zM38 9h11l7 7v10l-7 7H38l-7-7V16zm3 6-4 4v4l4 4h5l4-4v-4l-4-4zM64 9h17l6 6v18h-6V19l-4-4h-3l-4 4v14h-6zM101 9h11l7 7v10l-7 7h-11l-7-7V16zm3 6-4 4v4l4 4h5l4-4v-4l-4-4z"/>
+        </svg>
+      </a>
+      <nav aria-label="Tono links">
+        <a href="https://github.com/pietrobolcato/tono/blob/main/ambplus/CONTROLS.md">Controls</a>
+        <a href="https://github.com/pietrobolcato/tono/releases/latest">Download</a>
+      </nav>
+    </header>
+    <h1>Play Tono in your browser</h1>
+    <p>Click <strong>Start</strong> to boot the instrument, then <strong>PLAY</strong> to hear Garden.</p>
+    <iframe id="instrument" title="Tono FM-1 emulator" allow="autoplay; midi"></iframe>
+    <footer>
+      <a id="standalone" href="https://joakimeriksson.github.io/fm1-emu/">Open the instrument in its own tab</a>
+      <a href="https://github.com/joakimeriksson/fm1-emu">Powered by fm1-emu</a>
+    </footer>
+  </main>
+</body>
+</html>

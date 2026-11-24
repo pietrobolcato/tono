@@ -1,0 +1,50 @@
+name: Play Tono on Pages
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tono-pages
+  cancel-in-progress: false
+
+jobs:
+  site:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: main
+      - name: Stage the stable firmware and notices
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          mkdir site
+          cp web/tono/* site/
+          tag=$(gh release view --json tagName --jq .tagName)
+          version=${tag#v}
+          gh release download "$tag" --dir site --pattern "tono-$version.fwsc" --pattern "tono-$version-notices.zip" --pattern SHA256SUMS
+          cd site
+          awk -v fw="tono-$version.fwsc" -v notices="tono-$version-notices.zip" '$2==fw || $2==notices' SHA256SUMS | sha256sum --check
+          rm SHA256SUMS
+          mv "tono-$version.fwsc" tono.fwsc
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
+        with:
+          path: site
+  deploy:
+    needs: site
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.publish.outputs.page_url }}
+    steps:
+      - name: Publish Tono player
+        id: publish
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e

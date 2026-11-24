@@ -1,5 +1,9 @@
 # Try or install Tono
 
+## Browser emulator
+
+[Open the Tono player](https://pietrobolcato.github.io/tono/), click **Start**, then click **PLAY** for Garden. The browser runs the current stable firmware through [fm1-emu](https://github.com/joakimeriksson/fm1-emu). For a larger panel, open the instrument in its own tab.
+
 ## macOS emulator
 
 Download and extract the macOS ARM64 bundle from [Releases](https://github.com/pietrobolcato/tono/releases). From the extracted folder, run `./launch-emulator.sh`. The bundle runs the exact released firmware at 240 MHz with an emulated UC25HQ80. Saved emulator state stays on your computer. The launcher opens the emulator with physical MIDI disabled.
