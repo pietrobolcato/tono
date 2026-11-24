@@ -10,8 +10,8 @@ static void settle(void)
 static void check_random_rate(void)
 {
     amb_fixture_scene(0);
-    amb_target(1);
-    press(B_LFO);
+    press(B_HOME);amb_target(1);
+    press(B_LFO);assert(!amb_second_editor());
     amb_layer_t *l=&amb.layer[0];
     l->base[P_LRATE]=60;
     unsigned depth=l->lfo_depth, destination=l->lfo_dest;
@@ -45,7 +45,7 @@ static void check_random_rate(void)
     ambr.slot=3;amb_save();
     amb_fixture_scene(0);assert(amb_recall(3));
     assert(l->base[P_LRATE]==range);
-    amb_target(1);press(B_LFO);press(B_EDIT);
+    press(B_HOME);amb_target(1);press(B_LFO);press(B_EDIT);
     int current=amb_cycle_rate(range,t->lfo_rnd,0);
     amb_knob(0,-1);assert(l->base[P_LRATE]==current);
     amb_knob(0,2);
