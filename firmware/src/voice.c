@@ -776,6 +776,7 @@ static volatile uint8_t asleep_hit;                     /* (0.6.28) a note went 
 static void trk_note_on(track_t *t, uint32_t note, uint32_t vel)
 {
 #if AMBPLUS
+    if(acid_bloom_state==CUE_TAIL)acid_bloom_state=CUE_OFF;
     if(amb_tail_releasing((unsigned)(t-trk)))return;
     if(amb_tail_any() && voices_busy()>=voice_cap()){
         track_t *victim=0;if(voice_victim(t,0,&victim)==NVOICE)return;

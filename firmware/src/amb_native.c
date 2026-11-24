@@ -1514,6 +1514,15 @@ static __attribute__((noinline)) void amb_output(int32_t *out,uint32_t n)
 {
     if(ambr.view==2 && ambr.page==4 && !ambr.help)amb_measure_eq(0,out,n,2);
     amb_master_eq_output(out,n);
+    /* Trim the signature after its shared effects, including the tail until the
+     * first performance note or transport start. Monitor input retains its gain. */
+    if(acid_bloom_state){
+        if(song.playing)acid_bloom_state=CUE_OFF;
+#if FELUCCA_UAC && defined(UAC_UIN)
+        else if(uin_on)acid_bloom_state=CUE_OFF;
+#endif
+        else for(unsigned i=0;i<2*n;i++)out[i]=out[i]*7/10;
+    }
     if(amb_monitor_active)amb_monitor_output(out,n);
 }
 /* Three broad bands per layer before dry mix and shared sends. Flat EQ is

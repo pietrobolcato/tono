@@ -8,10 +8,6 @@
  * the longest at full rate (DLY_LEN - DLY_EDGE) / FS, the longest of all four times that */
 #include "prof.c"                         /* (0.9.14) MENU > ABOUT > PROFILE's measurements */
 #define CHO_LEN 2048u
-#if AMBPLUS
-/* Set only while the clean power-on cue owns tracks 0–2. */
-static volatile uint8_t acid_bloom_playing;
-#endif
 static union {
     int16_t s[DLY_LEN];
     uint64_t d[DLY_LEN / 4u];            /* (cleared through it: a double word a store, dly_line_clear) */
@@ -2067,7 +2063,6 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
         uint32_t ti = (uint32_t)(t - trk) % NTRK;
         int32_t lvl = LEVEL_Q12[t->p[P_LEVEL] & 127] << 8, pan = t->p[P_PAN] << 8, l0, p0, lq, dl, gl, gr, dgl, dgr;
 #if AMBPLUS
-        if(acid_bloom_playing && ti<3)lvl=lvl*7/10;
         lvl=amb_fade_level(ti,lvl);
 #endif
         if (t->p[P_APDEP] > 0)                          /* (0.6.9) AUTO PAN */

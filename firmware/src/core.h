@@ -11,6 +11,8 @@
 #define AMBPLUS 0
 #endif
 #if AMBPLUS
+enum { CUE_OFF, CUE_PLAYING, CUE_TAIL };
+static volatile uint8_t acid_bloom_state;
 static void amb_init(void);
 static void amb_prepare(void);
 static void amb_control_tick(void);
