@@ -2,7 +2,7 @@
 
 ## Browser emulator
 
-[Open the Tono player](https://pietrobolcato.github.io/tono/), click **Start**, then click **PLAY** for Garden. The browser runs the current stable firmware through [fm1-emu](https://github.com/joakimeriksson/fm1-emu). For a larger panel, open the instrument in its own tab.
+[Open the Tono player](https://pietrobolcato.github.io/tono/), click **Start**, then click **PLAY** for Garden. The browser runs the current stable firmware through [fm1-emu](https://github.com/joakimeriksson/fm1-emu). Use Big screen to show a larger view of the firmware display above the playable panel.
 
 ## macOS emulator
 

@@ -18,16 +18,30 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           ref: main
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: joakimeriksson/fm1-emu
+          ref: 736aded65c8e2e9d652cf595fca248734483a877
+          path: emulator
+          persist-credentials: false
+      - name: Build the browser emulator
+        working-directory: emulator
+        env:
+          RUSTFLAGS: -Cllvm-args=-inline-threshold=2000 -Clink-arg=--export-table -Clink-arg=--growable-table
+          CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 1
+        run: |
+          rustup toolchain install 1.100.0 --profile minimal --target wasm32-unknown-unknown
+          cargo +1.100.0 build --locked --release -p fm1-web --target wasm32-unknown-unknown
       - name: Stage the stable firmware and notices
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
           mkdir site
-          cp web/tono/* site/
           tag=$(gh release view --json tagName --jq .tagName)
           version=${tag#v}
           gh release download "$tag" --dir site --pattern "tono-$version.fwsc" --pattern "tono-$version-notices.zip" --pattern SHA256SUMS
+          python3 web/tono/stage.py emulator emulator/target/wasm32-unknown-unknown/release/fm1_web.wasm site "$version"
           cd site
           awk -v fw="tono-$version.fwsc" -v notices="tono-$version-notices.zip" '$2==fw || $2==notices' SHA256SUMS | sha256sum --check
           rm SHA256SUMS
