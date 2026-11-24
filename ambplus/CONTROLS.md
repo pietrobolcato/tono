@@ -4,7 +4,7 @@ The playable instrument is the real `.fwsc` package in Joakim Eriksson's FM1 har
 
 ## Interaction pattern for new features
 
-Keep button and encoder instructions in the footer. The body shows musical values, choices, and status. The dedicated Help screen explains controls in detail. Group shortcuts by task on titled pages. Introduce each role separately and start with the active role. Draw a divider only between two populated sections.
+Keep button and encoder instructions in the footer. The body shows musical values, choices, and status. The dedicated Help screen explains controls in detail. Group shortcuts by task on titled pages. Introduce each role separately and start with the active role. Keep ranges and choices directly below their explanations. Separate the Help header and navigation from the body with dividers.
 
 Proposals own the display above the navigation footer. Show the proposed result there and hide the underlying page’s controls. HOME + ALGORITHM shows only the two actions for the selected layer. Turn ALGORITHM to keep its type and change its sound, or to change its type. REC triggers the Auto choice, at the next bar during playback.
 

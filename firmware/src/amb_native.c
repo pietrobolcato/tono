@@ -3170,12 +3170,16 @@ static void amb_help_limits(char *out,const param_desc_t *d,unsigned part)
             amb_help_append(out,d->names[i+(d->fmt==F_ENUM?d->min:0)]);
         }
     }else{
+        amb_help_append(out,*out?" Range: ":"Range: ");
         char val[24];const char *unit=0;
         for(unsigned end=0;end<2;end++){
             param_format(d,end?d->max:d->min,val,&unit);
             if(end)amb_help_append(out," to ");
             amb_help_append(out,val);
-            if(unit)amb_help_append(out,unit);
+            if(unit && *unit){
+                if((*unit>='A' && *unit<='Z') || (*unit>='a' && *unit<='z'))amb_help_append(out," ");
+                amb_help_append(out,unit);
+            }
         }
     }
 }
@@ -3198,6 +3202,8 @@ static void amb_draw(void)
     /* Both drawing strips leave the final three canvas rows untouched. */
     _Static_assert(240*147*sizeof(*cv_px)+2*HELP_TEXT_CAP<=sizeof cv_px,"Help text scratch");
     char *overview=(char *)(cv_px+240*147),*hint=overview+HELP_TEXT_CAP;
+    char *continued=0;
+    int continued_y=0;
     unsigned slot=0,part=0;
     const char *section=0;
     if(ambr.help){
@@ -3255,11 +3261,11 @@ static void amb_draw(void)
     if(ambr.help){
         if(ambr.help==1){
             cv_text(12,32,&AF_M,amb_guide_title(l),AINK);
-            amb_help_paragraph(54,overview);
+            amb_help_paragraph(54,overview,138,0);
             amb_help_actions(0);
         }else if(section){
             cv_text(12,32,&AF_M,section,AINK);
-            if(ambr.view)amb_help_paragraph(54,overview);
+            if(ambr.view)amb_help_paragraph(54,overview,138,0);
             else amb_help_actions(0);
         }else{
             char label[16]={0},value[24]={0},key[]="1";
@@ -3272,7 +3278,9 @@ static void amb_draw(void)
             int x=amb_nav_cap(34,12,key,1,0);
             cv_text(x+3,32,&AF_M,label,AINK);
             amb_text(12,56,"CURRENT",ADIM,8);amb_text(75,56,value,AINK,23);
-            amb_help_paragraph(76,overview);
+            int y=amb_help_paragraph(76,overview,138,0);
+            y=amb_help_paragraph(y,hint,138,&continued);
+            continued_y=y>147?y-147:1;
         }
     }else if(proposal && (!ambr.view || ambr.proposal==255)){
         /* Standalone preview content is drawn below. */
@@ -3612,7 +3620,7 @@ static void amb_draw(void)
     }
     cv_blit_cells(0,0);
     cv_begin(240,93,ABG);
-    if(!ambr.help || *hint || (ambr.view==1 && ambr.page!=0 && ambr.help==1 && !amb_proposing()))
+    if(!ambr.help)
         cv_rect(8,0,224,1,ALINE);
     int travel_footer=ambr.view==0 && travel.indicator && !ambr.help && !proposal;
     const char *notice=0;
@@ -3631,7 +3639,7 @@ static void amb_draw(void)
         }
     }
     if(ambr.help){
-        if(*hint)amb_help_paragraph(8,hint);
+        if(continued)amb_help_paragraph(continued_y,continued,61,0);
         else if(ambr.help==1)amb_help_actions(1);
     }
     if(!travel_footer)amb_footer(l);

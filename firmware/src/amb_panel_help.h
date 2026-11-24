@@ -170,10 +170,14 @@ static void amb_help_read(char *overview,char *hint,unsigned first,unsigned seco
     }
 }
 
-static void amb_help_paragraph(int y,char *text)
+static int amb_help_paragraph(int y,char *text,int limit,char **rest)
 {
     char *line=text;
     while(*line){
+        if(y>limit){
+            if(rest)*rest=line;
+            break;
+        }
         char *cut=line,*next=line;
         do{
             while(*next && *next!=' ')next++;
@@ -187,7 +191,9 @@ static void amb_help_paragraph(int y,char *text)
         }while(1);
         char saved=*cut;*cut=0;
         cv_text(12,y+1-AF_TONO_LABEL_CAP_Y,&AF_TONO_LABEL,line,AINK);
+        y+=14;
         if(!saved)break;
-        line=cut+1;y+=14;
+        line=cut+1;
     }
+    return y;
 }
