@@ -52,7 +52,7 @@ int main(int argc,char **argv)
                 unsigned id=amb_sound_id(l,0,i);
                 assert(id==P_E1+i && l->base[id]==preset->e[1+i]);
                 assert(l->base[P_ATK+i]==preset->env[i]);
-                assert(amb_param_hint(l,id)[0]);
+                assert(amb_param_hint(l,id));
                 assert(amb_route_name(l,amb_param_route(id)));
                 assert(amb_param_desc(l,id)->max==100);
             }

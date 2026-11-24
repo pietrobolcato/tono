@@ -2,6 +2,56 @@
 #define AMB_MAIN unused_amb_main
 #include "amb_native_test.c"
 
+static void check_held_home(void)
+{
+    amb_factory(AMB_SCENE_GARDEN);
+    ambr.view=0;
+    for(unsigned target=0;target<5;target++){
+        amb_target(target);
+        amb_piece_t saved=amb;
+        amb_song_controls_t controls=amb_controls;
+        char label[16],value[24];
+        btn_down(B_HOME);frame();
+        for(unsigned k=0;k<4;k++){
+            amb_knob_value(k,label,value);
+            if(!target){
+                static const char *const master[]={"SPACE","ECHO","MOTION","WARMTH"};
+                assert(!strcmp(label,master[k]));continue;
+            }
+            if(k==2)assert(!strcmp(label,"MID EQ"));
+            if(k==3)assert(!strcmp(label,"DRIVE"));
+            if(k==1)continue;
+            turn(EN_K1+k,1);
+            assert(ambr.home_used && !memcmp(&controls,&amb_controls,sizeof controls));
+            if(k==2)assert((target?amb.layer_eq[target-1][1]:amb.eq[1])==
+                           (target?saved.layer_eq[target-1][1]:saved.eq[1])+1);
+            if(k==3)assert(amb.layer[target-1].base[P_DIST]==saved.layer[target-1].base[P_DIST]+2);
+            if(k==0){
+                if(!strcmp(label,"LOW EQ"))assert(amb.layer_eq[target-1][0]==saved.layer_eq[target-1][0]+1);
+                else assert(!strcmp(label,"ATTACK") && amb.layer[target-1].base[P_ATK]==saved.layer[target-1].base[P_ATK]+2);
+            }
+        }
+        btn_up(B_HOME);frame();
+        amb_knob_value(1,label,value);assert(!strcmp(label,"DENSITY") && ambr.target==target);
+        for(unsigned k=0;k<4;k++)assert(!memcmp(saved.layer[k].macro,amb.layer[k].macro,4));
+        amb=saved;
+    }
+    amb_target(1);
+    for(unsigned role=0;role<8;role++){
+        amb_patch(0,role,0);
+        if(role==6)amb.layer[0].base[P_E1]=3;
+        btn_down(B_HOME);frame();
+        char label[16],value[24];
+        amb_knob_value(0,label,value);
+        assert(!strcmp(label,role==4 || role==6?"LOW EQ":"ATTACK"));
+        amb_knob(0,200);amb_knob_value(0,label,value);
+        assert(!strcmp(value,role==4 || role==6?"12dB":"100%"));
+        amb_knob(0,-200);amb_knob_value(0,label,value);
+        assert(!strcmp(value,role==4 || role==6?"-12dB":"0%"));
+        assert(ambr.last_edit_route[0]==1+(role==4 || role==6?ROUTE_EQ:amb_param_route(P_ATK)));
+        btn_up(B_HOME);frame();
+    }
+}
 static void set_travel(int style)
 {
     ambr.view=2;ambr.page=7;timing_tab=0;
@@ -60,6 +110,7 @@ int main(void)
         assert(amb_theme()==choice);
     }
     favorites.factory[15][14]=THEME_DIETER;
+    check_held_home();
     check_manual_density();
     const unsigned scene=AMB_SCENE_GARDEN;
     amb_factory(scene);

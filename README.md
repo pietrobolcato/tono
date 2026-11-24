@@ -12,7 +12,7 @@ Open-source generative ambient firmware for the M-VAVE FM-1. Four layers share a
 - **Perform** · Turn ALGORITHM on HOME to travel through the piece. Hold HOME and turn it with a layer selected to evolve that layer. Use HOME + EDIT for contextual help.
 - **Watch** · The Contour and Train Ride displays respond to the music. Choose Studio Dark, Studio Light or Dial in GLO.
 
-**[Play in your browser](https://pietrobolcato.github.io/tono/)** · [Download firmware or the macOS emulator](https://github.com/pietrobolcato/tono/releases) · [Install and recover](docs/tono/INSTALL.md) · [Controls](ambplus/CONTROLS.md) · [Build from source](docs/tono/BUILD.md)
+**[Play in your browser](https://pietrobolcato.github.io/tono/)** · [Download firmware or the macOS emulator](https://github.com/pietrobolcato/tono/releases) · [Install and recover](docs/tono/INSTALL.md) · [Controls](ambplus/CONTROLS.md) · [Help screens](docs/tono/HELP.md) · [Build from source](docs/tono/BUILD.md)
 
 Read the [architecture notes](docs/tono/ARCHITECTURE.md) and [release history](docs/tono/releases/) to get oriented. Report issues with your Tono version, steps to reproduce, and whether it occurs on hardware or in the emulator.
 

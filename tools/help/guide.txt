@@ -1,0 +1,510 @@
+# Groups occupy consecutive entries. Each line is one card.
+[home]
+Choose Master to shape the whole mix, or a layer to shape one instrument. The level pot follows the selected target.
+Hold HOME for Attack or Low EQ, the role shortcut, Mid EQ and Drive. Release HOME to return to the main controls.
+[ensemble]
+Read each layer's peak after its gain. NOTE is held, REL is fading and TAIL is a sound handoff. REST can still leave echoes.
+[zen]
+Notes animate the landscape. The transport moves the scene and travel changes its colours. The mix controls still work here.
+[mode]
+Choose what this layer plays. A new role starts its own automatic pattern and keeps the layer level.
+[sound]
+Browse patches silently before applying one. The four controls shape the current patch immediately.
+Set the oscillator or engine colours before the layer filter and effects.
+Shape the filter response. Listen for the edge around its cutoff as you add resonance.
+Set how this layer plays its notes and where it sits in stereo.
+Balance the drum voices inside this kit before changing the whole layer level.
+[sample]
+Choose a recording and trim its start and end to play just the part you want.
+Set the playback mode, tuning and loop. Smooth the join if repeats click.
+Shape the loop edge, filter, stereo motion and room around the recording.
+Record an incoming USB audio stream into this layer's take. Finish the take before editing it.
+[env]
+Shape a note from its first attack to the tail after release. Try a longer attack for a swell.
+Shape each percussion hit. Short hits leave room between steps.
+Trim the sample and soften its edges to avoid abrupt starts or stops.
+[lfo]
+Move a destination around its saved value. Choose the group, then the destination. Raise depth to hear it.
+Set a steady cycle or let each cycle pick a speed between two limits.
+[pattern]
+Build phrases from the chord and scale. Set how often notes arrive and how densely the layer plays.
+Generate a drum part. Swing delays offbeats and fills add hits near the end of a phrase.
+Choose a motion for the noise bed. Steady holds a continuous sound.
+Place notes or rests one step at a time. Each note has its own velocity.
+Choose a drum lane and toggle its hits on the step keys. Other lanes keep their own hits.
+[fx]
+Push this layer into distortion. Choose a circuit and use tone to tame the bright edge.
+Add chorus for width or sweep the layer across the stereo field.
+Feed this layer into the shared echo. Its delay algorithm affects every layer using that bus.
+Feed this layer into the shared room. A higher send leaves more reverb after each note.
+Place the layer left or right or move it repeatedly with auto-pan.
+Overlap small pieces of the layer's recent sound. Blend them into the dry signal for a moving texture.
+[eq]
+Boost or cut lows, mids and highs on this layer. Trim its output if a boost makes it too loud.
+Adjust the balance of lows, mids and highs across the whole mix. Trim the output after boosting a band.
+[global]
+Set how strongly each aspect of the piece drifts. The interval spaces automatic chord changes.
+Set the root, available notes and tempo for generated parts. Changing scale replaces the note pool.
+Rhythm sets when notes land, phrase sets their path and interplay sets who plays together. Style changes land every four bars during play.
+Choose the screen palette. The same controls and sounds are available in each theme.
+Choose how the song changes as you travel. Tail time and handoff shape the switch between sounds.
+[masterfx]
+Set the shared room for all reverb sends. Size changes its space and damping softens its tail.
+Set the shared repeats. Time spaces the echoes and feedback determines how long they continue.
+Set chorus movement and stereo width across the mix. Reverb modulation moves the room tail.
+Colour the full mix with filter and saturation. Delay colour and modulation shape its echoes.
+[timing]
+Set the unit and shortest and longest wait between moves. Equal limits give a regular pulse. Reach limits each new destination.
+Rotate generator families or choose a whole preset. Follow Travel shares its deadline; a separate clock uses the two limits.
+Replace one eligible layer at a time. Follow Travel shares its deadline; a separate clock uses the two limits.
+[modal]
+Recall a factory song for a fresh take or a user slot for its stored arrangement. During play it enters at the next bar.
+Save a snapshot of the current song in a user slot. During play the snapshot writes when playback stops.
+The slot already has a save. Confirm to replace it, or cancel to keep its contents.
+Restore this layer's sound, mix and pattern from the last loaded piece. Other layers keep playing.
+Keep the role to change its sound, or replace the role and start an automatic pattern. During play the change lands next bar.
+Browse settings for this page. Applying a choice changes this group of controls together.
+Save the four generator settings together for recall in another song.
+Preview a new chord before changing the harmony of the generated layers.
+Preview a new role before replacing this layer's instrument and automatic pattern.
+Preview the proposed sound. Applying it replaces this layer's patch and lets the old sound release.
+[acid]
+Open the resonant low-pass filter.
+Emphasize the tone around the cutoff.
+Let the note envelope sweep the filter.
+Set how long the filter sweep rings.
+[grain]
+Blend the grains into the original layer.
+Stretch each grain into a longer fragment.
+Transpose the grains in semitones.
+Spread the read positions for a less regular texture.
+[oscillator_waveform]
+Pick the shape that sets the basic harmonic colour.
+[spread_oscillator_tuning]
+Separate the pitches for a wider, beating tone.
+[blend_the_oscillators]
+Set the balance between the two oscillators.
+[mix_in_noise]
+Add unpitched hiss to the oscillator tone.
+[filter_cutoff]
+Move the filter edge to darken or open the sound.
+[filter_resonance]
+Raise the peak at the filter edge.
+[filter_drive]
+Push the signal harder into the filter.
+[second_oscillator_pitch]
+Tune the second oscillator against the first.
+[first_phase_waveform]
+Choose the first phase-distortion wave.
+[second_phase_waveform]
+Choose the second phase-distortion wave.
+[phase_distortion_amount]
+Bend the wave to bring out new harmonics.
+[envelope_to_distortion]
+Sweep the distortion as each note develops.
+[spread_the_two_lines]
+Detune the two lines for a beating sound.
+[combine_the_two_lines]
+Choose how the two phase lines mix.
+[sub_oscillator_level]
+Bring in a lower octave under the main tone.
+[phase_feedback]
+Feed the phase output back for a rougher tone.
+[chip_model]
+Choose the chip synthesis model.
+[wave_or_formula_family]
+Choose the chip wave or formula family.
+[pulse_width_or_table]
+Change pulse width or table position.
+[crush_or_variation]
+Change the crunch or variation of the chip sound.
+[chip_filter_cutoff]
+Move the chip filter edge.
+[vibrato_or_fine_motion]
+Add vibrato or motion to the chip tone.
+[shape_the_chip_waveform]
+Change the shape of the chip wave.
+[bit_mask_or_loop_length]
+Set the bit mask or the length of the loop.
+[starting_vowel_a_e_i_o_u]
+Choose the vowel at the start of each note.
+[vowel_to_move_toward]
+Choose the vowel the note moves toward.
+[time_between_vowels]
+Set how long the vowel change takes.
+[raise_or_lower_formants]
+Shift the resonances that give a vowel its size.
+[glottal_brightness]
+Brighten the buzz at the core of the voice.
+[air_in_the_voice]
+Mix breath noise into the voiced tone.
+[sharpen_vowel_resonances]
+Emphasize the peaks that define the vowel.
+[randomize_vowel_per_note]
+Vary the vowel from one note to the next.
+[drawbar_registration]
+Choose a drawbar mixture as a starting colour.
+[lower_drawbars]
+Bring out the low organ harmonics.
+[middle_drawbars]
+Bring out the middle organ harmonics.
+[upper_drawbars]
+Bring out the high organ harmonics.
+[percussion_harmonic]
+Add a pitched accent at the start of the note.
+[key_click_level]
+Bring out the click when a key starts.
+[organ_overdrive]
+Push the organ tone into saturation.
+[rotary_speaker_speed]
+Set the speed of the rotating speaker effect.
+[morph_the_drum_kit]
+Blend between kit colours.
+[tune_the_kit]
+Shift the tuning of the whole kit.
+[dark_to_bright]
+Open up the high end of each hit.
+[length_of_each_hit]
+Set how long a hit rings after its attack.
+[noise_in_the_hit]
+Blend noise into the drum tone.
+[fm_at_the_attack]
+Add a bright FM transient to each hit.
+[wavefold_the_hit]
+Fold the drum wave for extra harmonics.
+[drum_saturation]
+Drive the drum tone into saturation.
+[noise_generator]
+Choose the source of the noise.
+[noise_brightness]
+Brighten or darken the noise spectrum.
+[noise_filter_frequency]
+Move the filter through the noise spectrum.
+[filter_peak]
+Emphasize the band around the filter edge.
+[pitch_tracking]
+Make the filter follow the played pitch.
+[grain_density_or_register]
+Set grain density or the source register.
+[internal_noise_movement]
+Animate the noise inside a sustained note.
+[resolution_or_clock]
+Set the resolution or rate of the noise clock.
+[operator_routing]
+Choose which FM operators modulate each other.
+[operator_feedback]
+Feed an operator back into itself for more bite.
+[modulation_amount]
+Increase the strength of the FM overtones.
+[modulator_frequency_ratio]
+Tune the modulator relative to the played note.
+[modulator_envelope_time]
+Set how long the FM colour takes to change.
+[velocity_to_modulation]
+Make harder notes produce more FM overtones.
+[spread_carrier_tuning]
+Detune the carriers for a wider sound.
+[fm_voice_source]
+Choose the source of the FM voice.
+[bundled_audio_source]
+Choose the recording used by this voice.
+[playback_character]
+Choose how the recording plays when triggered.
+[pitch_in_semitones]
+Transpose the recording in semitones.
+[repeat_the_sample]
+Repeat the selected portion of the recording.
+[start_of_playback]
+Move the first playback point into the recording.
+[end_of_playback]
+Set where playback ends in the recording.
+[soften_loop_joins]
+Blend across the repeat point to soften clicks.
+[sample_brightness]
+Adjust the high end of the recording.
+[modulator_pitch_ratio]
+Tune the modulator relative to the carrier.
+[sustained_fm_brightness]
+Set how bright the held part of a note sounds.
+[swell_or_strike]
+Choose a swelling or struck FM attack.
+[transient_length]
+Set how long the initial FM accent lasts.
+[fine_tuning_in_cents]
+Detune in cents for a subtle pitch offset.
+[second_harmonic_level]
+Add the octave harmonic above the carrier.
+[sub_octave_level]
+Blend a lower octave under the carrier.
+[carrier_feedback]
+Feed the carrier back for extra harmonics.
+[metal_in_the_hats]
+Bring out the metallic part of the hats.
+[tune_kick_and_metal]
+Shift the tuning of the kick and metal voices.
+[hat_filter_frequency]
+Move the filter edge on the hats.
+[pulse_hit_length]
+Set how long a hit rings after its attack.
+[noise_in_the_hats]
+Blend noise into the hats.
+[kick_pitch_drop]
+Set the initial pitch drop of the kick.
+[extra_harmonic]
+Blend another harmonic into the pulse.
+[pulse_saturation]
+Drive the pulse into saturation.
+[level_of_this_drum_voice]
+Balance this drum voice within its kit.
+[motion_of_the_formula]
+Animate the formula while a note plays.
+[feed_back_formula_output]
+Feed the formula output back into itself.
+[loop_the_formula_clock]
+Repeat a section of the formula clock.
+[vary_the_formula]
+Change the pattern produced by this formula.
+[choose_a_sound_formula]
+Choose the formula that generates the sound.
+[strength_of_the_attack]
+Set how firmly the note starts.
+[bright_tine_overtones]
+Bring out the bright overtones of the tine.
+[tremolo_intensity]
+Increase the repeating change in volume.
+[round_off_the_top_end]
+Soften the brightest overtones.
+[oscillator_shape]
+Choose the basic oscillator wave.
+[cross_modulation_amount]
+Let one oscillator reshape the other.
+[internal_filter_cutoff]
+Move the engine's internal filter edge.
+[internal_filter_peak]
+Raise the peak at the internal filter edge.
+[filter_response_shape]
+Choose which frequency band the filter passes.
+[emphasize_cutoff]
+Emphasize the tone around the filter edge.
+[drive_intensity]
+Drive the layer harder into saturation.
+[drive_circuit]
+Choose the distortion circuit for this layer.
+[drive_brightness]
+Brighten or darken the driven tone.
+[send_to_shared_chorus]
+Feed more of this layer to the shared chorus.
+[send_to_shared_delay]
+Feed more of this layer to the shared echo.
+[send_to_shared_reverb]
+Feed more of this layer to the shared room.
+[auto_pan_speed]
+Set how quickly the layer moves left and right.
+[auto_pan_width]
+Set how far the layer moves left and right.
+[auto_pan_waveform]
+Choose the shape of the stereo movement.
+[stereo_position]
+Place this layer between the two speakers.
+[poly_mono_or_legato]
+Choose chords, single notes or joined notes.
+[time_to_slide_to_a_note]
+Set the time taken to slide between pitches.
+[transpose_the_layer]
+Move the layer up or down in semitones.
+[playback_gain]
+Balance the recording before layer effects.
+[sample_edge_softness]
+Fade the edges of the recording to reduce clicks.
+[low_band_gain]
+Boost or cut the weight of the low end.
+[middle_band_gain]
+Boost or cut the body of the middle range.
+[high_band_gain]
+Boost or cut the brightness of the high end.
+[output_trim]
+Adjust output level after the three EQ bands.
+[room_size_sends_width]
+Widen the room and raise the layer sends.
+[repeats_sends_and_return]
+Raise the echo return, feedback and sends.
+[chorus_pan_and_room_mod]
+Add chorus, stereo movement and room modulation.
+[body_drive_and_echo_tone]
+Round attacks and darken echoes as drive rises.
+[drive_attack_and_tone]
+Round the attack and add drive to the tone.
+[chorus_and_filter_motion]
+Add chorus and move the filter for more motion.
+[hold_notes_raise_sustain]
+Raise sustain and let generated notes hold longer.
+[room_and_echo_sends]
+Send more of the layer to the room and echo.
+[round_off_the_attack_tone]
+Soften the bright edge at the start of a note.
+[lengthen_the_ring]
+Let each bell ring out for longer.
+[darken_the_bass_tone]
+Soften the upper harmonics of the bass.
+[portamento_and_release]
+Add pitch slides and lengthen the release.
+[soften_hit_brightness]
+Soften the bright edge of each drum hit.
+[more_generated_hits]
+Increase the number of generated drum hits.
+[darken_the_noise]
+Filter the bright edge out of the noise.
+[noise_drift_and_release]
+Let the noise drift and fade for longer.
+[transpose_the_sample]
+Shift the recording up or down in pitch.
+[smooth_loop_boundaries]
+Blend across the join of a repeated sample.
+[stereo_movement]
+Move the recording across the stereo field.
+[chance_of_a_chord_change]
+Set the chance of an automatic chord change.
+[slow_filter_variation]
+Let the filter colour drift over time.
+[vary_generated_density]
+Let the density of generated notes change.
+[vary_the_reverb_send]
+Let the room send drift over time.
+[transpose_the_note_pool]
+Transpose the whole note pool to a new root.
+[replace_the_scale_pool]
+Replace the note pool with the selected scale.
+[transport_speed]
+Set the tempo in beats per minute.
+[auto_chord_interval]
+Set the interval between automatic chords.
+[rhythmic_event_grid]
+Choose the grid that places generated notes.
+[phrase_contour]
+Choose the path taken by generated pitches.
+[how_layers_take_turns]
+Choose when layers play together or leave gaps.
+[chance_of_extra_events]
+Raise the chance of extra generated events.
+[reverb_room_size]
+Set the size of the shared room.
+[reverb_filter]
+Shape the returning reverb tone.
+[high_frequency_decay]
+Make high frequencies fade faster in the tail.
+[reverb_algorithm]
+Choose the type of shared room.
+[echo_level]
+Set the level of the returning echoes.
+[echo_interval]
+Set the spacing between repeats.
+[echo_repeats]
+Feed the echo back to make more repeats.
+[delay_algorithm]
+Choose how repeats move and decay.
+[chorus_movement_depth]
+Set the width of the chorus pitch movement.
+[chorus_movement_rate]
+Set how quickly the chorus moves.
+[stereo_width]
+Spread the mix across the stereo field.
+[reverb_modulation]
+Add movement to the shared reverb tail.
+[sweep_the_master_filter]
+Sweep the filter across the full mix.
+[output_saturation]
+Drive the final mix into saturation.
+[delay_brightness]
+Brighten or darken each repeat.
+[delay_modulation]
+Add pitch movement to the repeats.
+[time_to_full_level]
+Set the time from silence to full level.
+[time_down_to_sustain]
+Set the time from the peak to the held level.
+[level_while_held]
+Set the level while the note stays held.
+[time_after_note_off]
+Set the time to fade after the note ends.
+[modulation_waveform]
+Choose the shape of each modulation cycle.
+[cycles_per_second]
+Set the number of cycles per second.
+[amount_of_modulation]
+Increase how far the destination moves.
+[patch_fx_or_pattern]
+Choose the parameter that will move.
+[generated_hit_density]
+Set how often generated drum hits occur.
+[delay_offbeat_hits]
+Push offbeat hits later for a loping feel.
+[phrase_end_fill_strength]
+Add more hits near the end of a phrase.
+[vary_drum_lane_choices]
+Vary which drum lanes play each phrase.
+[note_selection_pattern]
+Choose how the layer picks its next notes.
+[layer_step_interval]
+Set the time between steps in this layer.
+[generated_event_density]
+Set how often the layer sounds a step.
+[chance_to_follow_chord]
+Set how closely notes follow the current chord.
+[select_an_edit_slot]
+Choose which manual step to edit.
+[pitch_of_this_slot]
+Set the pitch stored on this step.
+[strength_of_this_slot]
+Set how hard the note plays on this step.
+[choose_a_drum_voice]
+Choose the drum lane to edit.
+[enable_this_slot]
+Choose a hit or a rest for this step.
+[layer_output_level]
+Set this layer's level in the whole mix.
+[fewer_notes_home_macro]
+Thin this layer's attacks. At full density every programmed attack can sound.
+[fewer_notes_home_echo]
+Thin attacks across the whole mix. Existing tails continue to ring.
+[shift_the_starting_vowel]
+Offset the starting vowel of the patch.
+[count_bars_or_seconds]
+Choose bars, seconds, minutes or hours.
+[shortest_wait]
+Set the shortest wait before another move.
+[longest_wait]
+Set the longest wait before another move.
+[farthest_destination]
+Limit the distance to a new destination.
+[enable_this_lane]
+Allow this timing lane to make changes.
+[follow_journey_or_set_interval]
+Share the travel deadline or use a separate clock.
+[shortest_interval]
+Set the shortest wait on this lane's clock.
+[longest_interval]
+Set the longest wait on this lane's clock.
+[bounded_or_endless_travel]
+Limit travel to the original range or keep moving beyond it.
+[sound_replacement_time]
+Set the time allowed for the old sound to fade.
+[release_or_crossfade]
+Let the old tail release or blend the two sounds.
+[move_while_playing]
+Allow automatic travel while the song plays.
+[shortest_cycle_in_bars]
+Set the fewest bars in a random cycle.
+[longest_cycle_in_bars]
+Set the most bars in a random cycle.
+[fixed_or_random_per_cycle]
+Keep one rate or pick a new one each cycle.
+[lowest_cycle_frequency]
+Set the slowest random cycle frequency.
+[shift_both_rate_limits]
+Move the two random rate limits together.
+[highest_cycle_frequency]
+Set the fastest random cycle frequency.
+[slide_into_selected_step]
+Glide from the previous pitch into this step.
+[shared_delay_algorithm]
+Choose the echo algorithm shared by all layers.

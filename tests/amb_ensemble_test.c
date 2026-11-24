@@ -24,8 +24,8 @@ static void check_knobs(void)
             assert(!*label && !*after && !memcmp(&amb,&piece,sizeof amb) && ambr.cursor==runtime.cursor);
             continue;
         }
-        const char *hint=amb_knob_hint(&amb.layer[0],knob);
-        assert(hint && *hint && strlen(hint)<=25);
+        unsigned card=amb_knob_card(&amb.layer[0],knob);
+        assert(card && card<HELP_COUNT);
         amb_knob_value(knob,label,before);
         assert(*label && strcmp(label,"-") && *before);
         static const int delta[]={1,9,-18};
@@ -36,6 +36,26 @@ static void check_knobs(void)
             ambr.view,ambr.page,ambr.bank,ambr.detail,amb.layer[0].role,knob,label,after);
         assert(strcmp(before,after));amb=piece;ambr=runtime;checks++;
     }
+}
+/* Check the actual firmware reader against every authored paragraph, including
+ * entries spanning block-directory boundaries and overlapping LZ copies. */
+static void audit_help_text(void)
+{
+    FILE *source=fopen("tools/help/guide.txt","r");
+    assert(source);
+    char line[512],overview[HELP_TEXT_CAP],hint[HELP_TEXT_CAP];
+    unsigned card=1;
+    while(fgets(line,sizeof line,source)){
+        line[strcspn(line,"\r\n")]=0;
+        if(!line[0] || line[0]=='#' || line[0]=='[')continue;
+        assert(card<HELP_COUNT);
+        amb_help_read(overview,hint,card,card);
+        assert(!strcmp(line,overview) && !strcmp(line,hint));
+        card++;
+    }
+    assert(card==HELP_COUNT);
+    fclose(source);
+    printf("%u Help paragraphs decoded byte for byte\n",card-1);
 }
 static void audit_controls(void)
 {
@@ -108,6 +128,7 @@ int main(void)
     shortcut(B_SEQ);assert(ambr.view==4 && song.grid==2);
     for(k=0;k<4;k++){turn(EN_K1+k,-1);assert(amb.layer[k].level<saved.layer[k].level);}
     assert(ambr.target==1);press(B_HOME);assert(ambr.view==0);
+    audit_help_text();
     audit_controls();
     puts("Factory scenes, expanded recipe bounds, vocal save/recall, modal help and ensemble controls PASS");
     return 0;
