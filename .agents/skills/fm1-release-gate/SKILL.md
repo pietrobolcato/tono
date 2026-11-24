@@ -4,7 +4,7 @@ description: Read-only safety check of an AMB+ FM1 release artifact against the 
 ---
 
 # Human hardware release review
-First apply the changelog and diff review in AGENTS.md, “Choose release checks from the changelog”. Use the extended checks below when relevant to the change. For a lightweight package, record build and checksum evidence, attribute prior evidence to its version and leave hardware signoff to the owner.
+First apply the changelog and diff review in AGENTS.md. Use the extended checks below when relevant to the change. For a lightweight package, record build and checksum evidence, attribute prior evidence to its version and leave hardware signoff to the owner.
 
 1. Inspect `SAFE_FLASH_GATES.md`, `MILESTONE_TEST_CARD.md`, pinned source revision and artifact hash.
 2. Obtain *actual* JEDEC flash-chip ID, complete read-only backup files and checksums, exported settings, compatible known-good firmware, and documented recovery route for the owner's Mac/device.

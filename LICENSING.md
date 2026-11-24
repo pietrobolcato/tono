@@ -120,3 +120,11 @@ The six percussion takes used by the Tono sampled textures are from the same pin
 Eagle Landed uses Apollo 11 landing radio, Radio Check uses the Shuttle “How Do You Read” recording, and Moon Address uses an excerpt of President John F. Kennedy’s Rice University address. Audio courtesy of NASA. Tono trims, resamples and encodes the recordings. The original filenames, timings and source hashes are in tools/gen_amb_speech.py. [NASA Historical Sounds](https://www.nasa.gov/historical-sounds/) · [NASA media usage](https://www.nasa.gov/nasa-brand-center/images-and-media/).
 
 Tono’s microphone companion independently implements the host-to-instrument audio routing demonstrated by April OS. Tono uses its JIANT USB Audio Class receiver and its own capture codec and song format. [April OS reference revision](https://github.com/beashoko/april-os/tree/6b65734fad087a114773fae5f7e6c11410b00f6c).
+
+## Additional Tono components
+
+- Tono ports the A22 electric and analog models from [A22](https://github.com/abektes/a22). See the pinned entry in the release provenance and the MIT notice in `firmware/src/a22/LICENSE`.
+- See `LICENSES/Marbles.txt` and `LICENSES/Downspout.txt` for the independently adapted phrase algorithms. Their original revisions are in the release provenance.
+- Kiel Harbour by schaarsen and Subway Voice by swelltoe77 are CC0. See `tools/field/manifest.json` for source links and hashes.
+- The Nostalgic New Inn factory song is a Tono project arrangement by the project owner. The factory bank is distributed with Tono.
+- The optional desktop emulator is [fm1-emu](https://github.com/joakimeriksson/fm1-emu), under MIT. Its bundle includes the emulator notice and a patch against the pinned upstream revision.
