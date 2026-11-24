@@ -3423,7 +3423,8 @@ static void amb_draw(void)
     cv_blit_cells(0,0);
     cv_begin(240,93,ABG);
     cv_rect(8,0,224,1,ALINE);
-    amb_footer(l);
+    int travel_footer=ambr.view==0 && travel.indicator && !ambr.help && !proposal;
+    if(!travel_footer)amb_footer(l);
     if(proposal && ambr.evolve_open){
         if(ambr.evolve_queued)amb_text(15,10,"Queued for next bar",AQUEUE,24);
         else if(ambr.evolve_role==255)amb_text(15,10,"No eligible role",ADIM,24);
@@ -3464,16 +3465,17 @@ static void amb_draw(void)
     if(ambr.view==1 && ambr.page==1 && ambr.level_feedback_active &&
        ambr.level_feedback_target==ambr.edit_layer+1 && fm1_ms-ambr.level_feedback_ms<1200u){
         amb_text(10,44,"LAYER GAIN",ADIM,10);amb_number(70,44,amb.layer[ambr.edit_layer].level*100/127,AQUEUE);
-    }else if(ambr.view==0 && travel.indicator){
+    }else if(travel_footer){
         int position=travel.wanted;
-        amb_text(10,44,"TRAVEL",ADIM,7);
-        amb_text(55,44,amb_landscape_name(position),AINK,20);
-        if(position>0)amb_text(166,44,"+",AQUEUE,1);
-        amb_number(174,44,position,AQUEUE);
+        cv_rect(8,57,224,1,ALINE);
+        amb_text(10,65,"TRAVEL",ADIM,7);
+        cv_text(53,60,&AF_M,amb_landscape_name(position),AINK);
+        if(position>0)amb_text(184,65,"+",AQUEUE,1);
+        amb_number(192,65,position,AQUEUE);
         int marker=120+clamp(position,-18,18)*6;
-        cv_rect(12,55,217,1,ALINE);
-        cv_rect(120,53,1,3,ADIM);
-        cv_rect(marker-2,52,5,4,TONO_ORANGE);
+        cv_rect(12,84,217,1,ALINE);
+        cv_rect(120,82,1,5,ADIM);
+        cv_rect(marker-2,81,5,7,TONO_ORANGE);
     }else if(ambr.notice[0] && fm1_ms-ambr.notice_ms<2500u)
         amb_text(10,44,ambr.notice,ADIM,39);
     else if(amb_tail_any())

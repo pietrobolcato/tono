@@ -61,3 +61,11 @@ Last Tram is the reference workflow. It started with a tenor sax and a sparse Ka
 For new Lead sounds and environmental or spoken textures, always obtain a Gemini audio review of the rendered sound solo and in a representative mix. Check recognisability, register, repetition and masking. Record pending review explicitly if the judge is unavailable.
 
 For bass, lead and environmental additions, compare the candidate blind against the closest existing patch using the same notes, timing, matched listening level and backing. Retain the A/B key and the actual audio verdict. Distinguish a recognizable field recording from a synthetic evocation. If a judge recommends revision, identify whether the complaint concerns the candidate or the reference.
+
+## Choose release checks from the changelog
+
+For each Tono package, review the changelog and the full source diff from the previous packaged commit, including build flags and assets. Record the affected paths and the chosen checks in the release card. This policy supersedes blanket per-change and per-release test requirements in this handoff.
+
+For isolated copy, footer or layout changes, build the exact firmware, check version, identity and linker budgets, and verify packaged checksums and provenance. Use a focused visual or interaction check when it would resolve a specific risk. Skip extensive regression suites, audio renders and long playback runs for these changes. Honor an explicit request to skip testing and record what was skipped.
+
+For audio, scheduling, hot-path rendering, performance, persistence, tools or flash-layout changes, run the relevant regression and emulator checks. Use the extended performance or recovery checks when the change can affect those properties. Investigate unexplained deltas before selecting a lighter review. Attribute earlier measurements to their original versions. Packaging and manual hardware signoff remain separate decisions.
