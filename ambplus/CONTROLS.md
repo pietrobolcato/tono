@@ -4,7 +4,7 @@ The playable instrument is the real `.fwsc` package in Joakim Eriksson's FM1 har
 
 ## Interaction pattern for new features
 
-SEL changes the main page. SELECT moves within a page. HOME + EDIT opens contextual Help, SELECT browses the shortcut guide and each assigned knob, and HOME closes it.
+Keep a control and its action together. Use a second footer line for SEL page navigation and HOME cancellation when a page has its own controls. SEL changes the main page. SELECT moves within a page. HOME + EDIT opens contextual Help, SELECT browses the shortcut guide and each assigned knob, and HOME closes it.
 
 - **EDIT opens detail in place.** Keep the familiar controls on the main page. Name the detail action in the footer, use EDIT to return, and explain each changed knob in HOME + EDIT. For a bounded range, show units, let either endpoint meet the other, and clamp the endpoint being turned.
 - **SELECT navigates** the current screen, such as a layer, module, detail group or LFO category. **HOME ALGORITHM travels live through the song**. On the relevant editing pages **ALGORITHM proposes a replacement** chord, role, patch or sample source. Continue turning ALGORITHM to browse. Describe proposed sounds by what someone would hear, using auditioned descriptions for factory sounds.

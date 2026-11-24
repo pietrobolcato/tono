@@ -62,7 +62,7 @@ static void check_page_presets(void)
                 assert(ambr.view==view && ambr.piece_preview==255 && !memcmp(&amb,&old,sizeof amb));
                 if(!amb_local_count()){assert(!ambr.local_preset);continue;}
                 assert(ambr.local_preset==index && amb_rec_action());
-                press(B_HOME);assert(!ambr.local_preset && !memcmp(&amb,&old,sizeof amb));
+                press(B_HOME);assert(!ambr.local_preset && ambr.view==view && ambr.page==page && !memcmp(&amb,&old,sizeof amb));
                 ambr.view=view;ambr.page=page;ambr.fx=fx;
                 turn(EN_PRESET,index);press(B_REC);
                 assert(amb_valid(&amb) && !ambr.local_preset);
@@ -118,7 +118,8 @@ int AMB_MAIN(int argc,char **argv)
     turn(EN_ALGO,2);turn(EN_SELECT,1);assert(ambr.proposal==2 && amb.layer[0].role==0);press(B_REC);assert(amb.layer[0].role==2);
     press(B_SCL);assert(ambr.page==1);before=amb;turn(EN_SELECT,1);assert(ambr.proposal==255);turn(EN_ALGO,1);turn(EN_SELECT,1);
     assert(ambr.proposal==1 && !memcmp(&amb,&before,sizeof amb));
-    press(B_REC);assert(amb.layer[0].patch==1 && ambr.proposal==255);
+    press(B_HOME);assert(ambr.proposal==255 && ambr.view==1 && ambr.page==1 && !memcmp(&amb,&before,sizeof amb));
+    turn(EN_ALGO,1);press(B_REC);assert(amb.layer[0].patch==1 && ambr.proposal==255);
     before=amb;turn(EN_PRESET,1);assert(ambr.local_preset && ambr.view==1 && !memcmp(&before,&amb,sizeof amb));
     press(B_REC);assert(!ambr.local_preset && amb.layer[0].patch==before.layer[0].patch && amb.layer[0].base[P_REV]!=before.layer[0].base[P_REV]);
     turn(EN_PRESET,1);press(B_LFO);assert(!ambr.local_preset && ambr.page==3);

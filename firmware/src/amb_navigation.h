@@ -1,28 +1,33 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The bottom 21 pixels of the second display tile are shared by all pages. */
-static int amb_nav_cap(int x,const char *name,int knob,int lit)
+/* Keep each control and its action together. A second row carries navigation when needed. */
+static int amb_nav_cap(int y,int x,const char *name,int knob,int lit)
 {
     int width=text_w(&AF_TONO_NAV,name)+(knob?21:6);
     uint16_t fg=lit?TONO_INK:AINK;
     cv_bg=lit?amb_primary_accent():ABG;
-    tono_round(x,76,width,13,1,lit?cv_bg:ADIM);
-    if(!lit)tono_round(x+1,77,width-2,11,1,ABG);
+    tono_round(x,y,width,13,1,lit?cv_bg:ADIM);
+    if(!lit)tono_round(x+1,y+1,width-2,11,1,ABG);
     if(knob){
-        tono_disc(x+8,82,4,fg);tono_disc(x+8,82,3,cv_bg);cv_line(x+8,82,x+10,80,fg);
+        tono_disc(x+8,y+6,4,fg);tono_disc(x+8,y+6,3,cv_bg);cv_line(x+8,y+6,x+10,y+4,fg);
     }
-    cv_text(x+(knob?16:3),80-AF_TONO_NAV_CAP_Y,&AF_TONO_NAV,name,fg);cv_bg=ABG;
+    cv_text(x+(knob?16:3),y+4-AF_TONO_NAV_CAP_Y,&AF_TONO_NAV,name,fg);cv_bg=ABG;
     return x+width+2;
 }
-static int amb_nav_item(int x,const char *key,const char *verb,int knob,int lit)
+static int amb_nav_item(int y,int x,const char *key,const char *verb,int knob,int lit)
 {
-    if(x>8){cv_rect(x,82,2,2,ADIM);x+=5;}
-    x=amb_nav_cap(x,key,knob,lit);
-    cv_text(x,80-AF_TONO_NAV_CAP_Y,&AF_TONO_NAV,verb,AINK);return x+text_w(&AF_TONO_NAV,verb)+3;
+    if(x>8){cv_rect(x,y+6,2,2,ADIM);x+=5;}
+    x=amb_nav_cap(y,x,key,knob,lit);
+    cv_text(x,y+4-AF_TONO_NAV_CAP_Y,&AF_TONO_NAV,verb,AINK);return x+text_w(&AF_TONO_NAV,verb)+3;
+}
+/* Width advanced by amb_nav_item, including a separator before the item. */
+static int amb_nav_width(const char *key,const char *verb,int knob)
+{
+    return text_w(&AF_TONO_NAV,key)+text_w(&AF_TONO_NAV,verb)+(knob?31:16);
 }
 static void amb_footer(const amb_layer_t *l)
 {
     const char *key="SEL",*verb="Page",*second=0,*action=0;
-    int knob=0,lit=0,second_knob=0;
+    int knob=0,lit=0,second_knob=0,cancel=0;
     const char *page=0;
     char counter[]="Page 1/1";
     if(ambr.help){
@@ -33,11 +38,11 @@ static void amb_footer(const amb_layer_t *l)
     }
     else if(ambr.reset_pending || ambr.view==3 || (amb_generate_page() && ambr.local_preset>AMB_ALL_GENERATE)){
         if(ambr.reset_pending || ambr.overwrite){key="REC";verb=ambr.reset_pending?"Restore":"Replace";second="HOME";action="Cancel";}
-        else{key="SELECT";knob=1;verb="Slot";second="REC";action="Save";}
+        else{key="SELECT";knob=1;verb="Slot";second="REC";action="Save";cancel=1;}
     }else if(ambr.evolve_open && (ambr.evolve_queued || ambr.evolve_role==255)){key="HOME";verb="Cancel";}
     else if(ambr.local_preset || ambr.piece_preview!=255 || ambr.proposal!=255 || ambr.evolve_open){
-        key=ambr.local_preset || ambr.piece_preview!=255?"PRESETS":"ALGO";knob=1;verb=ambr.evolve_open?"Choose":ambr.local_preset?"Pick":"Browse";second="REC";action=ambr.piece_preview!=255?"Recall":"Apply";
-        if(amb_generate_page() && ambr.local_preset>AMB_FACTORY_GENERATE && !amb_recipe_used(amb_user_recipe(ambr.local_preset-1-AMB_FACTORY_GENERATE))){second="HOME";action="Cancel";}
+        cancel=1;key=ambr.local_preset || ambr.piece_preview!=255?"PRESETS":"ALGO";knob=1;verb=ambr.evolve_open?"Choose":ambr.local_preset?"Pick":"Browse";second="REC";action=ambr.piece_preview!=255?"Recall":"Apply";
+        if(amb_generate_page() && ambr.local_preset>AMB_FACTORY_GENERATE && !amb_recipe_used(amb_user_recipe(ambr.local_preset-1-AMB_FACTORY_GENERATE))){second="HOME";action="Cancel";cancel=0;}
     }else if(ambr.view==0){key="SELECT";verb="Target";knob=1;second="EDIT";action=ambr.target?"Open":"FX";}
     else if(ambr.view==4){verb="Home";}
     else if(ambr.view==1){
@@ -65,10 +70,24 @@ static void amb_footer(const amb_layer_t *l)
     }
     if(page){counter[5]=page[0];counter[7]=page[2];second="SELECT";second_knob=1;action=counter;}
     int turn=(int32_t)(ambr.select_until-fm1_ms)>0 && ambr.select_until;
-    int x=amb_nav_item(8,key,verb,knob,lit || (turn && str_eq(key,"SELECT")));
-    if(second)x=amb_nav_item(x,second,action,second_knob,turn && str_eq(second,"SELECT"));
+    int paging=!ambr.help && !ambr.evolve_open && (ambr.view<3) && !str_eq(key,"SEL");
+    const char *page_action=ambr.view?"Page":"Ensemble";
+    int width=3+amb_nav_width(key,verb,knob);
+    if(second)width+=amb_nav_width(second,action,second_knob);
+    if(cancel)width+=amb_nav_width("HOME","Cancel",0);
+    if(paging)width+=amb_nav_width("SEL",page_action,0);
+    if(!ambr.help)width+=amb_nav_width("HOME","+",0)+amb_nav_width("EDIT","Help",0)-7;
+    int wrap=width>232;
+    int y=wrap?61:76;
+    cv_rect(8,y-4,224,1,ALINE);
+    int x=amb_nav_item(y,8,key,verb,knob,lit || (turn && str_eq(key,"SELECT")));
+    if(second)x=amb_nav_item(y,x,second,action,second_knob,turn && str_eq(second,"SELECT"));
+    if(wrap){y=76;x=8;}
+    if(cancel)x=amb_nav_item(y,x,"HOME","Cancel",0,0);
+    if(paging)x=amb_nav_item(y,x,"SEL",page_action,0,0);
     if(!ambr.help){
-        cv_rect(x,82,2,2,ADIM);x=amb_nav_cap(x+5,"HOME",0,0);cv_text(x,80-AF_TONO_NAV_CAP_Y,&AF_TONO_NAV,"+",ADIM);
-        x=amb_nav_cap(x+6,"EDIT",0,0);cv_text(x,80-AF_TONO_NAV_CAP_Y,&AF_TONO_NAV,"Help",AINK);
+        if(x>8){cv_rect(x,y+6,2,2,ADIM);x+=5;}
+        x=amb_nav_cap(y,x,"HOME",0,0);cv_text(x,y+4-AF_TONO_NAV_CAP_Y,&AF_TONO_NAV,"+",ADIM);
+        x=amb_nav_cap(y,x+6,"EDIT",0,0);cv_text(x,y+4-AF_TONO_NAV_CAP_Y,&AF_TONO_NAV,"Help",AINK);
     }
 }

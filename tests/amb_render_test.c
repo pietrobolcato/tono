@@ -64,6 +64,14 @@ static void ar_frame(const char *name,const char *dir,int save)
         assert(ink==(TE_DARK?0xffff:0));
         assert(!ar_n); /* wordmark geometry only; no HUD text in either strip */
     }
+    if(!strcmp(name,"sound_proposal") || !strncmp(name,"navigation_",11)){
+        unsigned sel=0,cancel=0;
+        for(unsigned i=0;i<ar_n;i++){
+            sel|=!strcmp(ar_boxes[i].s,"SEL");
+            cancel|=!strcmp(ar_boxes[i].s,"Cancel");
+        }
+        assert(sel && (strcmp(name,"sound_proposal") || cancel));
+    }
     if(save)ar_save(name,dir);
 }
 static void ar_splash(const char *dir)
@@ -260,7 +268,7 @@ int main(int argc,char **argv)
         unsigned count=role==6?NELEM(N_AS_SOURCE):amb_patch_count(role);
         for(unsigned patch=1;patch<count;patch++){
             ambr.proposal=patch;
-            ar_frame("sound_proposal",dir,0);
+            ar_frame("sound_proposal",dir,role==0 && patch==1);
         }
     }
     ambr.proposal=255;
@@ -268,8 +276,8 @@ int main(int argc,char **argv)
         while(amb_theme()!=theme)amb_theme_turn(1);
         amb_patch(0,0,0);ambr.view=1;ambr.page=1;ambr.bank=1;ambr.detail=1;ambr.help=0;ambr.select_until=0;ambr.notice[0]=0;ambr.level_feedback_active=0;
         snprintf(name,sizeof name,"navigation_%u_idle",theme);ar_frame(name,dir,1);
-        uint16_t orange=host_screen[175*240+12];
-        assert(orange==host_screen[31*240+9] && orange==host_screen[225*240+10]);
+        uint16_t orange=host_screen[166*240+12];
+        assert(orange==host_screen[31*240+9] && orange==host_screen[210*240+10]);
         ambr.select_until=fm1_ms+250;
         snprintf(name,sizeof name,"navigation_%u_turn",theme);ar_frame(name,dir,1);
         fm1_ms+=250;ambr.dirty=0;amb_draw();assert(!ambr.select_until);

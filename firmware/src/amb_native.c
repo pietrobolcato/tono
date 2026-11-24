@@ -2315,7 +2315,7 @@ static void amb_input(void)
         ambr.dirty=1;home0=home;play0=play;return;
     }
     if(amb_generate_page() && ambr.local_preset>AMB_ALL_GENERATE && sel){pre+=sel;sel=0;}
-    if((pressed & ~(1u<<panel.btn[B_REC] | 1u<<panel.btn[B_PLAY])) || sel || algo)ambr.local_preset=0;
+    if((pressed & ~(1u<<panel.btn[B_HOME] | 1u<<panel.btn[B_REC] | 1u<<panel.btn[B_PLAY])) || sel || algo)ambr.local_preset=0;
     if(ambr.view)ambr.zen=0;
     if(home && sel) {
         ambr.home_used=1;
@@ -2323,9 +2323,15 @@ static void amb_input(void)
         sel=0;
     }
     if(!home && home0 && !ambr.home_used) {
-        ambr.zen=0;
-        ambr.view=0;ambr.recording=0;ambr.reset_pending=0;ambr.overwrite=0;amb_pending_ready=0;
-        if(ambr.target){ambr.edit_layer=ambr.target-1;song.sel=ambr.edit_layer;}ambr.proposal=ambr.piece_preview=255;ambr.dirty=1;
+        /* Dismiss a proposal in its own page before HOME navigates away. */
+        if(ambr.proposal!=255 || ambr.local_preset || ambr.reset_pending){
+            ambr.local_preset=ambr.reset_pending=ambr.overwrite=0;
+            ambr.proposal=255;ambr.dirty=1;
+        }else{
+            ambr.zen=0;
+            ambr.view=0;ambr.recording=0;ambr.reset_pending=0;ambr.overwrite=0;amb_pending_ready=0;
+            if(ambr.target){ambr.edit_layer=ambr.target-1;song.sel=ambr.edit_layer;}ambr.proposal=ambr.piece_preview=255;ambr.dirty=1;
+        }
     }
     home0=(uint8_t)home;play0=(uint8_t)play;
     for(b=0;b<NB;b++) if((pressed>>panel.btn[b])&1u) {
@@ -3393,14 +3399,14 @@ static void amb_draw(void)
     cv_blit_cells(0,0);
     cv_begin(240,93,ABG);
     cv_rect(8,0,224,1,ALINE);
+    amb_footer(l);
     if(ambr.help){
-        amb_footer(l);
         cv_blit_cells(0,147);
         return;
     }
     if(ambr.view==2 && ambr.page==5){
-        amb_text(10,18,"SELECT",ADIM,16);
-        cv_text(10,32,&AF_M,"Display theme",AINK);
+        amb_text(10,5,"SELECT",ADIM,16);
+        cv_text(10,19,&AF_M,"Display theme",AINK);
 
     }else if(ambr.view==3) {
         for(i=0;i<8;i++){
@@ -3413,11 +3419,11 @@ static void amb_draw(void)
     }else if(!ambr.reset_pending && ambr.piece_preview==255)for(k=0;k<4;k++) {
         char label[16]={0},value[24]={0};amb_knob_value(k,label,value);if(!label[0])continue;cv_bg=ABG;
         int left=9+k*57;
-        if(k)cv_rect(left-4,12,1,42,ALINE);
+        if(k)cv_rect(left-4,4,1,39,ALINE);
         uint16_t accent=amb_theme()?amb_accent(k):TONO_ORANGE;
-        amb_text(left,14,label,amb_theme()?amb_accent_text(k):ADIM,9);cv_rect(left,28,17,2,accent);
-        if(text_w(&AF_M,value)<=54)cv_text(left,34,&AF_M,value,AINK);
-        else amb_text(left,37,value,AINK,9);
+        amb_text(left,5,label,amb_theme()?amb_accent_text(k):ADIM,9);cv_rect(left,19,17,2,accent);
+        if(text_w(&AF_M,value)<=54)cv_text(left,24,&AF_M,value,AINK);
+        else amb_text(left,27,value,AINK,9);
         if(amb_theme() && ambr.view==0){
             int amount;
             if(k==1 && !amb_home_echo())amount=100-(ambr.target?amb_controls.layer_thinning[ambr.target-1]:amb_controls.thinning);
@@ -3426,31 +3432,30 @@ static void amb_draw(void)
                 unsigned id=amb_master_macros[k];
                 amount=k==3?-amb.global[id]*100/64:amb.global[id]*100/GP[id].max;
             }
-            for(int tick=0;tick<9;tick++)cv_rect(left+5*tick,53,4,2,
+            for(int tick=0;tick<9;tick++)cv_rect(left+5*tick,41,4,2,
                 tick*100<9*amount?accent:ALINE);
         }
     }
     cv_bg=ABG;
     if(ambr.view==1 && ambr.page==1 && ambr.level_feedback_active &&
        ambr.level_feedback_target==ambr.edit_layer+1 && fm1_ms-ambr.level_feedback_ms<1200u){
-        amb_text(10,59,"LAYER GAIN",ADIM,10);amb_number(70,59,amb.layer[ambr.edit_layer].level*100/127,AQUEUE);
+        amb_text(10,44,"LAYER GAIN",ADIM,10);amb_number(70,44,amb.layer[ambr.edit_layer].level*100/127,AQUEUE);
     }else if(ambr.view==0 && travel.indicator){
         int position=travel.wanted;
-        amb_text(10,59,"TRAVEL",ADIM,7);
-        amb_text(55,59,amb_landscape_name(position),AINK,20);
-        if(position>0)amb_text(166,59,"+",AQUEUE,1);
-        amb_number(174,59,position,AQUEUE);
+        amb_text(10,44,"TRAVEL",ADIM,7);
+        amb_text(55,44,amb_landscape_name(position),AINK,20);
+        if(position>0)amb_text(166,44,"+",AQUEUE,1);
+        amb_number(174,44,position,AQUEUE);
         int marker=120+clamp(position,-18,18)*6;
-        cv_rect(12,70,217,1,ALINE);
-        cv_rect(120,68,1,3,ADIM);
-        cv_rect(marker-2,67,5,4,TONO_ORANGE);
+        cv_rect(12,55,217,1,ALINE);
+        cv_rect(120,53,1,3,ADIM);
+        cv_rect(marker-2,52,5,4,TONO_ORANGE);
     }else if(ambr.notice[0] && fm1_ms-ambr.notice_ms<2500u)
-        amb_text(10,59,ambr.notice,ADIM,39);
+        amb_text(10,44,ambr.notice,ADIM,39);
     else if(amb_tail_any())
-        amb_text(10,59,ambr.handoff[4] || ambr.handoff[5]?"CROSSFADE":"OLD SOUND RELEASING / NEXT QUEUED",ADIM,39);
-    else if(amb_monitor_requested)amb_text(10,59,"FX BYPASSED",AQUEUE,13);
-    cv_rect(8,72,224,1,ALINE);
-    amb_footer(l);
+        amb_text(10,44,ambr.handoff[4] || ambr.handoff[5]?"CROSSFADE":"OLD SOUND RELEASING / NEXT QUEUED",ADIM,39);
+    else if(amb_monitor_requested)amb_text(10,44,"FX BYPASSED",AQUEUE,13);
+
     cv_blit_cells(0,147);
     (void)b;
 }
