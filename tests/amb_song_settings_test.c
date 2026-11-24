@@ -216,6 +216,12 @@ int main(void)
     amb_controls.layer_thinning[2]=0;
     assert(amb_recall(6) && amb_controls.layer_thinning[2]==63);
     assert(!memcmp(amb_current_take(),&old.take,sizeof old.take));
+    amb_controls.filter[2]=38;amb_controls.ceiling=-2;amb_controls.release=1;
+    ambr.overwrite=1;amb_save();
+    assert(!st_head(amb_object(6),1,&hdr) && hdr.len==3680);
+    amb_controls.filter[2]=0;amb_controls.ceiling=amb_controls.release=0;
+    assert(amb_recall(6) && amb_controls.filter[2]==38 && lim_ceiling==8231 && lim_shift==14);
+    assert(!memcmp(amb_current_take(),&old.take,sizeof old.take));
     amb_saved_song.extended.octave[0]=7;
     assert(!st_save(amb_object(6),&amb_saved_song,sizeof amb_saved_song));
     assert(!amb_recall(6) && amb_bar_octave[0]==2 && ambr.zen_train);

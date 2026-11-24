@@ -59,6 +59,9 @@ typedef struct {
     int8_t octave[4];
     uint8_t flags, thinning; /* bit 0 train scenery, bit 1 dry monitor */
     uint8_t layer_thinning[4]; /* Optional song trailer extension, zero preserves the score. */
+    int8_t ceiling, release; /* offsets from the 0.69 limiter defaults */
+    uint8_t filter[4]; /* mode in the high nibble, cutoff index in the low */
+    uint8_t spare[2];
 } amb_song_controls_t;
 static const amb_song_controls_t amb_factory_controls={
     .tag='T',.schema=1,.walk={1,4,16,32,2,2}
@@ -67,6 +70,8 @@ static amb_song_controls_t amb_controls;
 
 #include "amb_grain.h"
 static int8_t amb_reset_grain[4][4];
+static uint8_t amb_reset_filter[4],amb_tail_filter[NTRK];
+static int32_t amb_filter_state[NTRK][6] __attribute__((section(".lowbuf")));
 static int8_t amb_reset_eq[4][4];
 static amb_layer_t amb_reset_layer[4]; /* last loaded piece, never a flash snapshot */
 /* Main-loop edits publish a revision; audio copies a full deep baseline only
@@ -342,7 +347,7 @@ static void amb_begin_change(unsigned k)
      * Internal FM envelopes are held while oscillators keep running. */
     frames=((unsigned)amb.release_ms*FS+999u)/1000u;
     ambr.tail_left[k]=ambr.tail_total[k]=((frames+CTL-1u)/CTL)*CTL;
-    ambr.tail_gain[k]=32767;memcpy(ambr.tail_eq[k],amb.layer_eq[k],4);
+    ambr.tail_gain[k]=32767;amb_tail_filter[k]=amb_controls.filter[k];memcpy(ambr.tail_eq[k],amb.layer_eq[k],4);
     for(i=0;i<NVOICE;i++)ambr.tail_env[k][i]=trk[k].v[i].env;
     ambr.handoff[k]=1;amb_release(k);trk_all_off(&trk[k]);
     ambr.due[k]=0;ambr.dirty=1;
@@ -399,6 +404,7 @@ static __attribute__((noinline)) int amb_move_release(unsigned k)
     ambr.tail_gain[dst]=ambr.tail_gain[k];memcpy(ambr.tail_env[dst],ambr.tail_env[k],sizeof ambr.tail_env[k]);
     amb_grain[dst]=amb_grain[k];amb_grain[k].valid=amb_grain[k].phase=amb_grain[k].period=0;
     memcpy(amb_grain_controls[dst],amb_grain_controls[k],4);
+    amb_tail_filter[dst]=amb_tail_filter[k];memcpy(amb_filter_state[dst],amb_filter_state[k],sizeof amb_filter_state[k]);
     memcpy(ambr.tail_eq[dst],ambr.tail_eq[k],4);
     if(ambr.fade_slot[k]){
         unsigned gain=amb_fade_level(k,65536);
@@ -420,7 +426,7 @@ static void amb_apply_patch(unsigned k)
     load_begin(t,LOAD_SOUND);t->eng_req=l->engine;
     t->preset=(uint8_t)amb_patch_preset(l);
     memcpy(t->p,l->base,sizeof t->p);fm6_track_loaded(t);
-    panic_req|=(uint8_t)(1u<<k);load_end(t);ambr.handoff[k]=0;
+    panic_req|=(uint8_t)(1u<<k);load_end(t);ambr.handoff[k]=0;memset(amb_filter_state[k],0,sizeof amb_filter_state[k]);
     amb_base_revision[k]++;ambr.overlap[k]=0;ambr.foundation_pending[k]=(uint8_t)(l->role<2 || l->role==5);
     ambr.dirty=1;
 }
@@ -689,7 +695,7 @@ typedef struct {
     };
     amb_song_controls_t extended;
 } amb_song_record_t;
-_Static_assert(sizeof(amb_song_controls_t)==24 && sizeof(amb_take_song_t)==3648 &&
+_Static_assert(sizeof(amb_song_controls_t)==32 && sizeof(amb_take_song_t)==3648 &&
                sizeof(amb_song_record_t)<=ST_PAYLOAD_MAX,"preserve full-length takes and old wire offsets");
 static amb_song_record_t amb_pending_song __attribute__((section(".pool")));
 #define amb_pending amb_pending_song.piece
@@ -716,9 +722,9 @@ static void amb_install(const amb_piece_t *p)
         if(!ambr.piece_transition){ambr.piece_master=amb.master;memcpy(ambr.piece_eq,amb.eq,4);}
         ambr.piece_transition=1;
         /* Silent old layers also wait for the coordinated piece handoff. */
-        for(k=0;k<4;k++)if(!ambr.handoff[k]){ambr.handoff[k]=1;ambr.tail_left[k]=ambr.tail_total[k]=0;memcpy(ambr.tail_eq[k],amb.layer_eq[k],4);}
+        for(k=0;k<4;k++)if(!ambr.handoff[k]){ambr.handoff[k]=1;ambr.tail_left[k]=ambr.tail_total[k]=0;amb_tail_filter[k]=amb_controls.filter[k];memcpy(ambr.tail_eq[k],amb.layer_eq[k],4);}
     }else ambr.piece_transition=0;
-    amb_controls=*incoming;amb_load_controls=0;
+    amb_controls=*incoming;memcpy(amb_reset_filter,amb_controls.filter,4);amb_limiter_settings(amb_controls.ceiling,amb_controls.release);amb_load_controls=0;
     for(k=0;k<4;k++)amb_bar_octave[k]=amb_controls.octave[k];
     memcpy(ambr.octave_seen,(const void *)ambr.octave_taps,sizeof ambr.octave_seen);
     ambr.zen_train=amb_controls.flags&1u;
@@ -1539,6 +1545,7 @@ static __attribute__((noinline)) void amb_output(int32_t *out,uint32_t n)
 }
 /* Three broad bands per layer before dry mix and shared sends. Flat EQ is
  * bit-exact bypass. Independent state per physical track, safe on two cores. */
+#include "amb_layer_filter.h"
 static __attribute__((noinline)) void amb_layer_process(unsigned k,int32_t *b,uint32_t n)
 {
     static int32_t low[NTRK][6],high[NTRK][6],g[NTRK][4];static uint8_t primed[NTRK];
@@ -1546,6 +1553,9 @@ static __attribute__((noinline)) void amb_layer_process(unsigned k,int32_t *b,ui
     unsigned i,j,c,flat=1;if(k>=4 && !ambr.handoff[k])return;
     if(amb_grain_controls[k][0] || amb_grain[k].mix || amb_grain[k].valid)
         amb_grain_process(k,b,n);
+    unsigned setting=ambr.handoff[k]?amb_tail_filter[k]:amb_controls.filter[k];
+    if(setting>=16 || (amb_scope_target==k+1 && amb_scope_page==5 && amb_scope_fill<64))
+        amb_filter_process(k,b,n,setting);
     if(ambr.view==1 && ambr.page==6 && ambr.edit_layer==k && !ambr.help)amb_measure_eq(k+1,b,n,1);
     const int8_t *eq=ambr.handoff[k]?ambr.tail_eq[k]:amb.layer_eq[k];
     int moving_eq=k<4 && amb.layer[k].lfo_dest>=ROUTE_EQ && amb.layer[k].lfo_dest<ROUTE_MODE;
@@ -1629,7 +1639,7 @@ static int amb_valid(const amb_piece_t *p)
 }
 enum { AMB_EMPTY, AMB_SAVED, AMB_UNREADABLE };
 static uint8_t amb_slot_state[AMB_SLOTS],amb_save_slot;
-static amb_song_record_t amb_saved_song;
+static amb_song_record_t amb_saved_song __attribute__((section(".lowbuf")));
 #define amb_snapshot amb_saved_song.piece
 static unsigned amb_save_bytes;
 static int amb_loadable(const amb_piece_t *p,int n)
@@ -1641,16 +1651,20 @@ static int amb_read_slot(unsigned slot)
 {
     int n=st_load(amb_object(slot),&amb_pending_song,sizeof amb_pending_song);
     int legacy_controls=n==(int)sizeof(amb_piece_t)+20 || n==(int)sizeof(amb_take_song_t)+20;
+    int previous=n==(int)sizeof(amb_piece_t)+24 || n==(int)sizeof(amb_take_song_t)+24;
     int compact=n==(int)(sizeof(amb_piece_t)+sizeof(amb_song_controls_t));
     int extended=n==(int)sizeof(amb_song_record_t);
     amb_load_controls=0;
-    amb_load_take=n==(int)sizeof(amb_take_song_t) || n==(int)sizeof(amb_take_song_t)+20 || extended;
+    amb_load_take=n==(int)sizeof(amb_take_song_t) || n==(int)sizeof(amb_take_song_t)+20 || n==(int)sizeof(amb_take_song_t)+24 || extended;
     if(amb_load_take && !amb_take_valid(&amb_pending_song.legacy.take))return -1;
-    if(compact || extended || legacy_controls){
+    if(compact || extended || legacy_controls || previous){
         amb_song_controls_t *c=amb_load_take?&amb_pending_song.extended:&amb_pending_song.compact;
+        if(legacy_controls || previous)memset(&c->ceiling,0,8);
+        if(c->ceiling < -4 || c->ceiling > 2 || c->release < -2 || c->release > 1)return -1;
+        for(unsigned k=0;k<4;k++)if(c->filter[k]>=48)return -1;
         if(legacy_controls)memset(c->layer_thinning,0,4);
         for(unsigned i=0;i<4;i++)if(c->layer_thinning[i]>100)return -1;
-        if(c->tag!='T' || c->schema!=(legacy_controls?1:2) || c->thinning>100 || c->flags>3 ||
+        if(c->tag!='T' || c->schema!=(legacy_controls?1:previous?2:3) || c->thinning>100 || c->flags>3 ||
            c->walk[0]>7 || c->walk[1]>120 || c->walk[2]>120 || c->walk[3]>80 ||
            c->walk[4]>2 || c->walk[5]>31)return -1;
         for(unsigned i=0;i<4;i++)if(c->octave[i]<-3 || c->octave[i]>3)return -1;
@@ -1728,10 +1742,14 @@ static void amb_save(void)
         amb_save_bytes=sizeof amb_saved_song;break;
     }
     *saved_controls=amb_controls;
-    saved_controls->schema=2;
-    if(!memcmp(saved_controls->layer_thinning,amb_factory_controls.layer_thinning,4)){
-        saved_controls->schema=1;
-        amb_save_bytes-=4;
+    saved_controls->schema=3;
+    if(!memcmp(&saved_controls->ceiling,&amb_factory_controls.ceiling,8)){
+        saved_controls->schema=2;
+        amb_save_bytes-=8;
+        if(!memcmp(saved_controls->layer_thinning,amb_factory_controls.layer_thinning,4)){
+            saved_controls->schema=1;
+            amb_save_bytes-=4;
+        }
     }
     saved_controls->flags=(uint8_t)(ambr.zen_train|(amb_monitor_requested?2u:0u));
     for(unsigned k=0;k<4;k++)saved_controls->octave[k]=(int8_t)amb_bar_octave[k];
@@ -2142,7 +2160,12 @@ static void amb_knob(unsigned knob,int delta)
             *value=(int8_t)clamp(before+delta,-12,12);
             amb_remember_edit(ROUTE_EQ+knob);
         } else if(ambr.page==5) {
-            if(ambr.fx==5){
+            if(ambr.fx==6){
+                uint8_t *v=&amb_controls.filter[ambr.edit_layer];
+                if(knob==0)*v=(*v&15)|(clamp((*v>>4)+delta,0,2)<<4);
+                if(knob==1)*v=(*v&48)|clamp((*v&15)+delta,0,15);
+                amb_remember_edit(ROUTE_COUNT);
+            }else if(ambr.fx==5){
                 int8_t *value=&amb.grain[ambr.edit_layer][knob];
                 int before=*value;
                 *value=(int8_t)clamp(before+delta*(knob==2?1:2),knob==2?-12:0,knob==2?12:100);
@@ -2194,6 +2217,12 @@ static void amb_knob(unsigned knob,int delta)
                 ambr.gen_edit[knob]=1;ambr.gen_time[knob]=fm1_ms;
             } else amb.policy.variation=(uint8_t)clamp(amb.policy.variation+delta*2,0,100);
         } else if(ambr.page==3) {
+            if(ambr.fx%5==4){
+                if(knob==0)amb_controls.ceiling=clamp(amb_controls.ceiling+delta,-4,2);
+                if(knob==1)amb_controls.release=clamp(amb_controls.release+delta,-2,1);
+                amb_limiter_settings(amb_controls.ceiling,amb_controls.release);
+                ambr.dirty=1;return;
+            }
             const param_desc_t *d;id=amb_master_fx[ambr.fx%4][knob];d=&GP[id];
             amb.global[id]=(int16_t)param_turn(d,amb.global[id],delta);
             if(id==G_DFDBK && amb.global[id]>86) amb.global[id]=86;
@@ -2222,7 +2251,7 @@ static void amb_rec(void)
     if(ambr.reset_pending){
         unsigned k=ambr.edit_layer,solo=amb.layer[0].solo_plus1;uint8_t p0=amb.layer[0].reserved,p1=amb.layer[1].reserved,p3=amb.layer[3].reserved;
         ambr.last_edit_route[k]=0;
-        ambr.loading=1;amb_begin_change(k);amb.layer[k]=amb_reset_layer[k];memcpy(amb.grain[k],amb_reset_grain[k],4);memcpy(amb.layer_eq[k],amb_reset_eq[k],4);
+        ambr.loading=1;amb_begin_change(k);amb.layer[k]=amb_reset_layer[k];amb_controls.filter[k]=amb_reset_filter[k];memcpy(amb.grain[k],amb_reset_grain[k],4);memcpy(amb.layer_eq[k],amb_reset_eq[k],4);
         amb.layer[0].solo_plus1=(uint8_t)solo;amb.layer[0].reserved=p0;amb.layer[1].reserved=p1;amb.layer[3].reserved=p3;
         if(!ambr.handoff[k])amb_apply_patch(k);
         amb_travel_rebase(k);ambr.recent_valid[k]=0;ambr.reset_pending=0;ambr.loading=0;
@@ -2450,10 +2479,10 @@ static void amb_input(void)
             else if(ambr.view==1 && ambr.page==1){ambr.proposal=255;ambr.bank=!ambr.bank;ambr.detail=0;}
             else if(ambr.view==1 && ambr.page==3){ambr.local_preset=0;ambr.bank=!ambr.bank;}
             else if(ambr.view==1 && ambr.page==4) {amb_set_generated(ambr.edit_layer,!amb.layer[ambr.edit_layer].generated);}
-            else {ambr.view=ambr.target?1:2;ambr.page=ambr.target?0:3;ambr.bank=0;ambr.detail=0;ambr.proposal=ambr.piece_preview=255;}
+            else {ambr.view=ambr.target?1:2;ambr.page=ambr.target?0:3;if(!ambr.target)ambr.fx%=5;ambr.bank=0;ambr.detail=0;ambr.proposal=ambr.piece_preview=255;}
         } else if(b==B_GLO) {ambr.view=2;ambr.page=0;ambr.recording=0;ambr.reset_pending=0;ambr.proposal=ambr.piece_preview=255;}
         else if(b==B_SCL) {
-            if(ambr.view==1 || ambr.view==2) {ambr.reset_pending=0;ambr.page=ambr.view==1?(uint8_t)((ambr.page+1)%7):amb_global_order[(amb_global_index(ambr.page)+1)%NELEM(amb_global_order)];ambr.recording=0;ambr.bank=0;ambr.detail=0;ambr.proposal=255;}
+            if(ambr.view==1 || ambr.view==2) {ambr.reset_pending=0;ambr.page=ambr.view==1?(uint8_t)((ambr.page+1)%7):amb_global_order[(amb_global_index(ambr.page)+1)%NELEM(amb_global_order)];if(ambr.view==2 && ambr.page==3)ambr.fx%=5;ambr.recording=0;ambr.bank=0;ambr.detail=0;ambr.proposal=255;}
         } else if(b==B_SAVE && amb_generate_page()){
             ambr.local_preset=AMB_ALL_GENERATE+1;ambr.overwrite=0;
         } else if(b==B_SAVE) {ambr.reset_pending=0;ambr.view=3;ambr.slot=0;ambr.overwrite=0;ambr.recording=0;ambr.proposal=ambr.piece_preview=255;}
@@ -2487,10 +2516,10 @@ static void amb_input(void)
             else if(ambr.page==4) {
                 if(l->role==4) ambr.lane=(uint8_t)amb_wrap(ambr.lane+sel,4);
                 else ambr.cursor=(uint8_t)amb_wrap(ambr.cursor+sel,16);
-            } else if(ambr.page==5) ambr.fx=(uint8_t)amb_wrap(ambr.fx+sel,6);
+            } else if(ambr.page==5) ambr.fx=(uint8_t)amb_wrap(ambr.fx+sel,7);
         } else if(ambr.view==2) {
             if(ambr.page==0) amb.auto_index=(uint8_t)amb_wrap(amb.auto_index+sel,8);
-            else if(ambr.page==3) ambr.fx=(uint8_t)amb_wrap(ambr.fx+sel,4);
+            else if(ambr.page==3) ambr.fx=(uint8_t)amb_wrap(ambr.fx+sel,5);
             else if(ambr.page==5) amb_theme_turn(sel);
             else if(ambr.page==6)amb_walk_adjust(4,sel);
             else if(ambr.page==7)timing_tab=amb_wrap(timing_tab+sel,3);
@@ -2733,7 +2762,12 @@ static const param_desc_t *amb_knob_value(unsigned knob,char *label,char *value)
             }
         } else if(ambr.page==6){static const char *const labels[4]={"LOW","MID","HIGH","OUTPUT"};str_cpy(label,labels[knob],16);v=amb.layer_eq[ambr.edit_layer][knob];}
         else {
-            if(ambr.fx==5){
+            if(ambr.fx==6){
+                unsigned setting=amb_controls.filter[ambr.edit_layer];
+                if(knob==0){str_cpy(label,"TYPE",16);str_cpy(value,setting<16?"Off":setting<32?"Low pass":"High pass",24);return 0;}
+                if(knob>1)return 0;
+                str_cpy(label,"CUTOFF",16);v=amb_filter_hz[setting&15];unit="Hz";
+            }else if(ambr.fx==5){
                 str_cpy(label,amb_grain_label[knob],16);
                 v=amb.grain[ambr.edit_layer][knob];
                 if(knob==1){v=(32+v)*8000/FS;unit="ms";}
@@ -2783,7 +2817,12 @@ static const param_desc_t *amb_knob_value(unsigned knob,char *label,char *value)
             static const char *const labels[4]={"RHYTHM","PHRASE","INTERPLAY","VARIATION"};str_cpy(label,labels[knob],16);
             v=knob==3?amb.policy.variation:ambr.gen_edit[knob]?ambr.gen_candidate[knob]+1:amb.policy.pending[knob]!=255?amb.policy.pending[knob]+1:amb.policy.active[knob]+1;
         } else if(ambr.page==3) {
-            id=amb_master_fx[ambr.fx%4][knob];d=&GP[id];v=amb.global[id];
+            if(ambr.fx%5==4){
+                if(knob>1)return 0;
+                str_cpy(label,knob?"RELEASE":"CEILING",16);
+                v=knob?((1000*(1<<(13+amb_controls.release))+FS/2)/FS):-6+3*amb_controls.ceiling;
+                unit=knob?"ms":"dB";
+            }else {id=amb_master_fx[ambr.fx%4][knob];d=&GP[id];v=amb.global[id];}
         } else {static const char *const labels[4]={"LOW","MID","HIGH","OUTPUT"};str_cpy(label,labels[knob],16);v=amb.eq[knob];}
     }
     if(d) {str_cpy(label,d->label,16);param_format(d,v,value,&unit);if(unit && str_len(value)+str_len(unit)<10)str_cpy(value+str_len(value),unit,24-str_len(value));}
@@ -2881,8 +2920,8 @@ static __attribute__((noinline)) int amb_proposing(void)
            ambr.reset_pending || ambr.piece_preview!=255;
 }
 
-static const char *const amb_layer_fx_names[]={"DRIVE","CHORUS / PAN","DELAY SEND","REVERB SEND","SPATIAL","GRANULAR"};
-static const char *const amb_master_fx_names[]={"REVERB","DELAY / TAPE","MOTION","WARMTH"};
+static const char *const amb_layer_fx_names[]={"DRIVE","CHORUS / PAN","DELAY SEND","REVERB SEND","SPATIAL","GRANULAR","LAYER FILTER"};
+static const char *const amb_master_fx_names[]={"REVERB","DELAY / TAPE","MOTION","WARMTH","LIMITER"};
 static const char *amb_edit_title(const amb_layer_t *l)
 {
     return ambr.page==1 && ambr.bank?(l->role==6?(ambr.bank==1?"Sound / Playback":"Sound / Character"):ambr.detail==2?"Sound / Play":ambr.detail==1?"Sound / Filter":"Sound / Engine"):ambr.page==2 && l->role==4?"HIT SHAPE":ambr.page==3 && ambr.bank?"LFO / RATE":AMB_EDIT[ambr.page];
@@ -2890,8 +2929,8 @@ static const char *amb_edit_title(const amb_layer_t *l)
 static const char *amb_guide_title(const amb_layer_t *l)
 {
     if(amb_proposing())return "Preview";
-    if(ambr.view==1)return ambr.page==5?amb_layer_fx_names[ambr.fx%6]:amb_edit_title(l);
-    if(ambr.view==2)return ambr.page==3?amb_master_fx_names[ambr.fx%4]:
+    if(ambr.view==1)return ambr.page==5?amb_layer_fx_names[ambr.fx%7]:amb_edit_title(l);
+    if(ambr.view==2)return ambr.page==3?amb_master_fx_names[ambr.fx%5]:
         ambr.page==7?timing_names[timing_tab]:AMB_GLO[ambr.page];
     return ambr.view==3?"SAVE":ambr.view==4?"ENSEMBLE":ambr.zen?"ZEN":"HOME";
 }
@@ -2949,6 +2988,7 @@ static void amb_scope(int reference_y)
     cv_line(19,reference_y,219,reference_y,DISPLAY_GRID);
 }
 
+#include "amb_live_plots.h"
 static void amb_eq_plot(const int8_t *bands,unsigned target)
 {
     amb_scope(82);
@@ -3190,7 +3230,14 @@ static void amb_draw(void)
         ambr.control_activity=0;ambr.dirty=1;
     }
     unsigned i,k;char b[32];amb_layer_t *l=&amb.layer[ambr.edit_layer];
-    if(!ambr.dirty && fm1_ms-ambr.last_draw<(ambr.zen?80u:(ambr.view==4 || (ambr.view==1 && ambr.page==4))?50u:((ambr.view==1 && (ambr.page==3 || ambr.page==6 || (ambr.page==5 && ambr.fx==4))) || (ambr.view==2 && ambr.page==4))?80u:250u))return;
+    unsigned scope=ambr.view==1 && !ambr.help && !amb_proposing() &&
+        ((ambr.page==1 && ambr.bank && ambr.detail==1 && amb.layer[ambr.edit_layer].role!=6) ||
+        (ambr.page==5 && ambr.fx==6))?ambr.edit_layer+1:0;
+    if(scope!=amb_scope_target || ambr.page!=amb_scope_page){
+        amb_scope_target=0;amb_scope_fill=0;amb_scope_page=ambr.page;amb_scope_target=scope;
+    }
+    lim_meter_on=ambr.view==2 && ambr.page==3 && ambr.fx%5==4 && !ambr.help && !amb_proposing();
+    if(!ambr.dirty && fm1_ms-ambr.last_draw<((scope || lim_meter_on || ambr.zen)?80u:(ambr.view==4 || (ambr.view==1 && ambr.page==4))?50u:((ambr.view==1 && (ambr.page==3 || ambr.page==6 || (ambr.page==5 && ambr.fx==4))) || (ambr.view==2 && ambr.page==4))?80u:250u))return;
     ambr.last_draw=fm1_ms;ambr.dirty=0;
     /* Tono supplies RGB inks independently of the upstream palette. */
     if(ux.mono || ux.light!=!TE_DARK){ux.mono=0;ux.light=!TE_DARK;ux.gen++;}
@@ -3228,6 +3275,11 @@ static void amb_draw(void)
             }
         }
         amb_help_read(overview,hint,first,second);
+        if(!amb_proposing() && ((ambr.view==2 && ambr.page==3 && ambr.fx%5==4) || (ambr.view==1 && ambr.page==5 && ambr.fx==6))){
+            int master=ambr.view==2;
+            str_cpy(overview,master?(ambr.help==1?"Watch input, output and linked stereo gain reduction.":slot?"Time for gain to recover after a peak.":"Lower the ceiling to catch quieter peaks."):(ambr.help==1?"Filter the entire layer before its shared sends. Compare input and output traces.":slot?"Move the boundary between passed and reduced frequencies.":"Low pass softens highs. High pass removes lows."),HELP_TEXT_CAP);
+            hint[0]=0;
+        }
     }
     cv_begin(240,147,ABG);
 
@@ -3305,7 +3357,8 @@ static void amb_draw(void)
             else if(l->role!=6 && ambr.bank){
                 static const char *const group[3]={"ENGINE","FILTER","PLAY"};
                 amb_text(12,54,ENGINES[l->engine]->name,ADIM,12);amb_text(125,54,l->engine==ENGI_AMB_A22 && !ambr.detail?"MIX":group[ambr.detail],AINK,12);
-                for(i=0;i<4;i++){
+                if(ambr.detail==1)amb_wave_plot(0);
+                else for(i=0;i<4;i++){
                     unsigned id=amb_sound_id(l,1,i);const param_desc_t *d=amb_param_desc(l,id);char val[24];const char *unit=0;
                     int width=(l->base[id]-d->min)*78/(d->max-d->min?d->max-d->min:1);param_format(d,l->base[id],val,&unit);
                     amb_text(12,73+i*18,d->label,ADIM,10);amb_text(76,73+i*18,val,AINK,10);
@@ -3392,7 +3445,8 @@ static void amb_draw(void)
             amb_eq_plot(amb.layer_eq[ambr.edit_layer],ambr.edit_layer+1);
             amb_text(12,130,"LIVE INPUT / LAYER EQ (DB)",ADIM,35);
         } else if(ambr.view==1 && ambr.page==5) {
-            cv_text(12,53,&AF_M,amb_layer_fx_names[ambr.fx%6],AINK);amb_fx_diagram(ambr.edit_layer,ambr.fx%6);
+            if(ambr.fx==6)amb_wave_plot(1);
+            else {cv_text(12,53,&AF_M,amb_layer_fx_names[ambr.fx%7],AINK);amb_fx_diagram(ambr.edit_layer,ambr.fx%6);}
         } else if(ambr.view==2 && ambr.page==0) {
             amb_text(12,60,"CURRENT CHORD",ADIM,20);amb_chord_label(amb.chord,b);cv_text(12,76,&AF_M,b,AINK);
             amb_text(130,60,"PROPOSED",ADIM,12);
@@ -3483,8 +3537,9 @@ static void amb_draw(void)
             }
             cv_bg=ABG;
         } else if(ambr.view==2 && ambr.page==3) {
+            if(ambr.fx%5==4)amb_limiter_plot();else {
             amb_display(49,75);
-            cv_text(17,50,&AF_M,amb_master_fx_names[ambr.fx%4],SCOPE_INK);
+            cv_text(17,50,&AF_M,amb_master_fx_names[ambr.fx%5],SCOPE_INK);
             if(ambr.fx%4==0)amb_text(162,58,N_RTYPE[fx.rtype<NELEM(N_RTYPE)?fx.rtype:0],TE_LIGHT?amb_accent_text(1):DISPLAY_TRACE,11);
             if(ambr.fx%4==1)amb_text(162,58,N_DLYTYPE[amb.global[G_DTYPE]],TE_LIGHT?amb_accent_text(1):DISPLAY_TRACE,11);
             const char *const names[]={"SIZE","MIX","DEPTH","CLIP"};
@@ -3498,7 +3553,7 @@ static void amb_draw(void)
             if(ambr.fx%4>=2){int x=19+v*198/max;cv_line(x,73,x,103,TONO_ORANGE);}
             amb_text(17,112,names[ambr.fx%4],SCOPE_INK,6);amb_number(189,112,v*100/max,SCOPE_INK);
             amb_text(208,112,"%",SCOPE_INK,1);cv_bg=ABG;
-            amb_text(10,132,ambr.fx%4==0 && fx.rtype!=amb.global[G_RTYPE]?"ECO: LIGHTER EFFECT ACTIVE":"SHARED MASTER PROCESSING",ADIM,32);
+            amb_text(10,132,ambr.fx%4==0 && fx.rtype!=amb.global[G_RTYPE]?"ECO: LIGHTER EFFECT ACTIVE":"SHARED MASTER PROCESSING",ADIM,32);}
         } else if(ambr.view==2 && ambr.page==1) {
             amb_display(49,75);cv_text(17,51,&AF_M,N_NOTE[amb.key],SCOPE_INK);
             amb_text(43,58,amb.scale==0?"MINOR":amb.scale==1?"MAJOR":amb.scale==2?"DORIAN":"LYDIAN",TE_LIGHT?amb_accent_text(1):DISPLAY_TRACE,8);
