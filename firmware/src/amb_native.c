@@ -1891,12 +1891,12 @@ static unsigned amb_envelope_id(const amb_layer_t *l,unsigned knob)
     }
     return P_ATK+knob;
 }
-static const char *const theme_names[]={"Dieter","Teenage Engineering / Dark","Teenage Engineering / Light"};
+static const char *const theme_names[]={"Dial","Studio Dark","Studio Light"};
 /* Global PER4 settings, spare engine-15 byte between hint counters and CPU settings. */
 static unsigned amb_theme(void)
 {
     unsigned value=favorites.factory[15][14];
-    return value<THEME_COUNT?value:THEME_DIETER;
+    return value<THEME_COUNT?value:THEME_TE_DARK;
 }
 static void amb_theme_turn(int delta)
 {
@@ -3348,9 +3348,11 @@ static void amb_draw(void)
         } else if(ambr.view==2 && ambr.page==5){
             for(i=0;i<THEME_COUNT;i++){
                 int y=55+26*i;
-                cv_bg=i==amb_theme()?ASEL:ABG;cv_rect(8,y,224,22,cv_bg);
-                if(i==amb_theme())cv_rect(8,y,3,22,TONO_ORANGE);
-                amb_text(17,y+6,theme_names[i],AINK,32);
+                unsigned theme=(i+THEME_TE_DARK)%THEME_COUNT;
+                int selected=theme==amb_theme();
+                cv_bg=selected?ASEL:ABG;cv_rect(8,y,224,22,cv_bg);
+                if(selected)cv_rect(8,y,3,22,TONO_ORANGE);
+                amb_text(17,y+6,theme_names[theme],AINK,32);
             }
         } else if(ambr.view==3) {
             amb_text(12,62,"SLOT",ADIM,6);amb_number(49,62,ambr.slot+1,AINK);

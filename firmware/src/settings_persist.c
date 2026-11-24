@@ -35,7 +35,12 @@ static int settings_import(persist_t *p, int n)
         p->lowcut = p->zoom = 0;
     }
     if (old1 || old2) p->bold = 0;
-    if (!current) memset(&p->favorites, 0, sizeof p->favorites);
+    if (!current) {
+        memset(&p->favorites, 0, sizeof p->favorites);
+#if AMBPLUS
+        p->favorites.factory[15][14] = THEME_TE_DARK;
+#endif
+    }
     if (p->favorites.factory[15][20] > 3u)         /* SKIN (JIANT 0.8.9, ui.c ui_skin; 0.9.7: 3 AIR): unknown = COLORS (0, older
                                                      * settings too: they keep the skin they had) */
         p->favorites.factory[15][20] = 0;
@@ -120,6 +125,9 @@ static void settings_fresh(void)
 {
 #ifdef FELUCCA_FAVORITES
     favorites.factory[15][20] = SKIN_AIR;
+#if AMBPLUS
+    favorites.factory[15][14] = THEME_TE_DARK;
+#endif
 #endif
 }
 
