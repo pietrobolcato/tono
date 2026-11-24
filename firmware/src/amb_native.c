@@ -1411,7 +1411,7 @@ static unsigned amb_level_feedback(void)
 }
 static void amb_master(int32_t raw,int boot)
 {
-    unsigned target=ambr.view==1 && ambr.page==1?ambr.edit_layer+1:ambr.target;
+    unsigned target=ambr.view==1?ambr.edit_layer+1:ambr.target;
     if(raw<0 || raw>1023)return;
     if(boot || ambr.master_raw>1023){
         ambr.master_raw=(uint16_t)raw;ambr.gain_target=255;
@@ -3424,25 +3424,24 @@ static void amb_draw(void)
     int travel_footer=ambr.view==0 && travel.indicator && !ambr.help && !proposal;
     const char *notice=0;
     char gain[18]="LAYER GAIN ";
-    if(!ambr.help && !proposal && !travel_footer){
-        if(ambr.view==1 && ambr.page==1 && ambr.level_feedback_active &&
+    if(!ambr.help && !travel_footer){
+        if(ambr.view==1 && ambr.level_feedback_active &&
            ambr.level_feedback_target==ambr.edit_layer+1 && fm1_ms-ambr.level_feedback_ms<1200u){
             fmt_int(gain+11,l->level*100/127);
             char *end=gain+11+str_len(gain+11);end[0]='%';end[1]=0;
             notice=gain;
-        }else if(ambr.notice[0] && fm1_ms-ambr.notice_ms<2500u)notice=ambr.notice;
-        else if(amb_tail_any())notice=ambr.handoff[4] || ambr.handoff[5]?"Crossfade":"Old sound releasing";
-        else if(amb_monitor_requested)notice="FX bypassed";
+        }else if(!proposal){
+            if(ambr.notice[0] && fm1_ms-ambr.notice_ms<2500u)notice=ambr.notice;
+            else if(amb_tail_any())notice=ambr.handoff[4] || ambr.handoff[5]?"Crossfade":"Old sound releasing";
+            else if(amb_monitor_requested)notice="FX bypassed";
+        }
     }
     if(!travel_footer)amb_footer(l);
     if(proposal && ambr.evolve_open){
         if(ambr.evolve_queued)amb_text(15,10,"Queued for next bar",AQUEUE,24);
         else if(ambr.evolve_role==255)amb_text(15,10,"No eligible role",ADIM,24);
     }
-    if(ambr.help || proposal){
-        cv_blit_cells(0,147);
-        return;
-    }
+    if(ambr.help || proposal)goto finish_footer;
     if(ambr.view==3) {
         for(i=0;i<8;i++){
             int x=11+i*28;unsigned selected=i==ambr.slot;
@@ -3483,7 +3482,9 @@ static void amb_draw(void)
         cv_rect(12,84,217,1,ALINE);
         cv_rect(120,82,1,5,ADIM);
         cv_rect(marker-2,81,5,7,TONO_ORANGE);
-    }else if(notice){
+    }
+finish_footer:
+    if(notice){
         GFX_HOOK_COVER(4,76,236,89);
         tono_round(4,76,232,13,2,AINK);
         cv_rect(4,78,2,9,amb_primary_accent());

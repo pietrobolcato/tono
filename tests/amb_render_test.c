@@ -362,5 +362,20 @@ int main(int argc,char **argv)
             }
         }
     }
+    /* The edit layer may differ from the last HOME target. */
+    ambr.view=1;ambr.bank=0;ambr.edit_layer=2;ambr.target=1;
+    unsigned master=amb.master,home_gain=amb.layer[0].level;
+    for(unsigned page=0;page<7;page++){
+        ambr.page=page;
+        amb.layer[2].level=64;
+        amb_master(512,1);
+        amb_master(1023,0);
+        assert(amb.master==master && amb.layer[0].level==home_gain && amb.layer[2].level==127);
+        snprintf(name,sizeof name,"edit_gain_%u",page);
+        ar_frame(name,dir,1);
+        int shown=0;
+        for(unsigned i=0;i<ar_n;i++)shown|=!strcmp(ar_boxes[i].s,"LAYER GAIN 100%");
+        assert(shown);
+    }
     printf("Tono native bitmap audit: %u frames, %u clipping/bounds/overlap findings\n",ar_frames,ar_bad);return ar_bad?1:0;
 }
