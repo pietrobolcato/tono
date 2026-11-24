@@ -24,7 +24,7 @@ static int amb_nav_width(const char *key,const char *verb,int knob)
 {
     return text_w(&AF_TONO_NAV,key)+text_w(&AF_TONO_NAV,verb)+(knob?31:16);
 }
-static __attribute__((noinline)) void amb_footer(const amb_layer_t *l,int toast_left)
+static __attribute__((noinline)) void amb_footer(const amb_layer_t *l)
 {
     const char *key="SEL",*verb="Page",*second=0,*action=0;
     int knob=0,lit=0,second_knob=0,cancel=0;
@@ -79,29 +79,20 @@ static __attribute__((noinline)) void amb_footer(const amb_layer_t *l,int toast_
     int help_width=ambr.help?0:27+text_w(&AF_TONO_NAV,"HOME")+text_w(&AF_TONO_NAV,"EDIT")+text_w(&AF_TONO_NAV,"Help");
     int end=3+amb_nav_width(key,verb,knob);
     if(second)end+=amb_nav_width(second,action,second_knob);
-    int row_width=end;
-    int y=76;
-    const int widths[]={cancel_width,page_width,help_width};
-    for(unsigned i=0;i<NELEM(widths);i++){
-        if(row_width+widths[i]>232){y=61;row_width=3;}
-        row_width+=widths[i];
-    }
-    /* Lift the footer only when its bottom row would be covered. */
-    int bottom=76-(row_width>toast_left?14:0);
-    y+=bottom-76;
+    int y=end+cancel_width+page_width+help_width>232?61:76;
     cv_rect(8,y-4,224,1,ALINE);
     int x=amb_nav_item(y,8,key,verb,knob,lit || (turn && str_eq(key,"SELECT")));
     if(second)x=amb_nav_item(y,x,second,action,second_knob,turn && str_eq(second,"SELECT"));
     if(cancel){
-        if(x+cancel_width>232){y=bottom;x=8;}
+        if(x+cancel_width>232){y=76;x=8;}
         x=amb_nav_item(y,x,"HOME","Cancel",0,0);
     }
     if(paging){
-        if(x+page_width>232){y=bottom;x=8;}
+        if(x+page_width>232){y=76;x=8;}
         x=amb_nav_item(y,x,"SEL",page_action,0,0);
     }
     if(!ambr.help){
-        if(x+help_width>232){y=bottom;x=8;}
+        if(x+help_width>232){y=76;x=8;}
         if(x>8){cv_rect(x,y+6,2,2,ADIM);x+=5;}
         x=amb_nav_cap(y,x,"HOME",0,0);cv_text(x,y+4-AF_TONO_NAV_CAP_Y,&AF_TONO_NAV,"+",ADIM);
         x=amb_nav_cap(y,x+6,"EDIT",0,0);cv_text(x,y+4-AF_TONO_NAV_CAP_Y,&AF_TONO_NAV,"Help",AINK);

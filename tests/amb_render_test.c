@@ -326,7 +326,20 @@ int main(int argc,char **argv)
             }
             if(frame)assert(changed==(frame==1 && theme!=THEME_DIETER));
         }
+        ambr.notice[0]=0;
         ar_frame("home_footer",dir,theme==0);
+        static uint16_t home[240*240];
+        memcpy(home,host_screen,sizeof home);
+        amb_say("Crossfade");
+        snprintf(name,sizeof name,"toast_%u",theme);
+        ar_frame(name,dir,1);
+        for(unsigned y=0;y<240;y++)for(unsigned x=0;x<240;x++)
+            if(y<223 || y>=236 || x<4 || x>=236)
+                assert(home[y*240+x]==host_screen[y*240+x]);
+        assert(home[229*240+220]!=host_screen[229*240+220]);
+        ambr.notice_ms=fm1_ms-2500u;
+        ar_frame("toast_expired",dir,0);
+        assert(!memcmp(home,host_screen,sizeof home));
         ambr.evolve_open=1;ambr.evolve_layer=0;ambr.evolve_role=0;ambr.evolve_patch=1;
         ar_frame("evolution_keep",dir,theme==0);
         ambr.evolve_mode=1;ambr.evolve_role=255;

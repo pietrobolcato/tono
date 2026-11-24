@@ -3434,8 +3434,7 @@ static void amb_draw(void)
         else if(amb_tail_any())notice=ambr.handoff[4] || ambr.handoff[5]?"Crossfade":"Old sound releasing";
         else if(amb_monitor_requested)notice="FX bypassed";
     }
-    int toast_left=notice?236-text_w(&AF_TONO_LABEL,notice)-12:240;
-    if(!travel_footer)amb_footer(l,toast_left);
+    if(!travel_footer)amb_footer(l);
     if(proposal && ambr.evolve_open){
         if(ambr.evolve_queued)amb_text(15,10,"Queued for next bar",AQUEUE,24);
         else if(ambr.evolve_role==255)amb_text(15,10,"No eligible role",ADIM,24);
@@ -3485,10 +3484,10 @@ static void amb_draw(void)
         cv_rect(120,82,1,5,ADIM);
         cv_rect(marker-2,81,5,7,TONO_ORANGE);
     }else if(notice){
-        cv_bg=AINK;
-        tono_round(toast_left,76,236-toast_left,13,2,cv_bg);
-        cv_rect(toast_left,78,2,9,amb_primary_accent());
-        amb_text(toast_left+7,79,notice,ABG,39);
+        GFX_HOOK_COVER(4,76,236,89);
+        tono_round(4,76,232,13,2,AINK);
+        cv_rect(4,78,2,9,amb_primary_accent());
+        cv_text_in(4,76+CAP_IN(TONO_LABEL,13),232,&AF_TONO_LABEL,notice,ABG,AINK);
     }
 
     cv_blit_cells(0,147);
