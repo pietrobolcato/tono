@@ -332,10 +332,10 @@ static void amb_fill_patch(amb_layer_t *l,unsigned key,unsigned k,unsigned role,
     }else if(role==5 && patch==27){
         l->base[P_E1]=62;l->base[P_E3]=36;l->base[P_LRATE]=24;
     }else if(role==5 && patch==30){
-        static const int16_t rain[]={NZ_RAIN,20,62,72,28,11,0,15};
+        static const int16_t rain[]={NZ_RAIN,20,52,72,38,16,0,100};
         memcpy(l->base+P_E0,rain,sizeof rain);
         l->base[P_VOICE]=V_LEGATO;l->base[P_LD_FLT]=l->base[P_CHOR]=l->base[P_FRES]=0;
-        l->base[P_FCUT]=95;
+        l->base[P_FCUT]=110;
     }else if(role==5 && patch>=28){
         l->base[P_E0]=AMB_FIELD_SOURCE+patch-28;l->base[P_E1]=4;
         l->base[P_E6]=3;l->base[P_E7]=r->color;l->base[P_LN6]=2;

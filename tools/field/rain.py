@@ -91,6 +91,12 @@ array('rain_bands',[min(255,round(150*(weights[j][k]+weights[j+1][k])/(2*ref))) 
 # Four seconds of actual low-mid rain carry the fine timing that a set of
 # smoothed noise envelopes cannot convey. Scale each short block independently.
 wet=forest_pcm(4096)[:16384]
+# Remove close microphone wind/low-mid rumble from the shower. The storm
+# roll supplies its own bass, and the gentle preset should stay light.
+slow=0.
+for i,x in enumerate(wet):
+    slow+=(x-slow)*.26
+    wet[i]=round(x-.89*slow)
 peak=max(map(abs,wet))
 scales=[]
 codes=[]

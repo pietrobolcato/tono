@@ -77,7 +77,7 @@ static void rain_render(track_t *t,voice_t *v,int32_t *out,uint32_t n,const vmod
             const uint8_t *take=rain_drops+256*drop;
             int sample=rain_sample(take,index);
             if(index+1<frames)sample+=(rain_sample(take,index+1)-sample)*(int)(pos&255)>>8;
-            fall+=sample*amp*grain>>(drop==2?8:10);
+            fall+=sample*amp*grain>>(drop==2?7:9);
             pos+=step;
         }
         if(storm){
@@ -91,7 +91,7 @@ static void rain_render(track_t *t,voice_t *v,int32_t *out,uint32_t n,const vmod
                 int bass=first+(((second-first)*(thunder&1023))>>10);
                 rumble+=(noise-rumble)>>4;
                 int crack=rumble*rain_thunder_air[j>>4]>>9;
-                fall+=(bass*145+crack)*storm>>7;
+                fall+=(bass*197+crack)*storm>>6;
                 thunder+=6; /* 258.5 Hz at the engine sample rate. */
             }
         }
