@@ -2505,7 +2505,7 @@ static inline __attribute__((always_inline)) void mix_part_t(track_t *t, uint32_
     mc_tk[i] = d > mc_tk[i] ? mc_tk[i] + ((d - mc_tk[i]) >> 1) : mc_tk[i] - ((mc_tk[i] - d) >> 3);   /* (up fast) */
 }
 static void mix_part_m(track_t *t, uint32_t n) { mix_part_t(t, n); }   /* (core 1: from the flash) */
-#if FELUCCA_HOTRAM                                       /* (0.6.78) core 0's copy, in RAM (app.ld .hot_text) */
+#if FELUCCA_HOTRAM && !AMBPLUS                           /* (0.6.78) core 0's copy, in RAM (app.ld .hot_text) */
 static __attribute__((noinline)) void mix_part_m0(track_t *t, uint32_t n) { mix_part_t(t, n); }
 #else
 #define mix_part_m0 mix_part_m
@@ -2583,8 +2583,12 @@ static inline __attribute__((always_inline)) void fx_run_t(uint32_t n)
     prf_blk[PRF_FX] = d;
     mc_fx_tk = d > mc_fx_tk ? mc_fx_tk + ((d - mc_fx_tk) >> 1) : mc_fx_tk - ((mc_fx_tk - d) >> 3);
 }
+/* Both Tono cores execute the bus effects from flash; share one DSP body. */
+#if AMBPLUS
+__attribute__((noinline))
+#endif
 static void fx_run(uint32_t n) { fx_run_t(n); }         /* (core 1: from the flash) */
-#if FELUCCA_HOTRAM                                       /* (0.6.78) core 0's copy, in RAM */
+#if FELUCCA_HOTRAM && !AMBPLUS                           /* (0.6.78) core 0's copy, in RAM */
 static __attribute__((noinline)) void fx_run0(uint32_t n) { fx_run_t(n); }
 #else
 #define fx_run0 fx_run
