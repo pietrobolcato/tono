@@ -177,21 +177,27 @@ static void amb_svf_block(int32_t *b,unsigned n,int32_t *state,const tsvf_t *c,
     }
     state[0]=ic1*4096;state[1]=ic2*4096;
 }
+/* Separate max/min lets pi32v2 use its two signed bound instructions. */
+static inline int32_t amb_limit(int32_t x,int32_t maximum)
+{
+    int32_t floor=x > -maximum ? x : -maximum;
+    return floor < maximum ? floor : maximum;
+}
 /* Keep fractional integrator updates at low cutoffs. In a 24 dB filter
  * the first section can feed the second one only a few signal counts. */
 static void amb_slope_stage(int32_t *b,unsigned n,int32_t *state,const tsvf_t *c,
                             int damping,unsigned type,int gentle)
 {
-    int32_t band=state[0],low=state[1],g=c->a3;
+    int32_t band=state[0],low=state[1],g=c->a3,a1=c->a1,a2=c->a2;
     for(unsigned i=0;i<n;i++){
-        int x=clamp(b[i]>>3,-60000,60000);
-        int mid=(c->a1*(band>>12)+c->a2*(x-(low>>12))+4096)>>13;
+        int x=amb_limit(b[i]>>3,60000);
+        int mid=(a1*(band>>12)+a2*(x-(low>>12))+4096)>>13;
         int lo=(low+g*mid+2048)>>12;
         int hi=x-lo-((damping*mid+2048)>>12);
         /* g tops out just below 9000. Bound the input to each product
          * before doubling so the intermediate and state stay in int32. */
-        band=clamp(band+2*g*clamp(hi,-95000,95000),-307200000,307200000);
-        low=clamp(low+2*g*clamp(mid,-95000,95000),-307200000,307200000);
+        band=amb_limit(band+2*g*amb_limit(hi,95000),307200000);
+        low=amb_limit(low+2*g*amb_limit(mid,95000),307200000);
         b[i]=((type==FT_HP?hi:lo)+(gentle?mid:0))*8;
     }
     state[0]=band;state[1]=low;
