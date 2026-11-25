@@ -23,15 +23,20 @@ static double bell_response(unsigned hz,int gain,unsigned width,int synth)
 }
 /* A doubling in the stop band resolves rolloff from a mere gain change.
  * Correlate with the source to exclude fixed-point DC and rounding noise. */
-static double slope_level(unsigned fx,unsigned type,unsigned slope,unsigned hz)
+static double slope_level(unsigned fx,unsigned type,unsigned slope,unsigned hz,unsigned cutoff)
 {
     uint32_t phase=0,inc=hz*(0xffffffffu/FS);
     double re=0,im=0,ref=0;int32_t b[CTL];
     for(unsigned j=0;j<512;j++){
         uint32_t start=phase;
         for(unsigned i=0;i<CTL;i++,phase+=inc)b[i]=osc_sine(phase);
-        if(fx)amb_filter_process(0,b,CTL,(type+1)*16+6+(slope<<6));
-        else amb_synth_curve(0,b,CTL,71,0,type,slope);
+        if(fx)amb_filter_process(0,b,CTL,(type+1)*16+(cutoff==71?6:0)+(slope<<6));
+        else {
+            track_t *t=&trk[0];
+            t->p[P_FTYPE]=type;t->p[P_FCUT]=cutoff;t->p[P_FRES]=0;
+            amb_synth_slope[0]=slope;
+            track_post(t,&ENG_WHEEL,b,CTL);
+        }
         for(unsigned i=0;j>=128 && i<CTL;i++,start+=inc){
             double x=osc_sine(start);
             re+=b[i]*x;im+=b[i]*(double)osc_sine(start+0x40000000u);ref+=x*x;
@@ -43,12 +48,19 @@ static void check_slopes(void)
 {
     trk[0].p[P_LD_FLT]=trk[0].p[P_ED_FLT]=0;
     for(unsigned fx=0;fx<2;fx++)for(unsigned type=0;type<2;type++)for(unsigned slope=1;slope<=3;slope++){
-        double a=slope_level(fx,type,slope,type?520:2300);
-        double b=slope_level(fx,type,slope,type?260:4600);
+        double a=slope_level(fx,type,slope,type?520:2300,71);
+        double b=slope_level(fx,type,slope,type?260:4600,71);
         double db=20*log10(a/b),expected=3u<<slope;
         printf("%s %s %u dB/oct: measured %.1f dB/oct\n",fx?"layer":"synth",type?"HP":"LP",(unsigned)expected,db);
         assert(fabs(db-expected)<3.5);
     }
+    /* At the 80 Hz lower endpoint, a quiet signal must still drive the
+     * second integrator while hundreds of Hz above the corner drop away. */
+    for(unsigned fx=0;fx<2;fx++){
+        assert(slope_level(fx,FT_LP,3,45,20)>.9);
+        assert(slope_level(fx,FT_LP,3,320,20)<.01);
+    }
+    amb_synth_slope[0]=0;
 }
 static void check_bell(void)
 {
