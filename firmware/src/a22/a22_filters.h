@@ -3,9 +3,8 @@
 #include "a22_math.h"
 
 #define a22_SIN_N 2048
-#include "a22_sine.h"
 /* Indexed on every oscillator sample. The full wave lives in spare LOWBUF;
- * only the quarter wave is stored in flash. Initialize before enabling audio. */
+ * Generate its quarter wave before enabling audio and mirror it exactly. */
 #ifdef TONO_A22_FM1
 static float a22_wave[a22_SIN_N + 1] __attribute__((section(".lowbuf"), aligned(4)));
 #else
@@ -13,10 +12,12 @@ static float a22_wave[a22_SIN_N + 1];
 #endif
 void tono_a22_init(void)
 {
-    for (unsigned i = 0; i <= a22_SIN_N; ++i) {
+    for (unsigned i = 0; i <= a22_SIN_N / 4; ++i)
+        a22_wave[i] = a22_sin_turns((float)i / a22_SIN_N);
+    for (unsigned i = a22_SIN_N / 4 + 1; i <= a22_SIN_N; ++i) {
         unsigned j = i & 1023u;
         if (j > 512) j = 1024 - j;
-        a22_wave[i] = i > 1024 && i < a22_SIN_N ? -a22_quarter[j] : a22_quarter[j];
+        a22_wave[i] = i > 1024 && i < a22_SIN_N ? -a22_wave[j] : a22_wave[j];
     }
 }
 
