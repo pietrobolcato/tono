@@ -979,6 +979,13 @@ static __attribute__((noinline)) void amb_engine_macros(const amb_layer_t *l,tra
         t->p[P_APDEP]=(int16_t)clamp(l->base[P_APDEP]+bloom/2,0,64);
     }
 }
+static __attribute__((noinline)) void amb_restore_macro_bases(track_t *t,const amb_layer_t *l)
+{
+    t->p[P_PAN]=l->base[P_PAN];
+    t->p[P_DLY]=l->base[P_DLY];t->p[P_CHOR]=l->base[P_CHOR];
+    t->p[P_E1]=l->base[P_E1];t->p[P_E2]=l->base[P_E2];t->p[P_E3]=l->base[P_E3];
+    t->p[P_E4]=l->base[P_E4];t->p[P_E6]=l->base[P_E6];t->p[P_APDEP]=l->base[P_APDEP];
+}
 static __attribute__((noinline)) void amb_prepare(void)
 {
     unsigned k,i; int32_t desired;
@@ -1009,10 +1016,7 @@ static __attribute__((noinline)) void amb_prepare(void)
             for(i=0;i<P_COUNT;i++)t->p[i]=l->base[i];
             ambr.applied_revision[k]=amb_base_revision[k];
         }
-        t->p[P_PAN]=l->base[P_PAN];
-        t->p[P_DLY]=l->base[P_DLY];t->p[P_CHOR]=l->base[P_CHOR];
-        t->p[P_E1]=l->base[P_E1];t->p[P_E2]=l->base[P_E2];t->p[P_E3]=l->base[P_E3];
-        t->p[P_E4]=l->base[P_E4];t->p[P_E6]=l->base[P_E6];t->p[P_APDEP]=l->base[P_APDEP];
+        amb_restore_macro_bases(t,l);
         /* Most layers have no LFO routed to these control banks. Skip the
          * eight per-knob route lookups, without changing smoothing or rates. */
         int macro_route=(l->lfo_depth && (unsigned)(l->lfo_dest-ROUTE_MACRO)<4) ||
