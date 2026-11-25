@@ -75,13 +75,13 @@ static __attribute__((noinline)) void amb_footer(const amb_layer_t *l)
         case 3:control=B_EDIT;verb=ambr.bank?"Exit rate":"Rate";lit=!!ambr.bank;
             if(!ambr.bank){secondary=NC_SELECT;action="Group";}break;
         case 4:control=NC_SELECT;verb=l->role==4?"Lane":"Step";secondary=ambr.recording?B_REC:B_EDIT;action=ambr.recording?"Finish":l->generated?"Manual":"Auto";break;
-        case 5:control=NC_SELECT;verb="Effect";break;
+        case 5:case 6:control=NC_SELECT;verb="Effect";break;
         }
     }else if(ambr.view==2){
         switch(ambr.page){
         case 0:control=NC_SELECT;verb="Interval";break;
         case 2:control=NC_PRESETS;verb="Browse";secondary=B_SAVE;action="Store";break;
-        case 3:control=NC_SELECT;verb="Effect";break;
+        case 3:case 4:control=NC_SELECT;verb="Effect";break;
         case 5:control=NC_SELECT;verb="Theme";break;
         case 6:control=NC_SELECT;verb="Journey";secondary=B_EDIT;action="Timing";break;
         case 7:control=B_EDIT;verb="Exit";lit=1;page=(const char*[]){"1/3","2/3","3/3"}[timing_tab];break;
@@ -158,6 +158,7 @@ static void amb_help_actions(int lower)
             amb_help_shortcut(76,"SEQ","Open Ensemble meters",1,0);
             amb_help_shortcut(94,"ARP",ambr.zen?"Leave Zen":"Open Zen",1,0);
             amb_help_shortcut(112,ambr.zen?"SEL":"ALGO",ambr.zen?"Switch landscape":"Travel through the song",0,!ambr.zen);
+            amb_help_shortcut(130,"GLO","Toggle Auto Travel",1,0);
         }else if(ambr.help==4 && ambr.target){
             amb_help_shortcut(56,"OCT-","Toggle mute",1,0);
             amb_help_shortcut(74,"OCT+","Toggle solo",1,0);

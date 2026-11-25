@@ -140,6 +140,14 @@ def main(src, dst):
     if os.environ.get("AMBPLUS") == "1":
         compact = ("analog_", "lofi_", "animal_", "formant_", "perf_", "sy_", "ly_", "ep", "uac_", "djf_")
         names.update(name for name in body if name.startswith(compact))
+        # Share repeated cold UI/editor operations across their many call sites.
+        refs = {}
+        for caller in body.values():
+            for callee in IR_REF.findall(caller):
+                refs[callee] = refs.get(callee, 0) + 1
+        out.update(n for n in names - isr if refs.get(n, 0) >= 3
+                   and body.get(n, "").count("\n") >= 18
+                   and n.startswith(("amb_", "cv_", "ed_", "proj_", "ui_", "str_")))
 
     def mark(m):
         if m.group(2) not in names:

@@ -41,8 +41,8 @@ Place the layer left or right or move it repeatedly with auto-pan.
 Overlap small pieces of the layer's recent sound. Blend them into the dry signal for a moving texture.
 The live spectrum shows the layer from low to high. The curve shows which frequencies pass at the selected cutoff.
 [eq]
-The filled spectrum shows this layer after EQ. The curve shows band gains and trim. Turn LOW, MID or HIGH to shape the sound.
-Adjust the balance of lows, mids and highs across the whole mix. Trim the output after boosting a band.
+Turn SELECT through the layer FX to EQ. The fill shows what you hear and the line shows your EQ curve. TYPE selects the mode.
+Press FX in GLO, then turn SELECT to EQ. Shape the whole mix here. Each layer has the same controls in its FX list.
 [global]
 Set how strongly each aspect of the piece drifts. The interval spaces automatic chord changes.
 Set the root, available notes and tempo for generated parts. Changing scale replaces the note pool.
@@ -559,7 +559,7 @@ Set how fast gain returns after a peak.
 [layer_filter_mode]
 LP softens highs. HP removes lows. Bell boosts or cuts a band. Band-pass keeps the band around FREQ.
 [layer_filter_cutoff]
-Move the cutoff or centre frequency. The curve shows its position over the live spectrum.
+Turn FREQ in 100 Hz steps. The synth uses its nearest available cutoff. The curve shows the cutoff or band centre.
 
 [bell_gain]
 Lift or dip the chosen band by up to 12 dB. At 0 dB the sound passes through.
@@ -576,3 +576,6 @@ Shift the right cycle relative to the left. At 0 degrees both pulse together. At
 
 [filter_slope]
 Choose how quickly the filter fades beyond FREQ. At 6 dB/oct more harmonics come through. Turn up through 12 and 18 to 24 for a steeper cut. Band-pass rolls off both sides of FREQ.
+
+[eq_mode]
+3-band adjusts LOW, MID and HIGH in half-decibel steps from -24 to +18 dB. Isolator silences a band at its lowest setting.

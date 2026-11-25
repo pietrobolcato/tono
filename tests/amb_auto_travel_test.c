@@ -7,13 +7,19 @@ int main(void)
     assert(amb_walk_value(0)==WALK_BARS && amb_walk_value(1)==4 && amb_walk_value(2)==16 && amb_walk_value(3)==32);
     assert(amb_journey_style()==2 && amb_endless() && amb_crossfade() && amb.release_ms==6000);
     assert(!amb_lane_value(0,0) && !amb_lane_value(1,0));
+    for(int n=0;n<2;n++){
+        btn_down(B_HOME);frame();press(B_GLO);btn_up(B_HOME);frame();
+        assert(ambr.view==0 && !!amb_walk_value(0)==n && amb_walk_unit()==WALK_BARS);
+        assert(!strcmp(ambr.notice,n?"Auto: On":"Auto: Off"));
+    }
     /* Off is an explicit setting on this song. */
     memset(amb_walk_config(),0,6);
     assert(!amb_walk_value(0) && !amb_journey_style());
     press(B_GLO);turn(EN_SELECT,1);unsigned interval=amb.auto_index;
     press(B_SCL);assert(ambr.page==6);press(B_EDIT);assert(ambr.page==7);
     press(B_SCL);assert(ambr.page==1);turn(EN_K4,1);assert(amb.auto_index==interval);
-    for(unsigned i=2;i<=5;i++){press(B_SCL);assert(ambr.page==i);}
+    const unsigned pages[]={2,3,5}; /* Generate, Master FX (includes EQ), Theme. */
+    for(unsigned i=0;i<NELEM(pages);i++){press(B_SCL);assert(ambr.page==pages[i]);}
     press(B_SCL);assert(ambr.page==0);press(B_SCL);
     turn(EN_K4,1);assert(amb_walk_value(0)==WALK_BARS);
     press(B_EDIT);turn(EN_K1,1);assert(amb_walk_value(0)==WALK_SECONDS);

@@ -9,7 +9,6 @@ static void amb_scope_sound(const int32_t *b,unsigned n)
     for(unsigned i=0;i<n && pos<AMB_SCOPE_N;i++)amb_wave[pos++]=clamp(b[i]>>3,-32767,32767);
     amb_wave_ms=fm1_ms;amb_scope_fill=pos;
 }
-static const uint16_t amb_filter_hz[]={80,125,200,315,500,800,1000,1250,1600,2000,2500,3150,4000,6300,10000,16000};
 /* Matched one-pole coefficients, Q15, at the engine sample rate. */
 static void amb_filter_process(unsigned k,int32_t *b,unsigned n,unsigned setting)
 {
@@ -22,7 +21,7 @@ static void amb_filter_process(unsigned k,int32_t *b,unsigned n,unsigned setting
     amb_filter_previous[k]=next;
     unsigned mode=(setting>>4)&3,shape=(setting>>8)&15;
     int band=mode==3 && (setting&64);
-    unsigned slope=band?setting>>12:mode==3?0:((setting>>6)&3)|((setting>>10)&4);
+    unsigned slope=band?(setting>>12)&7:mode==3?0:((setting>>6)&3)|((setting>>10)&4);
     int svf=shape || mode==3 || slope>=2;
     unsigned pos=amb_scope_fill;
     int capture=amb_scope_target==k+1 && amb_scope_page==5 && pos<AMB_SCOPE_N;
@@ -32,7 +31,15 @@ static void amb_filter_process(unsigned k,int32_t *b,unsigned n,unsigned setting
         int a=coefficient[setting&15];
         static const uint8_t pitch[]={20,29,38,48,57,66,71,75,80,85,89,94,99,108,117,127};
         const tsvf_t *coef=0;int damping=amb_filter_damping(shape,mode==3);
-        if(svf)coef=amb_cached_coef(k,1,pitch[setting&15]<<8,&damping,band?0:slope);
+        int freq=pitch[setting&15]<<8;
+        if(setting>>16){
+            int hz=amb_frequency_hz(setting&15,setting>>16),i=0;
+            while(i<14 && amb_filter_hz[i+1]<hz)i++;
+            int t=(hz-amb_filter_hz[i])*256/(amb_filter_hz[i+1]-amb_filter_hz[i]);
+            a=coefficient[i]+((coefficient[i+1]-coefficient[i])*t>>8);
+            freq=pitch[i]*256+(pitch[i+1]-pitch[i])*t;
+        }
+        if(svf)coef=amb_cached_coef(k,1,freq,&damping,band?0:slope);
         int32_t dry[CTL];
         for(unsigned c=0;c<channels;c++){
             int32_t *buf=!c?b:a22?voice_bank[k].a22.side:c==1?dx_sl:c==2?dx_sr:dx_sb[c-3];

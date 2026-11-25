@@ -219,7 +219,7 @@ static void amb_change_role(void)
            (l->role==6 && l->base[P_E0]==AMB_MIC_SOURCE))continue;
         uint8_t role,patch;
         if(amb_role_proposal(k,dice,&role,&patch)){
-            amb_replace_role(k,role,patch);return;
+            unsigned before=l->role;amb_replace_role(k,role,patch);amb_auto_event(AUTO_ROLE,k,before,role);return;
         }
     }
 }
@@ -233,12 +233,14 @@ static void amb_pattern_tick(void)
         for(unsigned i=0;i<NELEM(amb_generate_recipes);i++)
             if(memcmp(amb.policy.active,amb_generate_recipes[i].values,3))choices[count++]=i+1;
         ambr.generate_queued=choices[amb_hash(amb.policy.seed+lane_clock[0].serial)%count];
-        amb_commit_generate();
+        unsigned preset=ambr.generate_queued-1;amb_commit_generate();amb_auto_event(AUTO_PRESET,0,255,preset);
         return;
     }
     unsigned f=(lane_clock[0].serial-1)%3;
-    if(amb.policy.pending[f]==255)
-        amb_policy_choose(&amb.policy,f,(amb.policy.active[f]+1)%amb_style_count(f),0);
+    if(amb.policy.pending[f]==255){
+        unsigned previous=amb.policy.active[f];amb_policy_choose(&amb.policy,f,(amb.policy.active[f]+1)%amb_style_count(f),0);
+        amb_auto_event(AUTO_RHYTHM+f,0,previous,amb.policy.active[f]);
+    }
 }
 static void amb_ensemble_downbeat(void)
 {
@@ -294,6 +296,7 @@ static void amb_journey_orchestrate(int playing)
         unsigned choice=amb_chapter_sound(k,layer->role,travel.direction,travel.chapter,current,travel.previous_sound[k]);
         travel.previous_sound[k]=current+1;
         amb_patch(k,layer->role,choice);
+        if(amb_notices.travel)amb_auto_event(AUTO_SOUND,k,current,amb_sound_index(k));
         travel.pending_layers&=~(1u<<k);
         if(playing)break;
     }
@@ -320,6 +323,7 @@ static int amb_landscape_instrument(unsigned k,int position)
         travel.origin[k]=*l;
         for(unsigned j=0;j<4;j++)travel.origin[k].macro[j]=clamp(travel.origin_macro[k][j],0,127);
     }
+    unsigned before=amb_sound_index(k);
     const amb_layer_t *saved=&travel.origin[k];
     if(stage){
         unsigned original=l->role==6?saved->base[P_E0]:saved->patch;
@@ -328,6 +332,7 @@ static int amb_landscape_instrument(unsigned k,int position)
         amb_landscape_apply(k,saved);
         for(unsigned j=0;j<4;j++)l->macro[j]=clamp(saved->macro[j]+amb_colour_offset(l->role,j,travel.colour),0,127);
     }
+    if(amb_notices.travel)amb_auto_event(AUTO_SOUND,k,before,amb_sound_index(k));
     travel.stage[k]=stage;
     return 1;
 }
@@ -344,10 +349,12 @@ static int amb_landscape_bar(void)
     }
     if(position==travel.harmony)return 0;
     int scale[12],count=amb_scale(amb_pool(),scale);
+    unsigned old_chord=amb.chord;
     if(style)amb.chord=amb_walk_next(&travel.walk,amb.policy.seed+travel.chapter*31+(uint32_t)position,amb.chord,count);
     else if(position>=-18 && position<=18)amb.chord=travel.chord[AMB_TRAVEL_RANGE+position]%count;
     else amb.chord=(amb_hash(amb.policy.seed+(uint32_t)position/4u)+(uint32_t)position)%count;
     amb_revoice();travel.harmony=position;
+    if(amb_notices.travel)amb_auto_event(AUTO_CHORD,0,old_chord,amb.chord);
     return 1;
 }
 static void amb_landscape_turn(int delta)

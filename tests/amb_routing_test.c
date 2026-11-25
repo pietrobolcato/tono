@@ -84,6 +84,44 @@ static void link_last_edit(void)
     assert(ambr.view==1 && ambr.page==3);
 }
 
+static void check_filter_and_eq(void)
+{
+    amb_fixture_scene(0);
+    press(B_HOME);amb_target(4);press(B_FX);ambr.fx=6;
+    amb_knob(0,8);
+    amb_next_link[3]=0;
+    amb_knob(1,1);
+    assert(amb_frequency_hz(amb_controls.filter[3]&15,amb_frequency_bank(3))==100);
+    amb_knob(1,12);
+    assert(amb_frequency_hz(amb_controls.filter[3]&15,amb_frequency_bank(3))==1300);
+    link_last_edit();assert(amb.layer[3].lfo_dest==ROUTE_FX_FREQ);
+    amb.layer[3].lfo_depth=100;
+    trk[3].lfo_val=32767;
+    unsigned up=amb_layer_filter_setting(3);
+    trk[3].lfo_val=-32767;
+    unsigned down=amb_layer_filter_setting(3);
+    assert(amb_frequency_hz(up&15,up>>16)>amb_frequency_hz(down&15,down>>16));
+    press(B_FX);ambr.fx=6;amb_knob(3,2);link_last_edit();
+    assert(amb_controls.second[3].dest==ROUTE_FX_RES);
+    press(B_FX);ambr.fx=7;turn(EN_SELECT,1);assert(ambr.view==1 && ambr.page==6);
+    amb_knob(0,1);amb_knob(1,-100);amb_knob(2,1);amb_knob(3,100);
+    assert(amb_controls.eq_isolator&8);
+    assert(amb_eq_ticks(amb.layer_eq[3][0])==-48 && amb_eq_ticks(amb.layer_eq[3][1])==1);
+    assert(amb_eq_ticks(amb.layer_eq[3][2])==36 && amb_valid(&amb));
+    ambr.slot=6;amb_save();amb_fixture_scene(0);assert(amb_recall(6));
+    assert(amb.layer[3].lfo_dest==ROUTE_FX_FREQ && amb_controls.second[3].dest==ROUTE_FX_RES);
+    assert(amb_frequency_hz(amb_controls.filter[3]&15,amb_frequency_bank(3))==1300);
+    assert(amb_controls.eq_isolator&8 && amb_eq_ticks(amb.layer_eq[3][1])==1);
+    press(B_GLO);press(B_FX);assert(ambr.view==2 && ambr.page==3);
+    ambr.fx=4;turn(EN_SELECT,1);assert(ambr.page==4);
+    amb_knob(0,1);amb_knob(2,1);assert(amb_controls.eq_isolator&16 && amb_eq_ticks(amb.eq[1])==1);
+    turn(EN_SELECT,-1);assert(ambr.page==3 && ambr.fx==4);
+    amb_notices.head=amb_notices.tail=0;
+    amb_auto_event(AUTO_ROLE,0,1,2);amb_auto_event(AUTO_SOUND,3,2,3);amb_auto_event(AUTO_RHYTHM,0,4,4);
+    assert(amb_notices.head==2 && amb_notices.events[1].layer==3);
+    puts("Layer FX cutoff, alternating links, EQ navigation and song recall PASS");
+}
+
 static void check_layer_shortcut(void)
 {
     amb_fixture_scene(0);
@@ -130,16 +168,15 @@ static void check_layer_shortcut(void)
     link_last_edit();
     assert(l->lfo_dest==ROUTE_GRAIN);
     ambr.page=6;
-    turn(EN_K2,1);
+    turn(EN_K3,1);
     link_last_edit();
     assert(amb_controls.second[0].dest==ROUTE_EQ+1 && l->lfo_dest==ROUTE_GRAIN);
     ambr.page=5;ambr.fx=2;
     turn(EN_K4,1);
     unsigned next=amb_next_link[0];
     link_last_edit();
-    assert(amb_next_link[0]==next);
-    assert(amb_controls.second[0].dest==ROUTE_EQ+1 && l->lfo_dest==ROUTE_GRAIN);
-    assert(!strcmp(ambr.notice,"THIS CONTROL CANNOT USE LFO"));
+    assert(amb_next_link[0]!=next && l->lfo_dest==ROUTE_DELAY_TYPE);
+    assert(amb_controls.second[0].dest==ROUTE_EQ+1);
 
     amb_patch(0,0,0);
     l->lfo_dest=2;
@@ -149,7 +186,7 @@ static void check_layer_shortcut(void)
     turn(EN_K1,-1);
     link_last_edit();
     assert(l->base[P_ATK]==0);
-    assert(!strcmp(amb_route_name(l,l->lfo_dest),"ATK"));
+    assert(!strcmp(amb_route_name(l,amb_edit_dest(l)),"ATK"));
     amb_patch(0,0,1);
     link_last_edit();
     assert(l->lfo_dest==0);
@@ -231,6 +268,7 @@ int main(void)
     ambr.slot=7;amb_save();amb_fixture_scene(0);
     assert(!amb_controls.layer_thinning[2] && amb_recall(7));
     assert(amb_controls.layer_thinning[2]==50 && amb.layer[2].lfo_dest==ROUTE_HOME_DENSITY);
+    check_filter_and_eq();
     check_layer_shortcut();
     check_random_rate();
     puts("HOME + LFO uses last actual layer edit, keeps LFO settings and rejects unavailable targets PASS");

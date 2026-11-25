@@ -388,6 +388,19 @@ static void check_reading(void)
         if (strcmp(b, EN[k][1])) { printf("voice:   EN %-12s %s (want %s)\n", EN[k][0], b, EN[k][1]); ok = 0; }
     }
     check("English through the dictionary (CMU, syllabified): love my time beautiful water strong the don't", ok);
+#ifdef LY_EN_DELTA
+    ok = 1;
+    for (k = 0; k < NELEM(LY_EN_FULL_W); k++) {
+        uint8_t spoken[SW_MAX];
+        uint32_t syllables;
+        const char *word = LY_EN_FULL_W[k], *canonical = LY_EN_FULL_PH[k];
+        uint32_t count = sy_word(LG_EN, word, strlen(word), spoken, &syllables);
+        if (count != strlen(canonical)) { ok = 0; continue; }
+        for (uint32_t i = 0; i < count; i++)
+            if (spoken[i] != ((uint8_t)canonical[i] & 0x7f)) ok = 0;
+    }
+    check("All English pronunciations reconstructed by the compact Tono dictionary", ok);
+#endif
     {   /* every dictionary word found, with at least a syllable; an unknown word by the letter rules.
          * (0.9.0: the dictionary Huffman-coded) each word's phonemes exactly gen_lyrics.py's (LY_EN_REF_*: the words as
          * text); every word cut short, one letter more and one changed at its end: not found unless itself a word */
