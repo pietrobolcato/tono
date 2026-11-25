@@ -196,7 +196,7 @@ int main(void)
     ambr.view=1;ambr.edit_layer=0;ambr.fx=6;ambr.page=5;
     amb_knob(3,1);amb_knob_value(3,label,value);assert(!strcmp(value,"24dB/oct"));
     assert(amb_slope(0,1)==3 && amb_slope(0,0)==0 && amb_slope(1,1)==0);
-    ambr.slot=6;amb_save();amb_fixture_scene(0);assert(amb_recall(6) && amb_slope(0,1)==3);
+    ambr.slot=7;amb_save();amb_fixture_scene(0);assert(amb_recall(7) && amb_slope(0,1)==3);
 
     puts("PASS layer isolation, filter response and captured taps, linked limiter controls and metering.");
 }
