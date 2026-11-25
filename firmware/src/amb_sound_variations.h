@@ -7,7 +7,7 @@
  * to the same performance direction through different synthesis controls. */
 enum {
     V_ORIGINAL,V_VEIL,V_BLOOM,V_CLOSE,V_REED,V_CHIME,V_VELVET,V_DUB,
-    V_PEDAL,V_PLUCK,V_BRASS,V_SLIDE,V_BRUSH,V_FLOOR,V_SPARK,V_WASH,V_RADIO
+    V_PEDAL,V_PLUCK,V_BRASS,V_SLIDE,V_BRUSH,V_FLOOR,V_SPARK,V_WASH,V_RADIO,V_DOWNPOUR,V_STORM
 };
 static const struct {
     const char *name;
@@ -29,7 +29,8 @@ static const struct {
     {"Floor tom",-11,18,-28,32,15,-26},
     {"Pinpoints",-29,-33,31,-26,-34,-15},
     {"Far bank",10,16,-34,-14,33,9},
-    {"Intercom",-23,-12,23,21,-43,-40}
+    {"Intercom",-23,-12,23,21,-43,-40},
+    {"Steady Downpour",0,0,0,0,0,0},{"Rain & Thunder",0,0,0,0,0,0}
 };
 typedef uint8_t amb_voicing_menu_t[3];
 /* Patch order follows amb_palette.h; SAMPLE uses the persisted source ID. */
@@ -84,7 +85,7 @@ static const amb_voicing_menu_t amb_lead_voicings[]={
 static const amb_voicing_menu_t amb_texture_voicings[]={
     [17]={V_CLOSE,V_BLOOM},[18]={V_PEDAL,V_WASH},[22]={V_RADIO,V_WASH},
     [23]={V_CLOSE,V_DUB},[24]={V_RADIO,V_WASH},[25]={V_CLOSE,V_WASH},
-    [26]={V_RADIO,V_BLOOM},[28]={V_CLOSE,V_WASH},[29]={V_RADIO,V_DUB}
+    [26]={V_RADIO,V_BLOOM},[28]={V_CLOSE,V_WASH},[29]={V_RADIO,V_DUB},[30]={V_DOWNPOUR,V_STORM}
 };
 #define AMB_CHECK_MENU(role) _Static_assert(NELEM(amb_##role##_voicings)==NELEM(amb_##role##_patches), "Every patch has a voicing menu")
 AMB_CHECK_MENU(pad);AMB_CHECK_MENU(drone);_Static_assert(NELEM(amb_bell_voicings)==NELEM(amb_bells_patches),"Bells menus");
@@ -110,7 +111,7 @@ static unsigned amb_variation_id(const amb_layer_t *l,unsigned index)
     return index && index<amb_variation_count(l)?amb_variation_menu(l)[index-1]:V_ORIGINAL;
 }
 static const char *amb_variation_name(const amb_layer_t *l,unsigned index)
-{return amb_voicing[amb_variation_id(l,index)].name;}
+{return l->role==5 && l->patch==30 && !index?"Chill Rain":amb_voicing[amb_variation_id(l,index)].name;}
 static void amb_voice_offset(amb_layer_t *l,const amb_layer_t *original,unsigned id,int delta)
 {
     const param_desc_t *d=amb_param_desc(l,id);
@@ -121,6 +122,12 @@ static void amb_apply_variation(unsigned k,unsigned index)
     amb_layer_t *l=&amb.layer[k];
     if(index>=amb_variation_count(l))return;
     const unsigned id=amb_variation_id(l,index);
+    if(l->role==5 && l->patch==30){
+        l->base[P_E1]=index==1?68:index==2?54:35;
+        l->base[P_E5]=index==1?115:index==2?66:31;
+        l->base[P_E6]=index==2?112:0;
+        return;
+    }
     const int tone=amb_voicing[id].tone,body=amb_voicing[id].body;
     amb_layer_t original={0};
     amb_fill_patch(&original,amb.key,k,l->role,l->patch);

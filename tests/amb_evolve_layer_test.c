@@ -77,7 +77,7 @@ static void texture_family_browser(void)
     amb_fixture_scene(AMB_SCENE_GARDEN);
     amb_target(1);press(B_EDIT);press(B_EDIT);
     unsigned families=amb_sound_count(5);
-    assert(families==12 && amb_patch_count(5)==30);
+    assert(families==13 && amb_patch_count(5)==31);
     for(unsigned family=0;family<families;family++){
         unsigned head=amb_sound_from_browser(5,family);
         for(unsigned i=0;i<amb_texture_count(head);i++){
@@ -97,7 +97,7 @@ static void texture_family_browser(void)
         }
     }
     assert(seen==(1u<<amb_patch_count(5))-1);
-    puts("All 30 texture IDs reachable across 12 sound families; silent browse and stable member ID PASS");
+    puts("All 31 texture IDs reachable across 13 sound families; silent browse and stable member ID PASS");
 }
 int main(void)
 {

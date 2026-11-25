@@ -17,8 +17,12 @@
  * note from silence sounds the same each time), s[3] the drift target and its countdown, s[4..6] the pink
  * poles, s[7] the brown pole; ph[0] the clock phase (LFSR, META) or the hold count (CRSH), ph[1] the
  * register, the held sample or META's DC blocker, ph[2] the drift. */
-static const char *const N_NOISE_MODE[] = {"ANLG", "DUST", "LFSR", "META"};
-enum { NZ_ANLG, NZ_DUST, NZ_LFSR, NZ_META };
+static const char *const N_NOISE_MODE[] = {"ANLG", "DUST", "LFSR", "META"
+#if AMBPLUS
+, "RAIN"
+#endif
+};
+enum { NZ_ANLG, NZ_DUST, NZ_LFSR, NZ_META, NZ_RAIN };
 static const char *const N_NOISE_LONG[] = {"L23", "L20", "L17", "L15", "L13", "L11", "L9", "L7", 0};
 static const char *const N_NOISE_META[] = {"127", "127B", "93", "63", "63B", "31", "15", "7", 0};
 static const param_desc_t NOISE_LONG = {"LEN", F_INT, 0, 127, 0, N_NOISE_LONG, 0};   /* = edit[5] but the names */
@@ -45,6 +49,17 @@ static const struct { uint32_t w[4]; uint8_t len; int16_t hi, lo; } NOISE_SEQ[8]
 static const param_desc_t *noise_param_desc(const int16_t *p, uint32_t k)
 {
     int32_t mode = p[P_E0];
+#if AMBPLUS
+    if(mode==NZ_RAIN && k>0 && k<=7){
+#define RAIN_PARAM(label) {label,F_PCT,0,127,0,0,0}
+        static const param_desc_t controls[]={
+            RAIN_PARAM("AIR"),RAIN_PARAM("BRIGHT"),RAIN_PARAM("LEVEL"),RAIN_PARAM("SIZE"),
+            RAIN_PARAM("DROPS"),RAIN_PARAM("THUNDER"),RAIN_PARAM("CLOSE")
+        };
+#undef RAIN_PARAM
+        return &controls[k-1];
+    }
+#endif
     if (k == 5u && mode >= NZ_LFSR)
         return mode == NZ_LFSR ? &NOISE_LONG : &NOISE_META;
     if (k == 7u && mode >= NZ_LFSR)
@@ -88,7 +103,11 @@ static uint32_t isqrt32(uint32_t x)
 static void noise_note_on(track_t *t, voice_t *v)
 {
     uint32_t seed = (v->note + 1u) * 0x9E3779B9u ^ (uint32_t)v->fine * 0x85EBCA6Bu;   /* UNISON: each its own */
+#if AMBPLUS
+    if(t->p[P_E0]==NZ_RAIN)seed^=t->lfo_ph; /* Each new drop field starts at the layer's live phase. */
+#else
     (void)t;
+#endif
     v->s[0] = v->s[1] = 0;
     v->s[2] = (int32_t)(seed ? seed : 1u);
     v->s[3] = 0;                                      /* a new drift target at once */
@@ -98,8 +117,15 @@ static void noise_note_on(track_t *t, voice_t *v)
     v->ph[2] = 0;
 }
 
+#if AMBPLUS
+#include "amb_rain.h"
+#endif
+
 static void noise_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const vmod_t *m)
 {
+#if AMBPLUS
+    if(t->p[P_E0]==NZ_RAIN){rain_render(t,v,out,n,m);return;}
+#endif
     const int16_t *p = t->p;
     uint32_t mode = (uint32_t)p[P_E0] & 3u, sel = ((uint32_t)p[P_E5] >> 4) & 7u, i;
     int32_t res = p[P_E3], drft = p[P_E6], crsh = mode < NZ_LFSR ? p[P_E7] : 0;
@@ -263,7 +289,7 @@ static const engine_t ENG_NOISE = {
     .name = "NOISE",
     .page_title = {"SRC", "MOVE"},
     .edit = {
-        {"MODE", F_ENUM, 0, 3, 0, N_NOISE_MODE, 0},
+        {"MODE", F_ENUM, 0, NELEM(N_NOISE_MODE)-1, 0, N_NOISE_MODE, 0},
         {"COLOR", F_PCT, 0, 127, 64, 0, 0},
         {"FREQ", F_CUTOFF, 0, 127, 80, 0, 0},
         {"PEAK", F_PCT, 0, 127, 30, 0, 0},   /* (0.5.1: was RES, beside the FILTER page's own RES) */
