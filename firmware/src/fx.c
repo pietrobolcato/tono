@@ -178,9 +178,20 @@ static int32_t dist_w[NTRK];                            /* the blend the last bl
 #if AMBPLUS
 /* The dry performance monitor's symmetric transfer. At high input its
  * integer-table ceiling is +/-25635 before the DAC's six-dB attenuation. */
+static inline unsigned amb_positive_clip(unsigned a)
+{
+    unsigned i=a>>8;
+    unsigned l=(uint16_t)TANH_Q15[i],r=(uint16_t)TANH_Q15[i+1];
+    return l+(((r-l)*(a&255))>>8);
+}
 static int32_t amb_monitor_curve(int32_t x)
 {
-    return soft_knee(softclip(x),12000);
+    /* Both stages are odd-symmetric. Apply their existing table to the
+     * magnitude and restore the sign once. Stage one bounds stage two. */
+    unsigned a=x<0?0u-(unsigned)x:(unsigned)x;
+    unsigned y=a>=65536?(uint16_t)TANH_Q15[256]:amb_positive_clip(a);
+    if(y>12000)y=12000+(amb_positive_clip((y-12000)*2)>>1);
+    return x<0?-(int)y:(int)y;
 }
 static int32_t amb_knee_sample(int32_t x,int gain,int makeup,int tone,int32_t *low,int blend)
 {
@@ -216,7 +227,12 @@ static __attribute__((noinline)) void amb_knee_block(track_t *t,int32_t *b,unsig
     t->dist_lp1=low_l;t->dist_lp2=low_r;
 }
 #endif
+#if AMBPLUS
+/* The wet circuit is shared by both mixer cores. Most layers bypass it. */
+static __attribute__((noinline)) void track_dist_wet(track_t *t,int32_t *b,uint32_t n)
+#else
 static void track_dist(track_t *t, int32_t *b, uint32_t n)
+#endif
 {
     int32_t d = t->p[P_DIST], i, g, k, mk, b0 = softclip(2400), w0, w1, dw, full;
     uint32_t type = (uint32_t)t->p[P_DTYPE], ti = (uint32_t)(t - trk) % NTRK;
@@ -266,6 +282,13 @@ static void track_dist(track_t *t, int32_t *b, uint32_t n)
         t->dist_lp2 = l2;
     }
 }
+
+#if AMBPLUS
+static inline void track_dist(track_t *t,int32_t *b,uint32_t n)
+{
+    if(t->p[P_DIST] || dist_w[(uint32_t)(t-trk)%NTRK])track_dist_wet(t,b,n);
+}
+#endif
 
 /* master: peak limiter in front of the soft clipper. Fast attack (~0.1 ms),
  * ~150 ms release, threshold where tanh is still nearly linear, so chords
@@ -2110,6 +2133,38 @@ static __attribute__((noinline)) void amb_a22_stereo(const int *side,int *l,int 
 }
 #endif
 
+#if AMBPLUS
+/* Factor stereo gain into a common level for the mono FX sends and two
+ * pan gains for the dry stereo image. Their product is the requested gain
+ * on each channel, including Drum-X and the A22 stereo side signal. */
+static void amb_trem_endpoint(int gain_l,int gain_r,int *level,int *pan_l,int *pan_r)
+{
+    int sum=gain_l+gain_r;
+    *level=mulq16(*level,sum*8u);
+    if(gain_l!=gain_r){
+        *pan_l=*pan_l*(2*gain_l)/sum;
+        *pan_r=*pan_r*(2*gain_r)/sum;
+    }
+}
+static __attribute__((noinline)) void amb_trem_mix(unsigned k,unsigned n,
+    int *level,int *dl,int *left,int *dgl,int *right,int *dgr)
+{
+    amb_trem_t v=amb_trem_audio[k];
+    uint32_t phase=amb_trem_phase[k]+n*(LFO_INC[(int)v.rate+64]/CTL);
+    amb_trem_phase[k]=phase;
+    int end_level=*level+*dl*(int)n,end_l=*left+*dgl*(int)n,end_r=*right+*dgr*(int)n;
+    amb_trem_endpoint(4096-amb_trem_dip[k][0],4096-amb_trem_dip[k][1],level,left,right);
+    for(unsigned channel=0;channel<2;channel++){
+        int wave=lfo_shape(v.shape,0,phase+(channel?(uint32_t)v.phase<<24:0));
+        amb_trem_dip[k][channel]=((32767-wave)*v.depth+800)/1600;
+    }
+    amb_trem_endpoint(4096-amb_trem_dip[k][0],4096-amb_trem_dip[k][1],&end_level,&end_l,&end_r);
+    *dl=(end_level-*level)>>CTL_LOG2;
+    *dgl=(end_l-*left)>>CTL_LOG2;
+    *dgr=(end_r-*right)>>CTL_LOG2;
+}
+#endif
+
 /* one synth part into the dry mix and the sends; a part with no voice sounding costs
  * the LFO tick and a cleared buffer only (after the DIST tail has run out) */
 static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t n)   /* (0.6.78: inlined in both
@@ -2208,11 +2263,18 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
                 mod_end(t);
             return;
         }
-        int32_t lq0 = lq, gl0 = gl, gr0 = gr;           /* (0.7.5: uin_mix, the same ramps) */
 #if AMBPLUS
+        if(amb_trem_audio[ti].depth || amb_trem_dip[ti][0] || amb_trem_dip[ti][1]){
+            /* Only the wet path passes ramp addresses to flash. Keep the dry
+             * mixing loop's gains register-eligible across the whole block. */
+            int level=lq, dlevel=dl, left=gl, dleft=dgl, right=gr, dright=dgr;
+            amb_trem_mix(ti,n,&level,&dlevel,&left,&dleft,&right,&dright);
+            lq=level;dl=dlevel;gl=left;dgl=dleft;gr=right;dgr=dright;
+        }
         if(t->engine==ENGI_AMB_A22)
             amb_a22_stereo(voice_bank[ti].a22.side,ol,or_,n,lq,dl,gl,dgl,gr,dgr,pm0,pm1);
 #endif
+        int32_t lq0=lq, gl0=gl, gr0=gr;       /* uin_mix shares the final ramps. */
         if (dx_xon && ENGINES[t->engine] == &ENG_DRUM)  /* (0.6.48) IMAGE, SENDs: from the same ramps as below */
         {
             int32_t *const sx[3] = {sc, sd, sr};
@@ -2459,7 +2521,7 @@ static inline __attribute__((always_inline)) void mix_part_t(track_t *t, uint32_
     mc_tk[i] = d > mc_tk[i] ? mc_tk[i] + ((d - mc_tk[i]) >> 1) : mc_tk[i] - ((mc_tk[i] - d) >> 3);   /* (up fast) */
 }
 static void mix_part_m(track_t *t, uint32_t n) { mix_part_t(t, n); }   /* (core 1: from the flash) */
-#if FELUCCA_HOTRAM                                       /* (0.6.78) core 0's copy, in RAM (app.ld .hot_text) */
+#if FELUCCA_HOTRAM                           /* (0.6.78) core 0's copy, in RAM (app.ld .hot_text) */
 static __attribute__((noinline)) void mix_part_m0(track_t *t, uint32_t n) { mix_part_t(t, n); }
 #else
 #define mix_part_m0 mix_part_m
@@ -2537,8 +2599,12 @@ static inline __attribute__((always_inline)) void fx_run_t(uint32_t n)
     prf_blk[PRF_FX] = d;
     mc_fx_tk = d > mc_fx_tk ? mc_fx_tk + ((d - mc_fx_tk) >> 1) : mc_fx_tk - ((mc_fx_tk - d) >> 3);
 }
+/* Both Tono cores execute the bus effects from flash; share one DSP body. */
+#if AMBPLUS
+__attribute__((noinline))
+#endif
 static void fx_run(uint32_t n) { fx_run_t(n); }         /* (core 1: from the flash) */
-#if FELUCCA_HOTRAM                                       /* (0.6.78) core 0's copy, in RAM */
+#if FELUCCA_HOTRAM && !AMBPLUS                           /* (0.6.78) core 0's copy, in RAM */
 static __attribute__((noinline)) void fx_run0(uint32_t n) { fx_run_t(n); }
 #else
 #define fx_run0 fx_run

@@ -322,6 +322,19 @@ static void fm1__key(uint32_t id, uint32_t closed)
 static void fm1__keys(uint32_t p)                  /* the keys of column p, just read */
 {
     uint32_t r, raw = fm1_in.raw[p];
+#if AMBPLUS
+    /* Once the longest debounce interval passes with the same column, every
+     * contact already agrees with its published state. A new raw sample
+     * restarts the full interval, including the first disagreeing scan. */
+    static uint8_t previous[FM1_NCOL], remaining[FM1_NCOL];
+    if (raw != previous[p]) {
+        previous[p] = (uint8_t)raw;
+        remaining[p] = FM1_DEB_PRESS > FM1_DEB_RELEASE ? FM1_DEB_PRESS : FM1_DEB_RELEASE;
+    }
+    if (!remaining[p])
+        return;
+    remaining[p]--;
+#endif
     for (r = 1; r < 5u; r++)
         if (FM1_KEYMAP[r][p] >= 0)
             fm1__key((uint32_t)FM1_KEYMAP[r][p], (raw >> r) & 1u);

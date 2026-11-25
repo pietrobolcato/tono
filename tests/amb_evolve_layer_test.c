@@ -73,17 +73,17 @@ static void auto_sound_browser(void)
 }
 static void texture_family_browser(void)
 {
-    unsigned seen=0;
+    unsigned char seen[NELEM(amb_texture_patches)]={0};
     amb_fixture_scene(AMB_SCENE_GARDEN);
     amb_target(1);press(B_EDIT);press(B_EDIT);
     unsigned families=amb_sound_count(5);
-    assert(families==12 && amb_patch_count(5)==30);
+    assert(families==14 && amb_patch_count(5)==32);
     for(unsigned family=0;family<families;family++){
         unsigned head=amb_sound_from_browser(5,family);
         for(unsigned i=0;i<amb_texture_count(head);i++){
             unsigned member=amb_texture_member(head,i);
-            assert(amb_texture_family(member)==family && !(seen&(1u<<member)));
-            seen|=1u<<member;
+            assert(member<NELEM(seen) && amb_texture_family(member)==family && !seen[member]);
+            seen[member]=1;
             amb_patch(0,5,member);
             amb_piece_t before=amb;
             amb_browse_proposal(1);
@@ -96,8 +96,8 @@ static void texture_family_browser(void)
             }
         }
     }
-    assert(seen==(1u<<amb_patch_count(5))-1);
-    puts("All 30 texture IDs reachable across 12 sound families; silent browse and stable member ID PASS");
+    for(unsigned member=0;member<NELEM(seen);member++)assert(seen[member]);
+    printf("All %u texture IDs reachable across %u sound families; silent browse and stable member ID PASS\n",amb_patch_count(5),families);
 }
 int main(void)
 {

@@ -9,6 +9,7 @@ attribute is an error on variables, so build.py compiles felucca.c to LLVM IR wi
 optimizer, this script adds 'minsize' to those definitions, and the IR is then compiled at -Os
 (without the edit, that round trip is byte-identical to compiling felucca.c directly).
   size_fns.py IN.ll OUT.ll"""
+import os
 import re
 import sys
 from pathlib import Path
@@ -133,6 +134,12 @@ def main(src, dst):
     fast = {f for f in isr if f not in names}
     called = {g for f in fast for g in IR_REF.findall(body.get(f, ""))}
     out = {n for n in names & isr & called if body.get(n, "").count("\n") >= 0}
+
+    # Share compact oscillator and optional-effect helpers on the Tono target.
+    # Keep the mixer, DMA callbacks, A22 DSP and delay/reverb lines on -Os.
+    if os.environ.get("AMBPLUS") == "1":
+        compact = ("analog_", "lofi_", "animal_", "formant_", "perf_", "sy_", "ly_", "ep", "uac_", "djf_")
+        names.update(name for name in body if name.startswith(compact))
 
     def mark(m):
         if m.group(2) not in names:

@@ -1,7 +1,8 @@
 # Role	Patch/source	Variation	Sound	Preset	Live cue
 0	0	0	Cloud Bloom	Original	Warm balanced pad for main bed
-0	0	1	Cloud Bloom	Veil	Dark muted veil for deep background
-0	0	2	Cloud Bloom	Open brass	Bright brassy pad for forward presence
+0	0	1	Cloud Bloom	Still Water	Soft sine bed leaves room for a lead
+0	0	2	Cloud Bloom	Twin Reeds	Detuned triangles pulse on held chords
+0	0	3	Cloud Bloom	Glass Tide	A soft upper fifth glints over the chord
 0	1	0	Soft Choir	Original	Smooth vocal pad for steady chords
 0	1	1	Soft Choir	Slow bloom	Slow-swelling choir for gradual entries
 0	1	2	Soft Choir	Reed edge	Nasal reed edge for extra cut
@@ -327,6 +328,11 @@
 5	29	0	Subway Voice	Original	Distant subway rumble and PA
 5	29	1	Subway Voice	Intercom	Mid-focused boxy intercom voice
 5	29	2	Subway Voice	Dub send	Spacious echoing dub-washed voice
+5	30	0	Abstract Rain	Chill Rain	Soft drizzle with separate close drops
+5	30	1	Abstract Rain	Steady Downpour	Busy splashes over a broad wet wash
+5	30	2	Abstract Rain	Rain & Thunder	Rain with occasional low thunder rolls
+5	31	0	True Rain	Chill Rain	Soft rain recorded under forest leaves
+5	31	1	True Rain	Rain & Thunder	Woodland rain and a low thunder roll
 6	0	0	SOFT CHIME	Original	Warm soft rounded chime pad
 6	0	1	SOFT CHIME	Silver tine	Brighter metallic tine sparkle
 6	0	2	SOFT CHIME	Dub send	Softer washy ambient chime tail

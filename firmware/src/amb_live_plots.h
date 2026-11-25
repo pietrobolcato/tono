@@ -44,16 +44,24 @@ static int amb_response_y(unsigned hz,int cutoff,int type,int resonance,int laye
         int a=(4096-(int)(ratio*ratio))/64,b=(int)ratio*amb_filter_damping(shape,1)/4096;
         int boosted=b*(int)amb_peak_q12[db+6]/4096;
         gain=256*isqrt32(1+a*a+boosted*boosted)/isqrt32(1+a*a+b*b);
-    }else if(layer && !resonance){
-        unsigned d=isqrt32(64*64+ratio*ratio);
-        gain=(type==0?64:ratio)*256/d;
     }else{
-        int delta=4096-(int)(ratio*ratio);
-        int damping=ratio*(128-resonance*116/127);
-        /* Normalize before squaring to keep resonant peaks in 32 bits. */
-        int a=delta/64,b=damping/64;
-        unsigned d=isqrt32(1+a*a+b*b);
-        gain=(type==0?64:type==1?ratio*ratio/64:ratio)*256/d;
+        unsigned slope=amb_slope(ambr.edit_layer,layer);
+        if(!slope && layer && !resonance)slope=1;
+        unsigned norm=hz>(unsigned)cutoff?hz:(unsigned)cutoff;
+        int lo=256*cutoff/norm,hi=256*hz/norm;
+        int a=(lo*lo-hi*hi)>>8,b=(lo*hi)>>8;
+        int damping=8192-resonance*7600/127;
+        if(slope==3)damping=damping*3135/8192;
+        if(slope==2 && layer)damping=damping*5793/8192;
+        int kd=b*damping>>12;
+        int num=type==FT_LP?lo*lo>>8:type==FT_HP?hi*hi>>8:b;
+        unsigned d=isqrt32(1+a*a+kd*kd);
+        if(slope==1)num=isqrt32(num*num+b*b);
+        gain=num*256/d;
+        if(slope==3){
+            kd=b*7568>>12;
+            gain=gain*num/isqrt32(1+a*a+kd*kd);
+        }
     }
     if(!gain)return 126;
     unsigned exp=31-__builtin_clz(gain);

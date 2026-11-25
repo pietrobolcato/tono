@@ -155,6 +155,7 @@ static inline __attribute__((always_inline)) void tf_steady_lowpass(int32_t *sam
 #endif
 #if AMBPLUS
 static int amb_second_cut[NTRK];
+static uint8_t amb_synth_slope[NTRK];
 static int8_t amb_bell_gain[NTRK]; /* two-dB steps, zero is a flat response */
 static const uint16_t amb_peak_q12[]={1029,1295,1631,2053,2584,3254,4096,5157,6492,8173,10289,12952,16306};
 static int amb_filter_damping(unsigned shape,int bell)
@@ -165,23 +166,110 @@ static int amb_filter_damping(unsigned shape,int bell)
 static void amb_svf_block(int32_t *b,unsigned n,int32_t *state,const tsvf_t *c,
                           int damping,unsigned type,int gain)
 {
-    int32_t ic1=state[0],ic2=state[1]>>3;
+    int32_t ic1=state[0]>>12,ic2=state[1]>>12;
     for(unsigned i=0;i<n;i++){
         int32_t input=b[i], x=clamp(input>>3,-60000,60000);
         int32_t v3=x-ic2,v1=(c->a1*ic1+c->a2*v3)>>13;
         int32_t v2=ic2+((c->a2*ic1+c->a3*v3)>>13);
         ic1=clamp(2*v1-ic1,-75000,75000);ic2=clamp(2*v2-ic2,-75000,75000);
         int32_t band=damping*v1>>12;
-        b[i]=type==FT_BELL?input+((gain*band)>>9):type==FT_HP?(x-v2-band)*8:v2*8;
+        b[i]=type==FT_BELL?input+((gain*band)>>9):((type&1)?x-v2-band:v2)*8;
     }
-    state[0]=ic1;state[1]=ic2*8;
+    state[0]=ic1*4096;state[1]=ic2*4096;
 }
-static int32_t amb_bell_state[NTRK][3][2] __attribute__((section(".lowbuf")));
-static void amb_synth_bell(unsigned ti,int32_t *out,unsigned n,int cut,int width)
+/* Separate max/min lets pi32v2 use its two signed bound instructions. */
+static inline int32_t amb_limit(int32_t x,int32_t maximum)
+{
+    int32_t floor=x > -maximum ? x : -maximum;
+    return floor < maximum ? floor : maximum;
+}
+/* Keep fractional integrator updates at low cutoffs. In a 24 dB filter
+ * the first section can feed the second one only a few signal counts. */
+static void amb_slope_stage(int32_t *b,unsigned n,int32_t *state,const tsvf_t *c,
+                            int damping,unsigned type,int gentle)
+{
+    int32_t band=state[0],low=state[1],g=c->a3,a1=c->a1,a2=c->a2;
+    const int limit_step=g*95000;
+    for(unsigned i=0;i<n;i++){
+        int x=amb_limit(b[i]>>3,60000);
+        int mid=(a1*(band>>12)+a2*(x-(low>>12))+4096)>>13;
+        int step=g*mid;
+        int lo=(low+step+2048)>>12;
+        int hi=x-lo-((damping*mid+2048)>>12);
+        /* g tops out just below 9000. Bound the input to each product
+         * before doubling so the intermediate and state stay in int32. */
+        band=amb_limit(band+2*g*amb_limit(hi,95000),307200000);
+        low=amb_limit(low+2*amb_limit(step,limit_step),307200000);
+        b[i]=((type==FT_HP?hi:lo)+(gentle?mid:0))*8;
+    }
+    state[0]=band;state[1]=low;
+}
+/* Both editors use the same biquad for resonant 6, 12 and 24 dB/oct.
+ * A 4-pole Butterworth is two biquads with different damping. Resonance
+ * affects only the first one, so it is not multiplied twice at the corner. */
+static void amb_filter_stages(int32_t *b,unsigned n,int32_t *state,const tsvf_t *coef,
+                              int damping,unsigned type,unsigned slope,int gain)
+{
+    if(!slope){amb_svf_block(b,n,state,coef,damping,type,gain);return;}
+    amb_slope_stage(b,n,state,coef,damping,type,slope==1);
+    if(slope==3)amb_slope_stage(b,n,state+2,coef+1,7568,type,0);
+}
+static int amb_filter_coefficients(tsvf_t coef[2],int freq,int damping,unsigned slope)
+{
+    if(slope==3){
+        tsvf_coef_k(coef+1,freq,7568);
+        damping=damping*3135/8192;
+    }else if(slope==2)damping=damping*5793/8192;
+    tsvf_coef_k(coef,freq,damping);
+    if(slope){
+        freq=clamp(freq,0,127<<8);
+        unsigned index=(unsigned)freq>>8;
+        int g=SVF_G[index];
+        if(index<127)g+=(SVF_G[index+1]-g)*(freq&255)>>8;
+        coef[0].a3=coef[1].a3=g;
+    }
+    return damping;
+}
+/* The two audio cores own disjoint tracks. Keep synth and insert filter
+ * coefficients independent so UI changes and modulation take effect on the
+ * next rendered block, including while a layer is sustaining. */
+typedef struct {
+    tsvf_t coefficients[2];
+    int freq, damping, result;
+    unsigned slope_key;
+} amb_coef_cache_t;
+static amb_coef_cache_t amb_coef_cache[NTRK][2] __attribute__((section(".lowbuf")));
+static const tsvf_t *amb_cached_coef(unsigned track,unsigned insert,int freq,int *damping,unsigned slope)
+{
+    amb_coef_cache_t *c=&amb_coef_cache[track][insert];
+    unsigned key=slope+1;
+    if(c->slope_key!=key || c->freq!=freq || c->damping!=*damping){
+        c->slope_key=key;c->freq=freq;c->damping=*damping;
+        c->result=amb_filter_coefficients(c->coefficients,freq,*damping,slope);
+    }
+    *damping=c->result;
+    return c->coefficients;
+}
+static void amb_slope_edge(int32_t *buf,unsigned n,int32_t *last,int changed)
+{
+    if(changed){
+        /* A control block is 32 samples; the mixer and filter feed bounded
+         * audio (< 2^20), so the difference times 31 fits int32. */
+        int32_t step=*last-buf[0];
+        for(unsigned i=0;i<n && i<CTL;i++)buf[i]+=(step*(int)(CTL-1-i))>>CTL_LOG2;
+    }
+    *last=buf[n-1];
+}
+static struct {int32_t last[3];uint8_t slope;} amb_synth_edge[NTRK] __attribute__((section(".lowbuf")));
+static unsigned amb_synth_channels(const track_t *t)
+{return t->engine==ENGI_AMB_A22?2:t->engine==ENGI_DRUM && dx_xon?3:1;}
+static int32_t *amb_synth_buf(unsigned ti,int32_t *out,unsigned channels,unsigned c)
+{return !c?out:channels==2?voice_bank[ti].a22.side:c==1?dx_sl:dx_sr;}
+static int32_t amb_bell_state[NTRK][3][4] __attribute__((section(".lowbuf")));
+static void amb_synth_curve(unsigned ti,int32_t *out,unsigned n,int cut,int width,unsigned type,unsigned slope)
 {
     int gain=amb_peak_q12[amb_bell_gain[ti]+6]-4096;
-    int damping=amb_filter_damping((unsigned)width>>3,1);
-    tsvf_t coef;
+    int damping=amb_filter_damping((unsigned)width>>3,type==FT_BELL);
     track_t *t=&trk[ti];
     int freq=(cut<<8)+amb_second_cut[ti]+((mulq15(t->lfo_val,t->lfo_fade)*t->p[P_LD_FLT])>>7);
     if(t->p[P_ED_FLT]){
@@ -189,14 +277,16 @@ static void amb_synth_bell(unsigned ti,int32_t *out,unsigned n,int cut,int width
         for(unsigned i=0;i<NVOICE;i++)if(t->v[i].active && t->v[i].stage<4 && (t->v[i].env>>9)>env)env=t->v[i].env>>9;
         freq+=(env*t->p[P_ED_FLT])>>7;
     }
-    tsvf_coef_k(&coef,freq,damping);
-    amb_svf_block(out,n,amb_bell_state[ti][0],&coef,damping,FT_BELL,gain);
-    if(trk[ti].engine==ENGI_AMB_A22)amb_svf_block(voice_bank[ti].a22.side,n,amb_bell_state[ti][1],&coef,damping,FT_BELL,gain);
-    if(trk[ti].engine==ENGI_DRUM && dx_xon){
-        amb_svf_block(dx_sl,n,amb_bell_state[ti][1],&coef,damping,FT_BELL,gain);
-        amb_svf_block(dx_sr,n,amb_bell_state[ti][2],&coef,damping,FT_BELL,gain);
+    const tsvf_t *coef=amb_cached_coef(ti,0,freq,&damping,slope);
+    unsigned channels=amb_synth_channels(t);
+    for(unsigned c=0;c<channels;c++){
+        int32_t *buf=amb_synth_buf(ti,out,channels,c);
+        amb_filter_stages(buf,n,amb_bell_state[ti][c],coef,damping,type,slope,gain);
     }
 }
+static void amb_synth_bell(unsigned ti,int32_t *out,unsigned n,int cut,int width)
+{amb_synth_curve(ti,out,n,cut,width,FT_BELL,0);}
+
 #endif
 static __attribute__((noinline)) void tf_run(track_t *t, int32_t *out, uint32_t n, uint32_t ft, uint32_t fo, int32_t w0,
                                              int32_t dw, uint32_t own, int32_t ccut, int32_t cres)
@@ -287,6 +377,12 @@ static __attribute__((noinline)) void track_filter(track_t *t, int32_t *out, uin
     uint32_t ti = (uint32_t)(t - trk) % NTRK, r = (uint32_t)t->p[P_FTYPE], ft, fo, i;
     uint32_t act = (tf_on[ti] && !own) || tf_cmb[ti];
     int32_t w0, dw;
+#if AMBPLUS
+    if((amb_synth_slope[ti]&1u) && r<=FT_HP){
+        amb_synth_curve(ti,out,n,ccut,cres,r,amb_synth_slope[ti]);
+        return;
+    }
+#endif
     if (own && r < FT_COMB)
         r = FT_LP;                                      /* (an engine's own filter: COMB or nothing here) */
     if (!tf_xb[ti]) {
@@ -1200,6 +1296,11 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
     damt = e == &ENG_DRUM ? 0 : 127 - clamp(p[P_DRIFT], 0, 127);   /* (0.7.8) DRIFT, 127 stored = 0 % */
     if (damt)
         drift_clk[ti]++;
+#if AMBPLUS
+    int native_type=t->p[P_FTYPE];
+    int replace_native=(amb_synth_slope[ti]&1u) && native_type<=FT_HP && (e==&ENG_ANALOG || e==&ENG_LOFI);
+    if(replace_native)t->p[P_FTYPE]=FT_BELL; /* the engine yields its unfiltered voices */
+#endif
     for (i = 0; i < NVOICE; i++) {
         voice_t *v = &t->v[i];
         vmod_t m;
@@ -1285,11 +1386,14 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
         e->render(t, v, out, n, &m);
         nr++;
     }
+#if AMBPLUS
+    if(replace_native)t->p[P_FTYPE]=native_type;
+#endif
     if (nr && e == &ENG_DRUM)                           /* (0.6.16) DRUM-X: DRV and the knee on the kit's sum */
         drum_bus(t, out, n);
     if (nr && (t->p[P_FTYPE] || t->p[P_FCUT] < 127 || t->p[P_FRES] || tf_on[(uint32_t)(t - trk) % NTRK] ||
 #if AMBPLUS
-               amb_second_cut[ti] ||
+               (amb_synth_slope[ti]&1u) || amb_second_cut[ti] ||
 #endif
                ((e == &ENG_WHEEL || e == &ENG_DRUM
 #if AMBPLUS
@@ -1300,6 +1404,16 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
                tf_xb[(uint32_t)(t - trk) % NTRK] || tf_cmb[(uint32_t)(t - trk) % NTRK]))
         /* (JIANT 0.5) the FILTER (track_post); 0.6.8: and a block more to leave the chain (track_filter's fade) */
         track_post(t, e, out, n);
+#if AMBPLUS
+    if(nr && n){
+        unsigned slope=t->p[P_FTYPE]<=FT_HP?amb_synth_slope[ti]:0;
+        int changed=slope!=amb_synth_edge[ti].slope;
+        unsigned channels=amb_synth_channels(t);
+        for(unsigned c=0;c<channels;c++)
+            amb_slope_edge(amb_synth_buf(ti,out,channels,c),n,&amb_synth_edge[ti].last[c],changed);
+        amb_synth_edge[ti].slope=slope;
+    }
+#endif
     if (snap)
         memcpy(t->p, p_new, sizeof p_new);
     else if (fade)

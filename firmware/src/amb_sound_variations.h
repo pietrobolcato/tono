@@ -7,7 +7,8 @@
  * to the same performance direction through different synthesis controls. */
 enum {
     V_ORIGINAL,V_VEIL,V_BLOOM,V_CLOSE,V_REED,V_CHIME,V_VELVET,V_DUB,
-    V_PEDAL,V_PLUCK,V_BRASS,V_SLIDE,V_BRUSH,V_FLOOR,V_SPARK,V_WASH,V_RADIO
+    V_PEDAL,V_PLUCK,V_BRASS,V_SLIDE,V_BRUSH,V_FLOOR,V_SPARK,V_WASH,V_RADIO,V_DOWNPOUR,V_STORM,
+    V_STILL_WATER,V_TWIN_REEDS,V_GLASS_TIDE
 };
 static const struct {
     const char *name;
@@ -29,12 +30,14 @@ static const struct {
     {"Floor tom",-11,18,-28,32,15,-26},
     {"Pinpoints",-29,-33,31,-26,-34,-15},
     {"Far bank",10,16,-34,-14,33,9},
-    {"Intercom",-23,-12,23,21,-43,-40}
+    {"Intercom",-23,-12,23,21,-43,-40},
+    {"Steady Downpour",0,0,0,0,0,0},{"Rain & Thunder",0,0,0,0,0,0},
+    {"Still Water",0,0,0,0,0,0},{"Twin Reeds",0,0,0,0,0,0},{"Glass Tide",0,0,0,0,0,0}
 };
 typedef uint8_t amb_voicing_menu_t[3];
 /* Patch order follows amb_palette.h; SAMPLE uses the persisted source ID. */
 static const amb_voicing_menu_t amb_pad_voicings[]={
-    {V_VEIL,V_BRASS},{V_BLOOM,V_REED},{V_VEIL,V_BRASS},{V_CHIME,V_BLOOM},
+    {V_STILL_WATER,V_TWIN_REEDS,V_GLASS_TIDE},{V_BLOOM,V_REED},{V_VEIL,V_BRASS},{V_CHIME,V_BLOOM},
     {V_CLOSE,V_PEDAL},{V_PEDAL,V_BLOOM},{V_DUB,V_VEIL},{V_CLOSE,V_PLUCK},
     {V_REED,V_WASH},{V_CLOSE,V_BLOOM},{V_VEIL,V_REED},{V_CLOSE,V_BRASS},
     {V_CLOSE,V_DUB},{V_BRASS,V_VEIL},{V_PEDAL,V_DUB},{V_PLUCK,V_BLOOM},
@@ -84,7 +87,7 @@ static const amb_voicing_menu_t amb_lead_voicings[]={
 static const amb_voicing_menu_t amb_texture_voicings[]={
     [17]={V_CLOSE,V_BLOOM},[18]={V_PEDAL,V_WASH},[22]={V_RADIO,V_WASH},
     [23]={V_CLOSE,V_DUB},[24]={V_RADIO,V_WASH},[25]={V_CLOSE,V_WASH},
-    [26]={V_RADIO,V_BLOOM},[28]={V_CLOSE,V_WASH},[29]={V_RADIO,V_DUB}
+    [26]={V_RADIO,V_BLOOM},[28]={V_CLOSE,V_WASH},[29]={V_RADIO,V_DUB},[30]={V_DOWNPOUR,V_STORM},[31]={V_STORM}
 };
 #define AMB_CHECK_MENU(role) _Static_assert(NELEM(amb_##role##_voicings)==NELEM(amb_##role##_patches), "Every patch has a voicing menu")
 AMB_CHECK_MENU(pad);AMB_CHECK_MENU(drone);_Static_assert(NELEM(amb_bell_voicings)==NELEM(amb_bells_patches),"Bells menus");
@@ -103,14 +106,14 @@ static const uint8_t *amb_variation_menu(const amb_layer_t *l)
 static unsigned amb_variation_count(const amb_layer_t *l)
 {
     const uint8_t *menu=amb_variation_menu(l);
-    return menu[2]?4:menu[0]?3:1;
+    return menu[2]?4:menu[1]?3:menu[0]?2:1;
 }
 static unsigned amb_variation_id(const amb_layer_t *l,unsigned index)
 {
     return index && index<amb_variation_count(l)?amb_variation_menu(l)[index-1]:V_ORIGINAL;
 }
 static const char *amb_variation_name(const amb_layer_t *l,unsigned index)
-{return amb_voicing[amb_variation_id(l,index)].name;}
+{return l->role==5 && (l->patch==30 || l->patch==31) && !index?"Chill Rain":amb_voicing[amb_variation_id(l,index)].name;}
 static void amb_voice_offset(amb_layer_t *l,const amb_layer_t *original,unsigned id,int delta)
 {
     const param_desc_t *d=amb_param_desc(l,id);
@@ -121,9 +124,41 @@ static void amb_apply_variation(unsigned k,unsigned index)
     amb_layer_t *l=&amb.layer[k];
     if(index>=amb_variation_count(l))return;
     const unsigned id=amb_variation_id(l,index);
+    if(l->role==5 && (l->patch==30 || l->patch==31)){
+        if(l->patch==31){
+            l->base[P_E6]=index?106:0;
+            return;
+        }
+        l->base[P_E1]=index==1?66:index==2?35:20;
+        l->base[P_E5]=index==1?102:index==2?54:16;
+        l->base[P_E6]=index==2?112:0;
+        l->base[P_E7]=index==1?49:index==2?71:100;
+        l->base[P_FCUT]=index==1?106:index==2?108:110;
+        return;
+    }
     const int tone=amb_voicing[id].tone,body=amb_voicing[id].body;
     amb_layer_t original={0};
     amb_fill_patch(&original,amb.key,k,l->role,l->patch);
+    if(l->role==0 && l->patch==0){
+        /* Voices auditioned on the same chord, envelope and gain. */
+        static const uint8_t oscillator[][8]={
+            /* wave, detune, mix, noise, cutoff, resonance, drive, interval */
+            {3,0,0,0,82,12,0,0},
+            {2,8,62,0,82,12,0,0},
+            {3,5,29,0,97,12,0,19}
+        };
+        for(unsigned j=0;j<8;j++)
+            l->base[P_E0+j]=index?oscillator[index-1][j]:original.base[P_E0+j];
+        l->base[P_DRIFT]=index?0:original.base[P_DRIFT];
+        l->base[P_MORPH]=index?0:original.base[P_MORPH];
+        /* Use an untouched LFO 2 for Glass Tide's slow upper fifth. A stored
+         * tag distinguishes the factory route from a player's identical edit. */
+        amb_lfo_settings_t *second=&amb_controls.second[k];
+        static const amb_lfo_settings_t idle={0};
+        const amb_lfo_settings_t tide={.rate=21,.depth=30,.dest=amb_param_route(P_E2),.pad=1};
+        if(index==3 && !memcmp(second,&idle,sizeof idle))*second=tide;
+        if(index!=3 && !memcmp(second,&tide,sizeof tide))*second=idle;
+    }
     if(amb_legacy_glass(l)){
         original.engine=l->engine;
         const preset_t *legacy=&ENGINES[l->engine]->presets[amb_patch_preset(l)];
@@ -150,8 +185,10 @@ static void amb_apply_variation(unsigned k,unsigned index)
         else {colour=P_E3;shape=P_E4;}
         break;
     }
-    amb_voice_offset(l,&original,colour,colour_change);
-    amb_voice_offset(l,&original,shape,shape_change);
+    if(l->role!=0 || l->patch!=0){
+        amb_voice_offset(l,&original,colour,colour_change);
+        amb_voice_offset(l,&original,shape,shape_change);
+    }
     amb_voice_offset(l,&original,P_ATK,amb_voicing[id].attack);
     amb_voice_offset(l,&original,P_REL,amb_voicing[id].release);
     amb_voice_offset(l,&original,P_REV,amb_voicing[id].space);

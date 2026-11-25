@@ -7,6 +7,16 @@ int main(int argc,char **argv)
     /* Last public patch IDs in v0.47-opt. SAMPLE stores its source separately. */
     static const unsigned old_counts[]={23,14,15,18,9,28,8,9};
     unsigned models=0;
+    /* Hash the IEEE-754 words across all four quadrants, including signed zero.
+     * Host compilers may otherwise fuse the boot polynomial's multiplies and adds. */
+    tono_a22_init();
+    uint32_t wave_hash=2166136261u;
+    for(unsigned i=0;i<NELEM(a22_wave);i++){
+        uint32_t bits;
+        memcpy(&bits,&a22_wave[i],sizeof bits);
+        wave_hash=(wave_hash^bits)*16777619u;
+    }
+    assert(wave_hash==0x464fdeefu);
     memset(amb_nor,255,sizeof amb_nor);
     ui_power_on();amb_init();amb_fixture_scene(AMB_SCENE_GARDEN);
     song.playing=0;

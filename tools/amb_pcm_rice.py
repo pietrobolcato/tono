@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""Losslessly pack the piano, sax and violin in seekable 256-frame blocks."""
+"""Losslessly pack the piano, sax, violin and cello in seekable 256-frame blocks."""
 import io
 from amb_pcm_octets import SRC, assets
 from amb_pcm_pack import write_array
@@ -62,7 +62,7 @@ def main():
     out = io.StringIO()
     out.write('/* CC0 acoustic recordings, packed losslessly by tools/amb_pcm_rice.py. */\n')
     for name, period, samples in assets(include_piano=True):
-        if name not in ('tenor', 'piano', 'violin'):
+        if name not in ('tenor', 'piano', 'violin', 'cello'):
             continue
         data = bytearray()
         offsets = []

@@ -7,7 +7,11 @@ int main(void)
     memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();
     for(i=0;i<amb_patch_count(5);i++){
         song.playing=0;amb_fixture_scene(0);amb_patch(0,5,i);
-        assert(amb.layer[0].engine==(i==26?ENGI_VOICE:(i<12 || i==25 || i==27)?11:ENGI_AMB_SAMPLE) && amb.layer[0].mode==0 && amb.layer[0].density==100);
+        unsigned engine=ENGI_AMB_SAMPLE;
+        if(i==26)engine=ENGI_VOICE;
+        if(i<12 || i==25 || i==27 || i>=30)engine=ENGI_NOISE;
+        assert(amb.layer[0].engine==engine && amb.layer[0].mode==0 && amb.layer[0].density==100);
+        if(i>=30)assert(amb.layer[0].base[P_E0]==(i==30?NZ_RAIN:NZ_FIELD_RAIN));
         amb_prepare();trk[0].engine=trk[0].eng_req;panic_req=0;
         for(k=0;k<128;k++){uint8_t notes[2];unsigned gate;
             assert(amb_generated_notes(0,k,0,notes,&gate)==(k%2?0:1));if(!(k%2))assert(notes[0]==60 && gate>=FS*30u);}
@@ -24,5 +28,5 @@ int main(void)
     assert(!strcmp(amb_patch_name(&amb.layer[0]),"Distant Voices"));ambr.slot=0;amb_save();
     amb_fixture_scene(0);assert(amb_recall(0));assert(!memcmp(&saved,&amb.layer[0],sizeof saved));
     amb_patch(0,5,4);assert(amb.layer[0].engine==11 && !strcmp(amb_patch_name(&amb.layer[0]),"Distant Hiss"));
-    puts("Texture: 12 noise and 10 recorded-grain recipes / steady AUTO despite sparse policy / explicit manual rest / legacy saved sound preserved PASS");return 0;
+    puts("Texture: factory engines and Rain / steady AUTO despite sparse policy / explicit manual rest / legacy saved sound preserved PASS");return 0;
 }

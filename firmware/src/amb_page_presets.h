@@ -47,7 +47,7 @@ static const amb_page_bank_t *amb_page_bank(void)
         return amb_envelope_id(l,0)==P_ATK?&amb_env_bank:0;
     }
     case 3:return ambr.bank?0:&amb_lfo_bank;
-    case 5:return ambr.fx==6?0:&amb_fx_banks[ambr.fx%6];
+    case 5:return ambr.fx>=6?0:&amb_fx_banks[ambr.fx%6];
     case 6:return &amb_eq_bank;
     default:return 0;
     }
