@@ -349,12 +349,10 @@ static int amb_landscape_bar(void)
     }
     if(position==travel.harmony)return 0;
     int scale[12],count=amb_scale(amb_pool(),scale);
-    unsigned old_chord=amb.chord;
     if(style)amb.chord=amb_walk_next(&travel.walk,amb.policy.seed+travel.chapter*31+(uint32_t)position,amb.chord,count);
     else if(position>=-18 && position<=18)amb.chord=travel.chord[AMB_TRAVEL_RANGE+position]%count;
     else amb.chord=(amb_hash(amb.policy.seed+(uint32_t)position/4u)+(uint32_t)position)%count;
     amb_revoice();travel.harmony=position;
-    if(amb_notices.travel)amb_auto_event(AUTO_CHORD,0,old_chord,amb.chord);
     return 1;
 }
 static void amb_landscape_turn(int delta)
