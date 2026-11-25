@@ -81,6 +81,7 @@ static uint8_t amb_reset_filter[4],amb_reset_shape[4];
 static int8_t amb_reset_bell[4];
 static uint16_t amb_tail_filter[NTRK];
 static int8_t amb_tail_octave[4];
+static uint16_t amb_filter_previous[NTRK];
 static int32_t amb_filter_state[NTRK][6][2] __attribute__((section(".lowbuf")));
 static int8_t amb_reset_eq[4][4];
 static amb_layer_t amb_reset_layer[4]; /* last loaded piece, never a flash snapshot */
@@ -428,6 +429,8 @@ static __attribute__((noinline)) int amb_move_release(unsigned k)
         memcpy(fm6_patch[dst],fm6_patch[k],sizeof fm6_patch[k]);
         fm6_pgen[dst]=fm6_pgen[k];fm6_eff[dst]=fm6_eff[k];fm6_lfo[dst]=fm6_lfo[k];
         fm6_slot[dst]=fm6_slot[k];fm6_trim[dst]=fm6_trim[k];fm6_tgen[dst]=fm6_tgen[k];
+    }else if(from->engine==ENGI_AMB_SAMPLE){
+        amb_pcm_invalidate(dst);
     }else if(from->engine==ENGI_AMB_A22){
         voice_bank[dst].a22=voice_bank[k].a22;
         memcpy(tf_side[dst],tf_side[k],sizeof tf_side[k]);
@@ -446,7 +449,7 @@ static __attribute__((noinline)) int amb_move_release(unsigned k)
     ambr.tail_gain[dst]=ambr.tail_gain[k];memcpy(ambr.tail_env[dst],ambr.tail_env[k],sizeof ambr.tail_env[k]);
     amb_grain[dst]=amb_grain[k];amb_grain[k].valid=amb_grain[k].phase=amb_grain[k].period=0;
     memcpy(amb_grain_controls[dst],amb_grain_controls[k],4);
-    memcpy(amb_bell_state[dst],amb_bell_state[k],sizeof amb_bell_state[k]);amb_bell_gain[dst]=amb_bell_gain[k];amb_tail_filter[dst]=amb_tail_filter[k];memcpy(amb_filter_state[dst],amb_filter_state[k],sizeof amb_filter_state[k]);
+    memcpy(amb_bell_state[dst],amb_bell_state[k],sizeof amb_bell_state[k]);amb_bell_gain[dst]=amb_bell_gain[k];amb_filter_previous[dst]=amb_filter_previous[k];amb_tail_filter[dst]=amb_tail_filter[k];memcpy(amb_filter_state[dst],amb_filter_state[k],sizeof amb_filter_state[k]);
     memcpy(ambr.tail_eq[dst],ambr.tail_eq[k],4);
     if(ambr.fade_slot[k]){
         unsigned gain=amb_fade_level(k,65536);
@@ -468,7 +471,7 @@ static void amb_apply_patch(unsigned k)
     load_begin(t,LOAD_SOUND);t->eng_req=l->engine;
     t->preset=(uint8_t)amb_patch_preset(l);
     memcpy(t->p,l->base,sizeof t->p);fm6_track_loaded(t);
-    panic_req|=(uint8_t)(1u<<k);load_end(t);ambr.handoff[k]=0;memset(amb_bell_state[k],0,sizeof amb_bell_state[k]);memset(amb_filter_state[k],0,sizeof amb_filter_state[k]);
+    panic_req|=(uint8_t)(1u<<k);load_end(t);ambr.handoff[k]=0;amb_filter_previous[k]=0;memset(amb_bell_state[k],0,sizeof amb_bell_state[k]);memset(amb_filter_state[k],0,sizeof amb_filter_state[k]);
     amb_grain[k].mix=amb_grain[k].valid=amb_grain[k].phase=0;
     for(unsigned j=0;j<4;j++)ambr.macro_smooth[k][j]=l->macro[j]*256;
     amb_base_revision[k]++;ambr.overlap[k]=0;ambr.foundation_pending[k]=(uint8_t)(l->role<2 || l->role==5);
@@ -1033,6 +1036,10 @@ static __attribute__((noinline)) void amb_prepare(void)
          * into a darker tone, and place distant layers deeper in both returns. */
         t->p[P_DIST]=clamp(l->base[P_DIST]+tone/3+(l->role==4?bloom/3:0),0,127);
         t->p[P_DTONE]=clamp(l->base[P_DTONE]-tone/2,-64,63);
+        if(l->base[P_DTYPE]==DT_SOFT_KNEE){
+            t->p[P_DIST]=l->base[P_DIST];
+            t->p[P_DTONE]=l->base[P_DTONE];
+        }
         t->p[P_APDEP]=clamp(t->p[P_APDEP]+movement/(l->role==3?5:3),0,127);
         t->p[P_REV]=clamp(t->p[P_REV]+room/2+(l->role==2?bloom/3:0),0,127);
         t->p[P_DLY]=clamp(t->p[P_DLY]+echo/2+(l->role==2?bloom/4:0),0,127);
@@ -1546,41 +1553,6 @@ static void amb_master(int32_t raw,int boot)
     }
     ambr.dirty=1;
 }
-/* The EQ pages share three broad bands with the audio filters. Each target has
- * one audio writer. The display reads an independent envelope per band. */
-typedef struct {
-    int32_t low[2], mid_lowpass[2];
-    volatile unsigned peak[3], updated_ms;
-} amb_eq_meter_t;
-static amb_eq_meter_t amb_eq_meters[5]; /* master, then layers 1–4 */
-
-static void amb_measure_eq(unsigned target,const int32_t *samples,unsigned frames,unsigned channels)
-{
-    amb_eq_meter_t *meter=&amb_eq_meters[target];
-    unsigned peak[3]={0};
-    if(fm1_ms-meter->updated_ms>=200)memset(meter,0,sizeof *meter);
-    for(unsigned c=0;c<channels;c++){
-        int low=meter->low[c],mid_lp=meter->mid_lowpass[c];
-        for(unsigned i=c;i<frames*channels;i+=channels){
-            int x=clamp(samples[i],-262144,262144);
-            low+=((x-low)*26)>>10;
-            mid_lp+=((x-mid_lp)*307)>>10;
-            unsigned bass=low<0?-low:low,mid=mid_lp<low?low-mid_lp:mid_lp-low;
-            unsigned high=x<mid_lp?mid_lp-x:x-mid_lp;
-            if(bass>peak[0])peak[0]=bass;
-            if(mid>peak[1])peak[1]=mid;
-            if(high>peak[2])peak[2]=high;
-        }
-        meter->low[c]=low;meter->mid_lowpass[c]=mid_lp;
-    }
-    for(unsigned j=0;j<3;j++){
-        unsigned old=meter->peak[j];
-        unsigned fall=(old+127)>>7;
-        meter->peak[j]=peak[j]>old-fall?peak[j]:old-fall;
-    }
-    meter->updated_ms=fm1_ms;
-}
-
 /* Bounded three-band output EQ. One-pole splits at ~180 Hz / ~3 kHz;
  * smoothed gains, headroom and a final soft knee, both stereo channels. */
 static inline __attribute__((always_inline)) void amb_master_eq_output(int32_t *out,uint32_t n)
@@ -1609,7 +1581,6 @@ static inline __attribute__((always_inline)) void amb_master_eq_output(int32_t *
 }
 static __attribute__((noinline)) void amb_output(int32_t *out,uint32_t n)
 {
-    if(ambr.view==2 && ambr.page==4 && !ambr.help)amb_measure_eq(0,out,n,2);
     amb_master_eq_output(out,n);
     /* Trim the signature after its shared effects, including the tail until the
      * first performance note or transport start. Monitor input retains its gain. */
@@ -1621,6 +1592,7 @@ static __attribute__((noinline)) void amb_output(int32_t *out,uint32_t n)
         else for(unsigned i=0;i<2*n;i++)out[i]=out[i]*7/10;
     }
     if(amb_monitor_active)amb_monitor_output(out,n);
+    if(amb_scope_target==AMB_SCOPE_MASTER && amb_scope_fill<AMB_SCOPE_N)amb_scope_sound(out,n*2);
 }
 /* Three broad bands per layer before dry mix and shared sends. Flat EQ is
  * bit-exact bypass. Independent state per physical track, safe on two cores. */
@@ -1633,9 +1605,8 @@ static __attribute__((noinline)) void amb_layer_process(unsigned k,int32_t *b,ui
     if(amb_grain_controls[k][0] || amb_grain[k].mix || amb_grain[k].valid)
         amb_grain_process(k,b,n);
     unsigned setting=ambr.handoff[k]?amb_tail_filter[k]:amb_controls.filter[k]|((unsigned)amb_controls.fx_shape[k]<<8);
-    if((setting&48) || (amb_scope_target==k+1 && amb_scope_page==5 && amb_scope_fill<AMB_SCOPE_N))
+    if((setting&48) || amb_filter_previous[k] || (amb_scope_target==k+1 && amb_scope_page==5 && amb_scope_fill<AMB_SCOPE_N))
         amb_filter_process(k,b,n,setting);
-    if(ambr.view==1 && ambr.page==6 && ambr.edit_layer==k && !ambr.help)amb_measure_eq(k+1,b,n,1);
     const int8_t *eq=ambr.handoff[k]?ambr.tail_eq[k]:amb.layer_eq[k];
     int moving_eq=k<4 && amb.layer[k].lfo_dest>=ROUTE_EQ && amb.layer[k].lfo_dest<ROUTE_MODE;
     if(k<4 && amb_controls.second[k].depth && amb_controls.second[k].dest>=ROUTE_EQ && amb_controls.second[k].dest<ROUTE_MODE)moving_eq=1;
@@ -2205,7 +2176,12 @@ static void amb_filter_control(unsigned knob,int delta,char *label,char *value)
     if(!label)return;
     str_cpy(label,name,16);
     if(text)str_cpy(value,text,24);
-    else {if(v<0){value[0]='-';fmt_int(value+1,-v);}else fmt_int(value,v);str_cpy(value+str_len(value),unit,8);}
+    else if(knob==1 && v>=1000){
+        int tenths=(v+50)/100;
+        if(tenths%10 && tenths<100)fmt_fix(value,tenths,1);
+        else fmt_int(value,(v+500)/1000);
+        str_cpy(value+str_len(value),"kHz",4);
+    }else {if(v<0){value[0]='-';fmt_int(value+1,-v);}else fmt_int(value,v);str_cpy(value+str_len(value),unit,8);}
 }
 static void amb_knob(unsigned knob,int delta)
 {
@@ -3170,23 +3146,18 @@ static void amb_scope(int reference_y)
 #include "amb_live_plots.h"
 static void amb_eq_plot(const int8_t *bands,unsigned target)
 {
-    amb_scope(82);
-    const amb_eq_meter_t *meter=&amb_eq_meters[target];
-    for(unsigned band=0;band<3;band++){
-        unsigned level=fm1_ms-meter->updated_ms<200?meter->peak[band]:0;
-        for(unsigned segment=0;segment<12 && level>16;segment++){
-            cv_rect(53+50*band,105-4*segment,32,3,DISPLAY_GRID);
-            level=level*5/9;
-        }
+    amb_display(49,75);
+    amb_plot_spectrum(107);
+    cv_line(14,82,231,82,DISPLAY_GRID);
+    int gain[4];
+    for(unsigned i=0;i<4;i++)gain[i]=target?amb_routed(target-1,ROUTE_EQ+i,bands[i],-12,12):bands[i];
+    int last=0;
+    for(unsigned i=0;i<32;i++){
+        int y=amb_eq_response_y(i,gain);
+        if(i)cv_line(14+(i-1)*7,last,14+i*7,y,TONO_ORANGE);
+        last=y;
     }
-    int last=82;
-    for(unsigned i=0;i<4;i++){
-        int next=i<3?82-bands[i]*2:82;
-        cv_line(19+50*i,last,69+50*i,next,DISPLAY_TRACE);
-        if(i<3)tono_disc(69+50*i,next,2,TONO_ORANGE);
-        last=next;
-    }
-    amb_text(60,112,"LOW",SCOPE_INK,3);amb_text(109,112,"MID",SCOPE_INK,3);amb_text(157,112,"HIGH",SCOPE_INK,4);
+    amb_text(14,112,"30 Hz",SCOPE_INK,6);amb_text(189,112,"16 kHz",SCOPE_INK,8);
     cv_bg=ABG;
 }
 
@@ -3411,7 +3382,8 @@ static void amb_draw(void)
     unsigned i,k;char b[32];amb_layer_t *l=&amb.layer[ambr.edit_layer];
     unsigned scope=ambr.view==1 && !ambr.help && !amb_proposing() &&
         ((ambr.page==1 && ambr.bank && ambr.detail==1 && amb.layer[ambr.edit_layer].role!=6) ||
-        (ambr.page==5 && ambr.fx==6))?ambr.edit_layer+1:0;
+        (ambr.page==5 && ambr.fx==6) || ambr.page==6)?ambr.edit_layer+1:0;
+    if(ambr.view==2 && ambr.page==4 && !ambr.help && !amb_proposing())scope=AMB_SCOPE_MASTER;
     if(scope!=amb_scope_target || ambr.page!=amb_scope_page){
         amb_scope_target=0;amb_scope_fill=0;amb_scope_page=ambr.page;amb_scope_target=scope;
     }
@@ -3630,7 +3602,7 @@ static void amb_draw(void)
             else {amb_text(98,132,"EDIT",ADIM,5);amb_number(129,132,ambr.cursor+1,AINK);}
         } else if(ambr.view==1 && ambr.page==6) {
             amb_eq_plot(amb.layer_eq[ambr.edit_layer],ambr.edit_layer+1);
-            amb_text(12,130,"LIVE INPUT / LAYER EQ (DB)",ADIM,35);
+            amb_text(12,130,"LAYER SPECTRUM / EQ (DB)",ADIM,35);
         } else if(ambr.view==1 && ambr.page==5) {
             cv_text(12,53,&AF_M,amb_layer_fx_names[ambr.fx%7],AINK);
             if(ambr.fx==6)amb_wave_plot(1);
@@ -3783,7 +3755,7 @@ static void amb_draw(void)
             amb_text(12,129,status,AINK,36);
         } else if(ambr.view==2 && ambr.page==4) {
             amb_eq_plot(amb.eq,0);
-            amb_text(12,130,"LIVE MIX / MASTER EQ (DB)",ADIM,34);
+            amb_text(12,130,"MIX SPECTRUM / EQ (DB)",ADIM,34);
         } else if(ambr.view==2 && ambr.page==5){
             for(i=0;i<THEME_COUNT;i++){
                 int y=55+26*i;

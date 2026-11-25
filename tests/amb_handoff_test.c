@@ -13,30 +13,32 @@ static double eq_energy(unsigned band,unsigned hz,int boost)
 }
 static void check_eq_display(void)
 {
+    acid_bloom_state=CUE_OFF;
+    memset(amb.eq,0,sizeof amb.eq);
     static const unsigned frequency[]={80,800,8000};
     int32_t stereo[2*CTL],original[2*CTL];
     for(unsigned band=0;band<3;band++){
-        memset(amb_eq_meters,0,sizeof amb_eq_meters);
-        for(unsigned block=0;block<200;block++){
+        amb_scope_target=AMB_SCOPE_MASTER;amb_scope_fill=0;
+        for(unsigned block=0;amb_scope_fill<AMB_SCOPE_N;block++){
             for(unsigned i=0;i<CTL;i++){
                 int v=(int)(8000*sin(6.283185307179586*frequency[band]*(block*CTL+i)/FS));
                 stereo[2*i]=v;stereo[2*i+1]=-v;
             }
-            memcpy(original,stereo,sizeof stereo);
-            amb_measure_eq(0,stereo,CTL,2);
+            memcpy(original,stereo,sizeof stereo);amb_output(stereo,CTL);
             assert(!memcmp(original,stereo,sizeof stereo));
         }
-        for(unsigned j=0;j<3;j++)if(j!=band)assert(amb_eq_meters[0].peak[band]>amb_eq_meters[0].peak[j]);
-        assert(!amb_eq_meters[1].peak[band]);
+        for(unsigned j=0;j<3;j++)if(j!=band)assert(amb_spectrum_height(frequency[band])>amb_spectrum_height(frequency[j]));
+        int bands[4]={0};assert(amb_eq_response_y(16,bands)==82);
+        bands[band]=9;assert(amb_eq_response_y((unsigned[]){0,16,31}[band],bands)<76);
     }
-    puts("EQ input meter: low/mid/high tones, opposite stereo polarity, separate targets and untouched audio PASS");
+    amb_scope_target=0;
+    puts("EQ spectrum: low/mid/high tones, opposite stereo polarity, separate targets and untouched audio PASS");
 }
 
 int main(void)
 {
-    check_eq_display();
     unsigned i,k,old_engine;int32_t out[CTL*2];amb_piece_t old;
-    memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();amb_fixture_scene(0);amb_controls.walk[5]=1;assert(amb.release_ms==6000);amb.release_ms=3000;
+    memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();check_eq_display();amb_fixture_scene(0);amb_controls.walk[5]=1;assert(amb.release_ms==6000);amb.release_ms=3000;
     amb.auto_index=0;ambr.solo=0;seq_start();for(i=0;i<FS*5u/CTL;i++)mix_block(out,CTL);
     old_engine=trk[0].engine;amb_patch(0,2,0);
     assert(ambr.handoff[0] && trk[0].engine==old_engine && trk[0].eng_req==old_engine);

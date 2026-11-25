@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""Losslessly pack the five factory acoustic recordings in seekable 256-frame blocks."""
+"""Losslessly pack the piano, sax and violin in seekable 256-frame blocks."""
 import io
 from amb_pcm_octets import SRC, assets
 from amb_pcm_pack import write_array
@@ -62,13 +62,15 @@ def main():
     out = io.StringIO()
     out.write('/* CC0 acoustic recordings, packed losslessly by tools/amb_pcm_rice.py. */\n')
     for name, period, samples in assets(include_piano=True):
-        if name in ('chime', 'vowel'):
+        if name not in ('tenor', 'piano', 'violin'):
             continue
         data = bytearray()
         offsets = []
         for start in range(0, len(samples), 256):
             offsets.append(len(data))
-            data.extend(block(samples[start:start+256], period))
+            chunk = samples[start:start+256]
+            chunk += [chunk[-1]] * (-len(chunk) % 8)
+            data.extend(block(chunk, period))
         data.extend(bytes(3))  # predictor bit lookahead
         assert len(data) < 65536
         write_array(out, 'uint16_t', 'amb_rice_'+name+'_offsets', offsets)

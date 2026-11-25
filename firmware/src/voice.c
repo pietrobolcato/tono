@@ -165,7 +165,7 @@ static int amb_filter_damping(unsigned shape,int bell)
 static void amb_svf_block(int32_t *b,unsigned n,int32_t *state,const tsvf_t *c,
                           int damping,unsigned type,int gain)
 {
-    int32_t ic1=state[0],ic2=state[1];
+    int32_t ic1=state[0],ic2=state[1]>>3;
     for(unsigned i=0;i<n;i++){
         int32_t input=b[i], x=clamp(input>>3,-60000,60000);
         int32_t v3=x-ic2,v1=(c->a1*ic1+c->a2*v3)>>13;
@@ -174,7 +174,7 @@ static void amb_svf_block(int32_t *b,unsigned n,int32_t *state,const tsvf_t *c,
         int32_t band=damping*v1>>12;
         b[i]=type==FT_BELL?input+((gain*band)>>9):type==FT_HP?(x-v2-band)*8:v2*8;
     }
-    state[0]=ic1;state[1]=ic2;
+    state[0]=ic1;state[1]=ic2*8;
 }
 static int32_t amb_bell_state[NTRK][3][2] __attribute__((section(".lowbuf")));
 static void amb_synth_bell(unsigned ti,int32_t *out,unsigned n,int cut,int width)
@@ -1036,6 +1036,7 @@ static void engine_block(track_t *t)
         any = t->engine != eng_idx(t->eng_req);
         t->engine = eng_idx(t->eng_req);
 #if AMBPLUS
+        if(any && t->engine==ENGI_AMB_SAMPLE)amb_pcm_invalidate((unsigned)(t-trk));
         if(any && (t->engine==ENGI_AMB_A22 || t->engine==ENGI_FM6))
             memset(&voice_bank[t-trk],0,sizeof voice_bank[0]);
 #endif

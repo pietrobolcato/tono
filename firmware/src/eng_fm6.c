@@ -58,11 +58,12 @@ static struct {                                  /* the patch through the macros
 } fm6_eff[NTRK];
 static fm6_lfo_t fm6_lfo[NTRK];
 static int32_t fm6_lfo_v[NTRK], fm6_lfo_d[NTRK]; /* this block's LFO value and delay (Q24) */
-/* The active engine owns its part's voice storage. FM6 and A22 can run on
- * different layers simultaneously, including the two crossfade tail layers. */
+/* Each active engine owns its part's storage, including the two crossfade tails.
+ * FM6 operators, A22 voices, and decoded acoustic blocks have disjoint lifetimes. */
 #if AMBPLUS
 #include "a22/a22_dsp.h"
-static union { fm6_note_t fm[FM6_POLY]; A22Part a22; } voice_bank[NTRK];
+static union { fm6_note_t fm[FM6_POLY]; A22Part a22; uint8_t acoustic[4][256]; } voice_bank[NTRK];
+_Static_assert(sizeof(voice_bank[0].acoustic) <= sizeof(fm6_note_t)*FM6_POLY, "acoustic cache exceeds the existing voice bank");
 _Static_assert(sizeof(A22Part) <= sizeof(fm6_note_t)*FM6_POLY, "A22 exceeds the existing voice bank");
 #define FM6_NOTES(track_index) voice_bank[(track_index)].fm
 #else

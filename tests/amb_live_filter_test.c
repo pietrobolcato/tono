@@ -23,6 +23,21 @@ static double bell_response(unsigned hz,int gain,unsigned width,int synth)
 }
 static void check_bell(void)
 {
+    int32_t dc[CTL];unsigned level=12000;
+    /* The legacy one-pole and resonant SVF share the same low-pass units. */
+    for(unsigned block=0;block<120;block++){
+        for(unsigned i=0;i<CTL;i++)dc[i]=level;
+        amb_filter_process(0,dc,CTL,22);
+    }
+    for(unsigned i=0;i<CTL;i++)dc[i]=level;
+    amb_filter_process(0,dc,CTL,22|0x100);
+    for(unsigned i=0;i<CTL;i++)assert(abs(dc[i]-(int)level)<32);
+    for(unsigned i=0;i<CTL;i++)dc[i]=level;
+    amb_filter_process(0,dc,CTL,0);
+    assert(dc[CTL-1]==level);
+    for(unsigned i=0;i<CTL;i++)dc[i]=-8000;
+    amb_filter_process(0,dc,CTL,22|0x100);
+    for(unsigned i=0;i<CTL;i++)assert(abs(dc[i]+8000)<32);
     for(int synth=0;synth<2;synth++){
         assert(bell_response(1000,0,8,synth)==1.0);
         assert(bell_response(1000,6,8,synth)>3.7);
@@ -56,6 +71,7 @@ int main(void)
     assert(amb.layer[0].base[P_FCUT]==patch_cut);
     /* A single sharp edge persists in the input trace and rolls off in the
      * output. Each layer owns its own filter memory. */
+    memset(block,0,sizeof block);amb_layer_process(0,block,CTL);
     for(unsigned i=0;i<CTL;i++)block[i]=i?0:16000;
     amb_scope_target=1;amb_scope_page=5;amb_scope_fill=0;
     amb_layer_process(0,block,CTL);

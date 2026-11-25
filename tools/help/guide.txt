@@ -33,7 +33,7 @@ STEADY sustains the noise bed. PULSE waits for half-note cues. DRIFT holds longe
 Place notes or rests one step at a time. Each note has its own velocity.
 Choose a drum lane and toggle its hits on the step keys. Other lanes keep their own hits.
 [fx]
-Push this layer into distortion. Choose a circuit and use tone to tame the bright edge.
+Choose a circuit. Soft Knee adds the grit of a loud dry layer at a lower level. Raise DRIVE until the sustain thickens.
 Add chorus for width or sweep the layer across the stereo field.
 Feed this layer into the shared echo. Its delay algorithm affects every layer using that bus.
 Feed this layer into the shared room. A higher send leaves more reverb after each note.
@@ -41,7 +41,7 @@ Place the layer left or right or move it repeatedly with auto-pan.
 Overlap small pieces of the layer's recent sound. Blend them into the dry signal for a moving texture.
 The live spectrum shows the layer from low to high. The curve shows which frequencies pass at the selected cutoff.
 [eq]
-Boost or cut lows, mids and highs on this layer. Trim its output if a boost makes it too loud.
+The filled spectrum shows this layer after EQ. The curve shows band gains and trim. Turn LOW, MID or HIGH to shape the sound.
 Adjust the balance of lows, mids and highs across the whole mix. Trim the output after boosting a band.
 [global]
 Set how strongly each aspect of the piece drifts. The interval spaces automatic chord changes.
@@ -289,9 +289,9 @@ LP softens highs. HP removes lows. BP keeps the band around cutoff. COMB adds a 
 [emphasize_cutoff]
 Emphasize the tone around the filter edge.
 [drive_intensity]
-Drive the layer harder into saturation.
+Raise DRIVE for more saturation. At zero the layer stays dry. Soft Knee compensates as you turn it up.
 [drive_circuit]
-SOFT rounds peaks. HARD clips them. FOLD folds them back. CRUSH adds digital grit. RECT rectifies the wave. AMP adds amp-style breakup.
+SOFT rounds peaks. HARD clips. FOLD adds harmonics. CRUSH adds grain. RECT adds an octave. AMP adds breakup. Soft Knee gives held chords a smooth buzz.
 [drive_brightness]
 Brighten or darken the driven tone.
 [send_to_shared_chorus]

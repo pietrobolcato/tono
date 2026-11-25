@@ -9,27 +9,35 @@ typedef struct {
     unsigned key, fill, bit, mode, lag, fraction, k;
     int error;
     const uint8_t *bits, *header;
-    uint8_t value[256];
 } amb_pcm_block_t;
 
 typedef struct {
-    amb_pcm_block_t block[2];
-    unsigned recent;
+    amb_pcm_block_t block[4];
+    uint8_t order[4];
 } amb_pcm_cache_t;
 
-/* Each audio worker owns complete tracks during a render, so separate per-track
- * caches avoid locks or shared mutable cursors across the two cores. */
-static amb_pcm_cache_t amb_pcm_main_cache[5];
-static amb_pcm_cache_t amb_pcm_low_cache AMB_DIRECTORY_RAM;
+static amb_pcm_cache_t amb_pcm_cache[NTRK];
 
-static unsigned amb_rice_code(amb_pcm_cache_t *cache, unsigned source, const uint8_t *data,
+static void amb_pcm_invalidate(unsigned track)
+{
+    amb_pcm_cache_t *c=&amb_pcm_cache[track];
+    for(unsigned i=0;i<4;i++){ c->block[i].key=0;c->order[i]=(uint8_t)i; }
+}
+
+static unsigned amb_rice_code(unsigned track, unsigned source, const uint8_t *data,
                               const uint16_t *offsets, unsigned period, unsigned at)
 {
-    unsigned id=at>>8, index=at&255, key=1+(id<<3)+source;
-    amb_pcm_block_t *b=&cache->block[cache->recent];
+    amb_pcm_cache_t *cache=&amb_pcm_cache[track];
+    unsigned id=at>>8, index=at&255, key=1+(id<<3)+source, slot=cache->order[0];
+    amb_pcm_block_t *b=&cache->block[slot];
     if(b->key!=key){
-        cache->recent^=1;
-        b=&cache->block[cache->recent];
+        unsigned pos=1;
+        while(pos<4 && cache->block[cache->order[pos]].key!=key)pos++;
+        if(pos==4)pos=3;
+        slot=cache->order[pos];
+        for(unsigned i=pos;i;i--)cache->order[i]=cache->order[i-1];
+        cache->order[0]=(uint8_t)slot;
+        b=&cache->block[slot];
         if(b->key!=key){
             const uint8_t *header=data+offsets[id];
             b->key=key;
@@ -41,47 +49,56 @@ static unsigned amb_rice_code(amb_pcm_cache_t *cache, unsigned source, const uin
             b->bits=header+4;
         }
     }
-    while(b->fill<=index){
-        unsigned i=b->fill, bit=b->bit;
-        if(!(i&31))b->k=(b->header[i>>6]>>((i>>3)&4))&15;
-        unsigned k=b->k;
-        const uint8_t *p=b->bits+(bit>>3);
-        unsigned bits=(p[0]|((unsigned)p[1]<<8)|((unsigned)p[2]<<16))>>(bit&7);
-        unsigned ref=0, value;
-        int pred=i?b->value[i-1]:128;
-        if(b->mode>=2 && i>b->lag){
-            unsigned prev=i-b->lag;
-            ref=b->value[prev];
-            ref+=(int)(((int)b->value[prev-1]-(int)ref)*(int)b->fraction+2)>>2;
-            pred=(int)ref;
-            if(b->mode&1)pred+=b->error;
-        }else if(b->mode==1 && i>=2){
-            pred+=pred-b->value[i-2];
-        }
-        if(k==8){
-            value=bits&255;
-            bit+=8;
-        }else{
-            while(!bits){
-                unsigned advance=24-(bit&7);
-                bit+=advance;
-                p=b->bits+(bit>>3);
-                bits=p[0]|((unsigned)p[1]<<8)|((unsigned)p[2]<<16);
+    uint8_t *value=voice_bank[track].acoustic[slot];
+    /* Decode a small run at once so the flash reader, predictor and Rice width
+     * stay in registers. The sample array is the prediction history. */
+    unsigned i=b->fill;
+    if(i<=index){
+        unsigned bit=b->bit, mode=b->mode, lag=b->lag, fraction=b->fraction, k=b->k;
+        int error=b->error;
+        unsigned end=(index|7u)+1;
+        while(i<end){
+            if(!(i&31))k=(b->header[i>>6]>>((i>>3)&4))&15;
+            const uint8_t *p=b->bits+(bit>>3);
+            unsigned bits=p[0]|((unsigned)p[1]<<8)|((unsigned)p[2]<<16);
+            bits>>=bit&7;
+            unsigned residual=0, sample;
+            if(k==8){
+                sample=bits&255;
+                bit+=8;
+            }else{
+                unsigned z=0;
+                while(!bits){
+                    unsigned skip=24-(bit&7);
+                    z+=skip;bit+=skip;p=b->bits+(bit>>3);
+                    bits=p[0]|((unsigned)p[1]<<8)|((unsigned)p[2]<<16);
+                }
+                unsigned zeros=(unsigned)__builtin_ctz(bits);
+                if(zeros+1+k>24-(bit&7)){
+                    p=b->bits+((bit+zeros+1)>>3);
+                    residual=(p[0]|((unsigned)p[1]<<8))>>((bit+zeros+1)&7);
+                }else residual=bits>>(zeros+1);
+                residual=((z+zeros)<<k)+(residual&((1u<<k)-1));
+                bit+=zeros+1+k;
+                sample=0;
             }
-            unsigned zeros=(unsigned)__builtin_ctz(bits);
-            unsigned quotient=bit-b->bit+zeros;
-            bit+=zeros+1;
-            p=b->bits+(bit>>3);
-            unsigned low=(p[0]|((unsigned)p[1]<<8))>>(bit&7);
-            unsigned residual=(quotient<<k)+(low&((1u<<k)-1));
-            bit+=k;
-            int difference=(int)(residual>>1)^-(int)(residual&1);
-            value=pred+difference;
+            int pred=i?value[i-1]:128;
+            if(mode>=2 && i>lag){
+                unsigned at=i-lag;
+                int ref=value[at];
+                ref+=((value[at-1]-ref)*(int)fraction+2)>>2;
+                if(k!=8){
+                    pred=ref+((mode&1)?error:0);
+                    sample=pred+((int)(residual>>1)^-(int)(residual&1));
+                }
+                error=(int)sample-ref;
+            }else if(k!=8){
+                if(mode==1 && i>=2)pred+=pred-value[i-2];
+                sample=pred+((int)(residual>>1)^-(int)(residual&1));
+            }
+            value[i++]=(uint8_t)sample;
         }
-        b->value[i]=(uint8_t)value;
-        if(b->mode>=2 && i>b->lag)b->error=(int)value-(int)ref;
-        b->bit=bit;
-        b->fill=i+1;
+        b->k=k;b->bit=bit;b->fill=i;b->error=error;
     }
-    return b->value[index];
+    return value[index];
 }

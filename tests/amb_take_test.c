@@ -4,18 +4,27 @@
 /* Frozen hashes of every decoded frame from the original CC0 PCM excerpts. */
 static void check_packed_factory_recordings(void)
 {
-    static const unsigned sources[]={3,4,6};
-    static const uint32_t expected[]={0x1afd66d7u,0xc5ff8c6eu,0x87959290u};
-    for(unsigned i=0;i<NELEM(sources);i++){
-        const unsigned source=sources[i];
+    static const uint32_t expected[]={0xdda0c6d0u,0xee5d631eu,0x813931bfu,
+        0x1afd66d7u,0xc5ff8c6eu,0x28b59bffu,0x87959290u};
+    static int16_t linear[40000];
+    for(unsigned source=0;source<NELEM(expected);source++){
         const amb_recording_t *r=&amb_recordings[source];
+        assert(r->length<=NELEM(linear));
         uint32_t hash=2166136261u;
         for(unsigned frame=0;frame<r->length;frame++){
-            uint16_t sample=(uint16_t)amb_recorded_at(&amb_pcm_low_cache,source,r->pcm,frame);
-            hash=(hash^sample)*16777619u;
+            linear[frame]=(int16_t)amb_recorded_at(0,source,r->pcm,frame);
+            hash=(hash^(uint16_t)linear[frame])*16777619u;
         }
-        assert(hash==expected[i]);
+        assert(hash==expected[source]);
+        /* Trim jumps, reverse loops and two forward/overlap heads on one track. */
+        unsigned rng=42;
+        for(unsigned n=0;n<r->length;n++){
+            rng=rng*1664525u+1013904223u;
+            unsigned at[3]={r->length-1-n,rng%r->length,(n+531u)%r->length};
+            for(unsigned j=0;j<3;j++)assert(amb_recorded_at(0,source,r->pcm,at[j])==linear[at[j]]);
+        }
     }
+
 }
 int main(void)
 {

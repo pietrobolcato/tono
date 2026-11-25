@@ -29,7 +29,7 @@ static int amb_fade_level(unsigned k,int level);
 static int32_t amb_tail_envelope(unsigned k,unsigned voice);
 static int amb_tail_finished(unsigned k);
 static volatile uint8_t amb_scope_target,amb_scope_page;
-enum { AMB_SCOPE_N=256 };
+enum { AMB_SCOPE_N=256, AMB_SCOPE_MASTER=255 };
 static volatile uint16_t amb_scope_fill;
 static void amb_scope_sound(const int32_t *b,unsigned n);
 static void amb_layer_process(unsigned k,int32_t *b,uint32_t n);
