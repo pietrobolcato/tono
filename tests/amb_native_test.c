@@ -212,7 +212,10 @@ int AMB_MAIN(int argc,char **argv)
             for(k=0;k<NTRK;k++)memset(&trk[k],0,sizeof trk[k]);
             amb_patch(0,scene,scene==6?0:patch);
             if(scene==6)amb.layer[0].base[P_E0]=(int16_t)patch;
-            amb_prepare();trk[0].engine=amb.layer[0].engine;
+            /* Commit through the audio engine so its shared voice storage
+             * changes ownership, including acoustic -> A22 and FM6. */
+            amb_prepare();engine_block(&trk[0]);
+            assert(trk[0].engine==amb.layer[0].engine);
             trk[0].xf_on=trk[0].xf=trk[0].xin=0;
             trk_note_on(&trk[0],scene==4?36:60,80);energy=0;
             for(i=0;i<FS*3u/CTL;i++) {
