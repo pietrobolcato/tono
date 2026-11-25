@@ -235,10 +235,6 @@ def hot_sections(ir):
 def audio_sections(ir, reach):
     """reach's definitions and constants in the optimised IR given sections .text.a.<name> / .rodata.a.<name> (those
     with a section of their own, the RAM code and .noinit, keep it); (the IR, functions, constants)"""
-    # Rain is an optional playback path with several KB of samples. Leave its
-    # code and tables after the common audio working set in shared flash.
-    if os.environ.get("AMBPLUS") == "1":
-        reach = {name for name in reach if not name.startswith("rain_")}
     nf = nc = 0
 
     def fn(m):
