@@ -75,6 +75,13 @@ static unsigned amb_knob_card(const amb_layer_t *l,unsigned knob)
     if(ambr.view==2 && ambr.page==6)return H_bounded_or_endless_travel+knob;
     if(ambr.view==2 && ambr.page==3 && ambr.fx%5==4)return knob<2?H_limiter_ceiling+knob:0;
     if(ambr.view==2)return ambr.page<3?H_chance_of_a_chord_change+ambr.page*4+knob:ambr.page==3?H_reverb_room_size+(ambr.fx%4)*4+knob:H_low_band_gain+knob;
+    if(amb_filter_editor(l)){
+        int fx=ambr.page==5,bell=fx?(amb_controls.filter[ambr.edit_layer]>>4)==3:l->base[P_FTYPE]==FT_BELL;
+        if(knob==0)return H_layer_filter_mode;
+        if(knob==1)return H_layer_filter_cutoff;
+        if(knob==2)return bell?H_bell_gain:H_filter_resonance;
+        return bell?H_bell_width:0;
+    }
     if(ambr.page==1)return amb_param_hint(l,amb_sound_id(l,ambr.bank,knob));
     if(ambr.page==2)return l->role==4 || (l->role==6 && l->base[P_E1]==3)?amb_param_hint(l,amb_envelope_id(l,knob)):H_time_to_full_level+knob;
     if(ambr.page==3){
@@ -96,7 +103,6 @@ static unsigned amb_knob_card(const amb_layer_t *l,unsigned knob)
         return (l->role==4?H_generated_hit_density:H_note_selection_pattern)+knob;
     }
     if(ambr.page==5 && ambr.fx==2 && knob==3)return H_shared_delay_algorithm;
-    if(ambr.page==5 && ambr.fx==6)return knob<2?H_layer_filter_mode+knob:0;
     if(ambr.page==5 && ambr.fx==5)return H_grain+knob;
     return ambr.page==5?amb_param_hint(l,amb_fx_id(l,knob)):H_low_band_gain+knob;
 }
@@ -152,7 +158,9 @@ static void amb_help_read(char *overview,char *hint,unsigned first,unsigned seco
     lcd_sync();
     uint8_t *text=(uint8_t *)cv_px;
     amb_help_reader_t r={0};
-    for(unsigned at=0;at<HELP_RAW_SIZE;){
+    unsigned next_block=(first>second?first:second)/8+1;
+    unsigned end=next_block<NELEM(help_blocks)?help_blocks[next_block]:HELP_RAW_SIZE;
+    for(unsigned at=0;at<end;){
         unsigned token=amb_help_symbol(&r,help_literal);
         if(token<128){text[at++]=(uint8_t)token;continue;}
         unsigned n=token-128+3;

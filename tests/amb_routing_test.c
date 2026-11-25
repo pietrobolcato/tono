@@ -11,7 +11,7 @@ static void check_random_rate(void)
 {
     amb_fixture_scene(0);
     press(B_HOME);amb_target(1);
-    press(B_LFO);assert(!amb_second_editor());
+    press(B_LFO);if(amb_second_editor())press(B_LFO);assert(!amb_second_editor());
     amb_layer_t *l=&amb.layer[0];
     l->base[P_LRATE]=60;
     unsigned depth=l->lfo_depth, destination=l->lfo_dest;
@@ -103,7 +103,9 @@ static void check_layer_shortcut(void)
     assert(l->lfo_depth==31 && l->base[P_LRATE]==rate && l->base[P_LWAVE]==wave);
 
     ambr.view=0;amb_master(512,1);amb_master(100,0);link_last_edit();
-    assert(l->lfo_dest==3 && l->lfo_depth==31);
+    assert(amb_second_editor() && amb_controls.second[0].dest==3 && l->lfo_depth==31);
+    assert(!strcmp(amb_route_name(l,l->lfo_dest),"BREATH"));
+    l->lfo_dest=3; /* Exercise the primary lane fader against its full cycle. */
     /* The shortcut targets the actual layer fader, also used by percussion
      * and the wet sends. Depth zero must reproduce the manual level. */
     int saved_level=l->level;assert(saved_level>0);trk[0].lfo_fade=32767;
@@ -130,11 +132,13 @@ static void check_layer_shortcut(void)
     ambr.page=6;
     turn(EN_K2,1);
     link_last_edit();
-    assert(l->lfo_dest==ROUTE_EQ+1);
+    assert(amb_controls.second[0].dest==ROUTE_EQ+1 && l->lfo_dest==ROUTE_GRAIN);
     ambr.page=5;ambr.fx=2;
     turn(EN_K4,1);
+    unsigned next=amb_next_link[0];
     link_last_edit();
-    assert(l->lfo_dest==ROUTE_EQ+1);
+    assert(amb_next_link[0]==next);
+    assert(amb_controls.second[0].dest==ROUTE_EQ+1 && l->lfo_dest==ROUTE_GRAIN);
     assert(!strcmp(ambr.notice,"THIS CONTROL CANNOT USE LFO"));
 
     amb_patch(0,0,0);
@@ -212,7 +216,9 @@ int main(void)
             ambr.view=0;
             turn(EN_K1+knob,-25);
             link_last_edit();
-            assert(amb.layer[k].lfo_dest==(knob==1?ROUTE_HOME_DENSITY:ROUTE_MACRO+knob));
+            assert(amb_lfo_page[k]==(knob&1));
+            assert(!strncmp(ambr.notice,knob&1?"LFO 2: ":"LFO 1: ",7));
+            assert(amb_edit_dest(&amb.layer[k])==(knob==1?ROUTE_HOME_DENSITY:ROUTE_MACRO+knob));
         }
         assert(amb_controls.layer_thinning[k]==50);
     }

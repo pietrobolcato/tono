@@ -67,7 +67,9 @@ static void check_page_presets(void)
                 turn(EN_PRESET,index);press(B_REC);
                 assert(amb_valid(&amb) && !ambr.local_preset);
                 assert(!memcmp(&old.layer[1],&amb.layer[1],3*sizeof(amb_layer_t)));
-                assert(amb.layer[0].engine==old.layer[0].engine && amb.layer[0].patch==old.layer[0].patch);
+                if(view==1 && page==1 && amb_family_size(&old.layer[0])>1)
+                    assert(amb.layer[0].patch==amb_texture_member(old.layer[0].patch,index-1));
+                else assert(amb.layer[0].engine==old.layer[0].engine && amb.layer[0].patch==old.layer[0].patch);
                 amb_piece_t saved=amb;
                 turn(EN_PRESET,index);press(B_REC);assert(!memcmp(&saved,&amb,sizeof amb));
                 checks++;
@@ -107,6 +109,32 @@ int AMB_MAIN(int argc,char **argv)
     amb.layer[0].level=127;amb_master(450,1);amb_master(800,0);
     amb_master(768,0);assert(amb.layer[0].level<127);
     amb.layer[0].level=0;amb_master(600,0);amb_master(620,0);assert(amb.layer[0].level>0);
+    /* Tiny movements near a rail used to sweep almost the entire level.
+     * Exercise each gain resolution, both stops and the HOME reposition gesture. */
+    for(unsigned target=0;target<2;target++){
+        amb_target(target);
+        int limit=target?127:1023;
+        for(int high=0;high<2;high++){
+            int start=high?1019:4;
+            int saved=high?limit/5:limit*4/5;
+            if(target)amb.layer[0].level=saved;else amb.master=saved;
+            amb_master(start,1);
+            amb_master(high?1023:0,0);
+            int level=target?amb.layer[0].level:amb.master;
+            int change=high?level-saved:saved-level;
+            assert(change>0 && change<=(8*limit+511)/1023);
+            for(int bounce=0;bounce<32;bounce++){
+                amb_master(start,0);amb_master(high?1023:0,0);
+            }
+            assert((target?amb.layer[0].level:amb.master)==level);
+            btn_down(B_HOME);
+            amb_master(high?0:1023,0);frame();
+            btn_up(B_HOME);frame();
+            assert((target?amb.layer[0].level:amb.master)==level);
+            amb_master(high?1023:0,0);
+            assert((target?amb.layer[0].level:amb.master)==(high?limit:0));
+        }
+    }
     amb_patch(0,6,0);ambr.view=1;ambr.page=1;ambr.bank=0;
     press(B_EDIT);assert(ambr.bank==1);turn(EN_SELECT,-1);assert(ambr.bank==2);
     press(B_EDIT);assert(!ambr.bank);turn(EN_SELECT,1);assert(!ambr.bank);
@@ -120,7 +148,7 @@ int AMB_MAIN(int argc,char **argv)
     assert(ambr.proposal==1 && !memcmp(&amb,&before,sizeof amb));
     press(B_HOME);assert(ambr.proposal==255 && ambr.view==1 && ambr.page==1 && !memcmp(&amb,&before,sizeof amb));
     turn(EN_ALGO,1);press(B_REC);assert(amb.layer[0].patch==1 && ambr.proposal==255);
-    before=amb;turn(EN_PRESET,1);assert(ambr.local_preset && ambr.view==1 && !memcmp(&before,&amb,sizeof amb));
+    before=amb;turn(EN_PRESET,2);assert(ambr.local_preset && ambr.view==1 && !memcmp(&before,&amb,sizeof amb));
     press(B_REC);assert(!ambr.local_preset && amb.layer[0].patch==before.layer[0].patch && amb.layer[0].base[P_REV]!=before.layer[0].base[P_REV]);
     turn(EN_PRESET,1);press(B_LFO);assert(!ambr.local_preset && ambr.page==3);
     turn(EN_SELECT,-1);assert(amb.layer[0].lfo_dest==ROUTE_GRAIN);
@@ -184,7 +212,10 @@ int AMB_MAIN(int argc,char **argv)
             for(k=0;k<NTRK;k++)memset(&trk[k],0,sizeof trk[k]);
             amb_patch(0,scene,scene==6?0:patch);
             if(scene==6)amb.layer[0].base[P_E0]=(int16_t)patch;
-            amb_prepare();trk[0].engine=amb.layer[0].engine;
+            /* Commit through the audio engine so its shared voice storage
+             * changes ownership, including acoustic -> A22 and FM6. */
+            amb_prepare();engine_block(&trk[0]);
+            assert(trk[0].engine==amb.layer[0].engine);
             trk[0].xf_on=trk[0].xf=trk[0].xin=0;
             trk_note_on(&trk[0],scene==4?36:60,80);energy=0;
             for(i=0;i<FS*3u/CTL;i++) {

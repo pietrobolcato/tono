@@ -110,7 +110,11 @@ _Static_assert(sizeof rev_comb / 2u >= SP_LEN && sizeof rev_u.sp / 4u >= 4u * (S
  * and bloom), the second stage's gain rising with the drive (clean .. crunch .. lead); then a cabinet: the two-pole
  * low-pass at a speaker's corner (TONE moves it ~2.5 .. 6 kHz) and a resonance at ~1.8 kHz (a state-variable band
  * added: the presence a 12" cone has). State: dist_dc (the coupling), dist_cab_l / _b (the cabinet) */
-enum { DT_SOFT, DT_HARD, DT_FOLD, DT_CRUSH, DT_RECT, DT_AMP };
+enum { DT_SOFT, DT_HARD, DT_FOLD, DT_CRUSH, DT_RECT, DT_AMP
+#if AMBPLUS
+    ,DT_SOFT_KNEE
+#endif
+};
 #define AMP_B1 7000                                     /* the stages' biases (Q15 into tanh) */
 #define AMP_B2 (-3500)
 static __attribute__((noinline)) int32_t dist_shape(track_t *t, uint32_t type, int32_t x, int32_t g, int32_t d)
@@ -171,6 +175,47 @@ static __attribute__((noinline)) void dist_amp(track_t *t, int32_t *b, uint32_t 
  * at 1: the low cut and the clip at once), the blend eased a block at a time and ramped across it; at 0 out of the
  * chain once the blend is down */
 static int32_t dist_w[NTRK];                            /* the blend the last block ended at, Q12 */
+#if AMBPLUS
+/* The dry performance monitor's symmetric transfer. At high input its
+ * integer-table ceiling is +/-25635 before the DAC's six-dB attenuation. */
+static int32_t amb_monitor_curve(int32_t x)
+{
+    return soft_knee(softclip(x),12000);
+}
+static int32_t amb_knee_sample(int32_t x,int gain,int makeup,int tone,int32_t *low,int blend)
+{
+    int wet=amb_monitor_curve((clamp(x,-65536,65536)*gain)>>8);
+    wet=(wet*makeup)>>14;
+    /* Neutral TONE leaves the two-stage monitor transfer untouched.
+     * Keep the low state tracking so turning TONE starts continuously. */
+    *low+=(wet-*low)>>3;
+    wet+=((wet-*low)*tone)>>6;
+    return blend==4096?wet:x+((((wet-x)>>2)*blend)>>10);
+}
+static __attribute__((noinline)) void amb_knee_block(track_t *t,int32_t *b,unsigned n,int drive,int blend,int delta)
+{
+    int gain=256+(drive*drive>>3);  /* 1x .. 8.9x in Q8 */
+    /* Match a 4096-unit reference rather than letting drive act as volume. */
+    int makeup=(4096<<14)/amb_monitor_curve(16*gain);
+    int tone=t->p[P_DTONE];
+    int32_t *side=t->engine==ENGI_AMB_A22?voice_bank[t-trk].a22.side:0;
+    int drum_image=t->engine==ENGI_DRUM && (dx_xon&1u);
+    int32_t low_l=t->dist_lp1,low_r=t->dist_lp2;
+    for(unsigned i=0;i<n;i++){
+        blend+=delta;
+        if(side || drum_image){
+            int left=side?b[i]+side[i]:b[i]-dx_sl[i];
+            int right=side?b[i]-side[i]:b[i]-dx_sr[i];
+            left=amb_knee_sample(left,gain,makeup,tone,&low_l,blend);
+            right=amb_knee_sample(right,gain,makeup,tone,&low_r,blend);
+            b[i]=(left+right)>>1;
+            if(side)side[i]=(left-right)>>1;
+            else{dx_sl[i]=b[i]-left;dx_sr[i]=b[i]-right;}
+        }else b[i]=amb_knee_sample(b[i],gain,makeup,tone,&low_l,blend);
+    }
+    t->dist_lp1=low_l;t->dist_lp2=low_r;
+}
+#endif
 static void track_dist(track_t *t, int32_t *b, uint32_t n)
 {
     int32_t d = t->p[P_DIST], i, g, k, mk, b0 = softclip(2400), w0, w1, dw, full;
@@ -186,6 +231,9 @@ static void track_dist(track_t *t, int32_t *b, uint32_t n)
         t->dist_lp1 = t->dist_lp2 = 0, t->dist_hp = 0;
     dw = (w1 - w0) >> CTL_LOG2;
     full = w0 >= 4096 && w1 >= 4096;
+#if AMBPLUS
+    if(type==DT_SOFT_KNEE){amb_knee_block(t,b,n,d,w0,dw);return;}
+#endif
     g = 4096 + d * d * 2;                                /* Q12: 1x .. ~9x, gentle at first */
     k = clamp(32000 - d * 95 + t->p[P_DTONE] * 300, 2500, 32767);   /* tone: transparent at low drive .. ~3 kHz, Q15 */
     mk = type == DT_HARD || type == DT_FOLD || type == DT_CRUSH ? 30000 - d * 60 : 30000 - d * 120;   /* make-up */
@@ -2039,7 +2087,7 @@ static __attribute__((noinline)) void amb_monitor_output(int32_t *out,unsigned n
         for(unsigned side=0;side<2;side++){
             unsigned j=2*i+side;
             int dry=amb_monitor_bus[0][j]+(amb_monitor_core1?amb_monitor_bus[1][j]:0);
-            dry=soft_knee(softclip((((dry>>2)*mg)>>10)),12000);
+            dry=amb_monitor_curve(((dry>>2)*mg)>>10);
             out[j]+=(dry-out[j])*(int)amb_monitor_blend/AMB_MONITOR_RAMP;
         }
     }
@@ -2146,6 +2194,8 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
         if(amb_scope_target==ti+1 && amb_scope_page==1 && amb_scope_fill<AMB_SCOPE_N)
             amb_scope_sound(b,n);
         amb_layer_process(ti,b,n);
+        if(amb_scope_target==ti+1 && amb_scope_page==6 && amb_scope_fill<AMB_SCOPE_N)
+            amb_scope_sound(b,n);
 #endif
         int32_t pm0 = 32768, pm1 = 32768;               /* (0.6.48: drum_mix's; pf.mg counts only while muting) */
         if ((pf.mute >> (t - trk)) & 1u) {

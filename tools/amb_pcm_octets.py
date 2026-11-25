@@ -39,7 +39,7 @@ def groups(values, period):
     return data, offsets, directory
 
 
-def assets():
+def assets(include_piano=False):
     samples = (SRC / 'amb_samples.h').read_text().split('= {', 1)[1]
     chime, vowel = [list(map(int, re.findall(r'\d+', row))) for row in re.findall(r'\{([^{}]+)\}', samples)]
     acoustic = (SRC / 'amb_acoustic_pcm.h').read_text()
@@ -50,7 +50,7 @@ def assets():
         yield name, period, list(map(int,re.findall(r'\d+',samples)))
     # Decode the checked-in sixteen-point assets exactly before changing
     # their storage stride. The decoded codes and the playback rates stay fixed.
-    for name, period in [('cello',46),('flute',19)]:
+    for name, period in [('cello',46),('flute',19)] + ([('piano',23)] if include_piano else []):
         symbol = 'amb_pcm_' + name
         def values(suffix):
             raw = re.search(symbol + suffix + r'\[\d+\] = \{([^}]+)', acoustic)[1]

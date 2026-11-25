@@ -1,5 +1,18 @@
 #define AMB_MAIN amb_test_main
 #include "amb_native_test.c"
+/* The original acoustic asset groups sixteen samples of the same oscillator
+ * phase. This test-only reader is deliberately independent of both playback codecs. */
+static unsigned reference_acoustic(const uint8_t *data,const uint16_t *offsets,
+                                   const uint32_t *widths,unsigned frame,unsigned period)
+{
+    unsigned cycle=frame/period, group=(cycle/16)*period+frame%period;
+    unsigned width_word=widths[group/8], pos=offsets[group/8];
+    for(unsigned i=0;i<group%8;i++){pos+=1+2*(width_word&15);width_word>>=4;}
+    unsigned width=width_word&15, bit=(cycle%16)*width;
+    unsigned p=pos+1+bit/8, bits=data[p]|((unsigned)data[p+1]<<8);
+    return data[pos]+((bits>>(bit%8))&((1u<<width)-1));
+}
+
 int main(void)
 {
     const unsigned pitches[]={60,62,64,65,67,69,71,72};
@@ -39,10 +52,15 @@ int main(void)
         assert(found==1);
         scene=amb_next_piece(scene,1);
     }while(scene!=AMB_SCENE_GARDEN);
-    for(unsigned i=0;i<amb_pcm_cello_length;i++)
-        assert(amb_octet_code(amb_oct_cello,amb_oct_cello_offsets,amb_oct_cello_widths,i,amb_oct_cello_period)==amb_packed_code(amb_pcm_cello,amb_pcm_cello_offsets,amb_pcm_cello_widths,i,amb_pcm_cello_period));
-    for(unsigned i=0;i<amb_pcm_flute_length;i++)
-        assert(amb_octet_code(amb_oct_flute,amb_oct_flute_offsets,amb_oct_flute_widths,i,amb_oct_flute_period)==amb_packed_code(amb_pcm_flute,amb_pcm_flute_offsets,amb_pcm_flute_widths,i,amb_pcm_flute_period));
+    for(unsigned source=3;source<=6;source+=3){
+        const amb_recording_t *r=&amb_recordings[source];
+        for(unsigned i=0;i<r->length;i++){
+            unsigned code=source==3?
+                reference_acoustic(amb_pcm_cello,amb_pcm_cello_offsets,amb_pcm_cello_widths,i,amb_pcm_cello_period):
+                reference_acoustic(amb_pcm_flute,amb_pcm_flute_offsets,amb_pcm_flute_widths,i,amb_pcm_flute_period);
+            assert(amb_recorded_at(0,source,r->pcm,i)==amb_pcm_decode[code]);
+        }
+    }
     amb_factory(AMB_SCENE_GARDEN);ambr.view=2;ambr.page=2;
     press(B_SAVE);assert(ambr.view==2 && ambr.local_preset==AMB_ALL_GENERATE+1);
     turn(EN_SELECT,1);press(B_REC);

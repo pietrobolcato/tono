@@ -161,7 +161,7 @@ static void amb_help_actions(int lower)
         }else if(ambr.help==4 && ambr.target){
             amb_help_shortcut(56,"OCT-","Toggle mute",1,0);
             amb_help_shortcut(74,"OCT+","Toggle solo",1,0);
-            amb_help_shortcut(92,"LFO","Link last control",1,0);
+            amb_help_shortcut(92,"LFO","Link to next LFO",1,0);
             if(!ambr.zen){
                 amb_help_shortcut(110,"ALGO","Preview evolution",1,1);
                 amb_help_shortcut(128,"PLAY","Toggle sound lock",1,0);
@@ -172,7 +172,7 @@ static void amb_help_actions(int lower)
             amb_help_shortcut(5,"SELECT","Change edited layer",1,1);
             amb_help_shortcut(23,"OCT-","Mute edited layer",1,0);
         }else{
-            amb_help_shortcut(111,"LFO","Link last control",1,0);
+            amb_help_shortcut(111,"LFO","Link to next LFO",1,0);
             if(!ambr.page)amb_help_shortcut(130,"SAVE","Restore this layer",1,0);
             else if(amb_local_count())amb_help_shortcut(130,"PRESETS","Browse page settings",0,1);
         }
