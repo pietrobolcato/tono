@@ -7,7 +7,8 @@
  * to the same performance direction through different synthesis controls. */
 enum {
     V_ORIGINAL,V_VEIL,V_BLOOM,V_CLOSE,V_REED,V_CHIME,V_VELVET,V_DUB,
-    V_PEDAL,V_PLUCK,V_BRASS,V_SLIDE,V_BRUSH,V_FLOOR,V_SPARK,V_WASH,V_RADIO,V_DOWNPOUR,V_STORM
+    V_PEDAL,V_PLUCK,V_BRASS,V_SLIDE,V_BRUSH,V_FLOOR,V_SPARK,V_WASH,V_RADIO,V_DOWNPOUR,V_STORM,
+    V_STILL_WATER,V_TWIN_REEDS,V_GLASS_TIDE
 };
 static const struct {
     const char *name;
@@ -30,12 +31,13 @@ static const struct {
     {"Pinpoints",-29,-33,31,-26,-34,-15},
     {"Far bank",10,16,-34,-14,33,9},
     {"Intercom",-23,-12,23,21,-43,-40},
-    {"Steady Downpour",0,0,0,0,0,0},{"Rain & Thunder",0,0,0,0,0,0}
+    {"Steady Downpour",0,0,0,0,0,0},{"Rain & Thunder",0,0,0,0,0,0},
+    {"Still Water",0,0,0,0,0,0},{"Twin Reeds",0,0,0,0,0,0},{"Glass Tide",0,0,0,0,0,0}
 };
 typedef uint8_t amb_voicing_menu_t[3];
 /* Patch order follows amb_palette.h; SAMPLE uses the persisted source ID. */
 static const amb_voicing_menu_t amb_pad_voicings[]={
-    {V_VEIL,V_BRASS},{V_BLOOM,V_REED},{V_VEIL,V_BRASS},{V_CHIME,V_BLOOM},
+    {V_STILL_WATER,V_TWIN_REEDS,V_GLASS_TIDE},{V_BLOOM,V_REED},{V_VEIL,V_BRASS},{V_CHIME,V_BLOOM},
     {V_CLOSE,V_PEDAL},{V_PEDAL,V_BLOOM},{V_DUB,V_VEIL},{V_CLOSE,V_PLUCK},
     {V_REED,V_WASH},{V_CLOSE,V_BLOOM},{V_VEIL,V_REED},{V_CLOSE,V_BRASS},
     {V_CLOSE,V_DUB},{V_BRASS,V_VEIL},{V_PEDAL,V_DUB},{V_PLUCK,V_BLOOM},
@@ -133,6 +135,26 @@ static void amb_apply_variation(unsigned k,unsigned index)
     const int tone=amb_voicing[id].tone,body=amb_voicing[id].body;
     amb_layer_t original={0};
     amb_fill_patch(&original,amb.key,k,l->role,l->patch);
+    if(l->role==0 && l->patch==0){
+        /* Voices auditioned on the same chord, envelope and gain. */
+        static const uint8_t oscillator[][8]={
+            /* wave, detune, mix, noise, cutoff, resonance, drive, interval */
+            {3,0,0,0,82,12,0,0},
+            {2,8,62,0,82,12,0,0},
+            {3,5,29,0,97,12,0,19}
+        };
+        for(unsigned j=0;j<8;j++)
+            l->base[P_E0+j]=index?oscillator[index-1][j]:original.base[P_E0+j];
+        l->base[P_DRIFT]=index?0:original.base[P_DRIFT];
+        l->base[P_MORPH]=index?0:original.base[P_MORPH];
+        /* Use an untouched LFO 2 for Glass Tide's slow upper fifth. A stored
+         * tag distinguishes the factory route from a player's identical edit. */
+        amb_lfo_settings_t *second=&amb_controls.second[k];
+        static const amb_lfo_settings_t idle={0};
+        const amb_lfo_settings_t tide={.rate=21,.depth=30,.dest=amb_param_route(P_E2),.pad=1};
+        if(index==3 && !memcmp(second,&idle,sizeof idle))*second=tide;
+        if(index!=3 && !memcmp(second,&tide,sizeof tide))*second=idle;
+    }
     if(amb_legacy_glass(l)){
         original.engine=l->engine;
         const preset_t *legacy=&ENGINES[l->engine]->presets[amb_patch_preset(l)];
@@ -159,8 +181,10 @@ static void amb_apply_variation(unsigned k,unsigned index)
         else {colour=P_E3;shape=P_E4;}
         break;
     }
-    amb_voice_offset(l,&original,colour,colour_change);
-    amb_voice_offset(l,&original,shape,shape_change);
+    if(l->role!=0 || l->patch!=0){
+        amb_voice_offset(l,&original,colour,colour_change);
+        amb_voice_offset(l,&original,shape,shape_change);
+    }
     amb_voice_offset(l,&original,P_ATK,amb_voicing[id].attack);
     amb_voice_offset(l,&original,P_REL,amb_voicing[id].release);
     amb_voice_offset(l,&original,P_REV,amb_voicing[id].space);
