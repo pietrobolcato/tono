@@ -178,9 +178,20 @@ static int32_t dist_w[NTRK];                            /* the blend the last bl
 #if AMBPLUS
 /* The dry performance monitor's symmetric transfer. At high input its
  * integer-table ceiling is +/-25635 before the DAC's six-dB attenuation. */
+static inline unsigned amb_positive_clip(unsigned a)
+{
+    unsigned i=a>>8;
+    unsigned l=(uint16_t)TANH_Q15[i],r=(uint16_t)TANH_Q15[i+1];
+    return l+(((r-l)*(a&255))>>8);
+}
 static int32_t amb_monitor_curve(int32_t x)
 {
-    return soft_knee(softclip(x),12000);
+    /* Both stages are odd-symmetric. Apply their existing table to the
+     * magnitude and restore the sign once. Stage one bounds stage two. */
+    unsigned a=x<0?0u-(unsigned)x:(unsigned)x;
+    unsigned y=a>=65536?(uint16_t)TANH_Q15[256]:amb_positive_clip(a);
+    if(y>12000)y=12000+(amb_positive_clip((y-12000)*2)>>1);
+    return x<0?-(int)y:(int)y;
 }
 static int32_t amb_knee_sample(int32_t x,int gain,int makeup,int tone,int32_t *low,int blend)
 {
