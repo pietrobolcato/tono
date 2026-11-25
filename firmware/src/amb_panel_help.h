@@ -80,7 +80,9 @@ static unsigned amb_knob_card(const amb_layer_t *l,unsigned knob)
         if(knob==0)return H_layer_filter_mode;
         if(knob==1)return H_layer_filter_cutoff;
         if(knob==2)return bell?H_bell_gain:H_filter_resonance;
-        return bell?H_bell_width:0;
+        if(bell)return H_bell_width;
+        return (fx?((amb_controls.filter[ambr.edit_layer]>>4)-1):l->base[P_FTYPE])<=FT_HP &&
+               (!fx || (amb_controls.filter[ambr.edit_layer]&48))?H_filter_slope:0;
     }
     if(ambr.page==1)return amb_param_hint(l,amb_sound_id(l,ambr.bank,knob));
     if(ambr.page==2)return l->role==4 || (l->role==6 && l->base[P_E1]==3)?amb_param_hint(l,amb_envelope_id(l,knob)):H_time_to_full_level+knob;

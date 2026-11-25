@@ -565,3 +565,6 @@ Move the cutoff, or the centre of the Bell. The curve shows its position over th
 Lift or dip the chosen band by up to 12 dB. At 0 dB the sound passes through.
 [bell_width]
 Narrow focuses on one frequency. Wide shapes more of the surrounding tone.
+
+[filter_slope]
+Choose how quickly the filter fades beyond FREQ. At 6 dB/oct more harmonics come through. Try 12 for a smoother rolloff or 24 for a deep cut.

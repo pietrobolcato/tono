@@ -61,7 +61,7 @@ typedef struct {
     uint8_t layer_thinning[4]; /* Optional song trailer extension, zero preserves the score. */
     int8_t ceiling, release; /* offsets from the 0.69 limiter defaults */
     uint8_t filter[4]; /* mode in the high nibble, cutoff index in the low */
-    uint8_t spare[2];
+    uint8_t slope[2]; /* Four packed two-bit selectors each: synth and layer FX. */
     amb_lfo_settings_t second[4];
     uint8_t fx_shape[4]; /* low nibble: resonance/width, high nibble: signed gain */
     int8_t bell_gain[4];
@@ -79,10 +79,20 @@ static amb_lfo_settings_t amb_reset_second[4];
 static int8_t amb_reset_grain[4][4];
 static uint8_t amb_reset_filter[4],amb_reset_shape[4];
 static int8_t amb_reset_bell[4];
+static uint8_t amb_reset_slope[2];
+static unsigned amb_slope(unsigned layer,unsigned fx)
+{return (amb_controls.slope[fx]>>(2*layer))&3;}
+static void amb_set_slope(unsigned layer,unsigned fx,unsigned value)
+{
+    unsigned shift=2*layer;
+    amb_controls.slope[fx]=(amb_controls.slope[fx]&~(3u<<shift))|(value<<shift);
+}
+static unsigned amb_layer_filter_setting(unsigned k)
+{return amb_controls.filter[k]|(amb_slope(k,1)<<6)|((unsigned)amb_controls.fx_shape[k]<<8);}
 static uint16_t amb_tail_filter[NTRK];
 static int8_t amb_tail_octave[4];
 static uint16_t amb_filter_previous[NTRK];
-static int32_t amb_filter_state[NTRK][6][2] __attribute__((section(".lowbuf")));
+static int32_t amb_filter_state[NTRK][6][4] __attribute__((section(".lowbuf")));
 static int8_t amb_reset_eq[4][4];
 static amb_layer_t amb_reset_layer[4]; /* last loaded piece, never a flash snapshot */
 /* Main-loop edits publish a revision; audio copies a full deep baseline only
@@ -378,7 +388,7 @@ static void amb_begin_change(unsigned k)
      * Internal FM envelopes are held while oscillators keep running. */
     frames=((unsigned)amb.release_ms*FS+999u)/1000u;
     ambr.tail_left[k]=ambr.tail_total[k]=((frames+CTL-1u)/CTL)*CTL;
-    ambr.tail_gain[k]=32767;amb_tail_octave[k]=amb_bar_octave[k];amb_tail_filter[k]=amb_controls.filter[k]|((unsigned)amb_controls.fx_shape[k]<<8);memcpy(ambr.tail_eq[k],amb.layer_eq[k],4);
+    ambr.tail_gain[k]=32767;amb_tail_octave[k]=amb_bar_octave[k];amb_tail_filter[k]=amb_layer_filter_setting(k);memcpy(ambr.tail_eq[k],amb.layer_eq[k],4);
     for(i=0;i<NVOICE;i++)ambr.tail_env[k][i]=trk[k].v[i].env;
     ambr.handoff[k]=1;amb_release(k);trk_all_off(&trk[k]);
     ambr.due[k]=0;ambr.dirty=1;
@@ -397,6 +407,7 @@ static void amb_fresh_sound(unsigned k)
     amb_sound_change(k);
     /* The outgoing tail already owns its FX. Start the incoming insert chain dry. */
     amb_controls.layer_thinning[k]=0;
+    amb_set_slope(k,0,0);amb_set_slope(k,1,0);
     amb_controls.filter[k]=amb_controls.fx_shape[k]=0;amb_controls.bell_gain[k]=0;
     memset(&amb_controls.second[k],0,sizeof amb_controls.second[k]);
     memcpy(amb.grain[k],(int8_t[]){0,50,0,20},4);
@@ -449,7 +460,7 @@ static __attribute__((noinline)) int amb_move_release(unsigned k)
     ambr.tail_gain[dst]=ambr.tail_gain[k];memcpy(ambr.tail_env[dst],ambr.tail_env[k],sizeof ambr.tail_env[k]);
     amb_grain[dst]=amb_grain[k];amb_grain[k].valid=amb_grain[k].phase=amb_grain[k].period=0;
     memcpy(amb_grain_controls[dst],amb_grain_controls[k],4);
-    memcpy(amb_bell_state[dst],amb_bell_state[k],sizeof amb_bell_state[k]);amb_bell_gain[dst]=amb_bell_gain[k];amb_filter_previous[dst]=amb_filter_previous[k];amb_tail_filter[dst]=amb_tail_filter[k];memcpy(amb_filter_state[dst],amb_filter_state[k],sizeof amb_filter_state[k]);
+    memcpy(amb_bell_state[dst],amb_bell_state[k],sizeof amb_bell_state[k]);amb_bell_gain[dst]=amb_bell_gain[k];amb_synth_slope[dst]=amb_synth_slope[k];amb_filter_previous[dst]=amb_filter_previous[k];amb_tail_filter[dst]=amb_tail_filter[k];memcpy(amb_filter_state[dst],amb_filter_state[k],sizeof amb_filter_state[k]);
     memcpy(ambr.tail_eq[dst],ambr.tail_eq[k],4);
     if(ambr.fade_slot[k]){
         unsigned gain=amb_fade_level(k,65536);
@@ -775,9 +786,9 @@ static void amb_install(const amb_piece_t *p)
         if(!ambr.piece_transition){ambr.piece_master=amb.master;memcpy(ambr.piece_eq,amb.eq,4);}
         ambr.piece_transition=1;
         /* Silent old layers also wait for the coordinated piece handoff. */
-        for(k=0;k<4;k++)if(!ambr.handoff[k]){ambr.handoff[k]=1;ambr.tail_left[k]=ambr.tail_total[k]=0;amb_tail_filter[k]=amb_controls.filter[k]|((unsigned)amb_controls.fx_shape[k]<<8);memcpy(ambr.tail_eq[k],amb.layer_eq[k],4);}
+        for(k=0;k<4;k++)if(!ambr.handoff[k]){ambr.handoff[k]=1;ambr.tail_left[k]=ambr.tail_total[k]=0;amb_tail_filter[k]=amb_layer_filter_setting(k);memcpy(ambr.tail_eq[k],amb.layer_eq[k],4);}
     }else ambr.piece_transition=0;
-    amb_controls=*incoming;memcpy(amb_reset_second,incoming->second,sizeof amb_reset_second);memset(amb_second,0,sizeof amb_second);memcpy(amb_reset_filter,amb_controls.filter,4);memcpy(amb_reset_shape,incoming->fx_shape,4);memcpy(amb_reset_bell,incoming->bell_gain,4);amb_limiter_settings(amb_controls.ceiling,amb_controls.release);amb_load_controls=0;
+    amb_controls=*incoming;memcpy(amb_reset_second,incoming->second,sizeof amb_reset_second);memset(amb_second,0,sizeof amb_second);memcpy(amb_reset_filter,amb_controls.filter,4);memcpy(amb_reset_shape,incoming->fx_shape,4);memcpy(amb_reset_bell,incoming->bell_gain,4);memcpy(amb_reset_slope,incoming->slope,2);amb_limiter_settings(amb_controls.ceiling,amb_controls.release);amb_load_controls=0;
     for(k=0;k<4;k++)amb_bar_octave[k]=amb_controls.octave[k];
     memcpy(ambr.octave_seen,(const void *)ambr.octave_taps,sizeof ambr.octave_seen);
     ambr.zen_train=amb_controls.flags&1u;
@@ -971,7 +982,7 @@ static __attribute__((noinline)) void amb_prepare(void)
         const amb_lfo_settings_t *other=&amb_controls.second[k];
         int stagger=(!other->depth || other->dest<2) && amb_control_slot<4 && l->lfo_dest<2 && ambr.applied_revision[k]==amb_base_revision[k];
         if(stagger && k!=amb_control_slot)continue;
-        amb_bell_gain[k]=amb_controls.bell_gain[k];
+        amb_bell_gain[k]=amb_controls.bell_gain[k];amb_synth_slope[k]=amb_slope(k,0);
         /* These arrays are naturally 16-bit aligned. The freestanding memcpy
          * copies bytes; doing this at control rate doubled the parameter-copy
          * work on pi32v2. Keep the saved/runtime separation with halfword IO. */
@@ -1604,7 +1615,7 @@ static __attribute__((noinline)) void amb_layer_process(unsigned k,int32_t *b,ui
     unsigned i,j,c,flat=1;if(k>=4 && !ambr.handoff[k])return;
     if(amb_grain_controls[k][0] || amb_grain[k].mix || amb_grain[k].valid)
         amb_grain_process(k,b,n);
-    unsigned setting=ambr.handoff[k]?amb_tail_filter[k]:amb_controls.filter[k]|((unsigned)amb_controls.fx_shape[k]<<8);
+    unsigned setting=ambr.handoff[k]?amb_tail_filter[k]:amb_layer_filter_setting(k);
     if((setting&48) || amb_filter_previous[k] || (amb_scope_target==k+1 && amb_scope_page==5 && amb_scope_fill<AMB_SCOPE_N))
         amb_filter_process(k,b,n,setting);
     const int8_t *eq=ambr.handoff[k]?ambr.tail_eq[k]:amb.layer_eq[k];
@@ -2171,6 +2182,11 @@ static void amb_filter_control(unsigned knob,int delta,char *label,char *value)
         name=knob==3?"WIDTH":"RES";unit="%";
         if(fx){int n=clamp((*shape&15)+delta,0,15);if(delta)*shape=(*shape&240)|n;v=(n*100+7)/15;}
         else{id=amb_sound_id(l,1,2);if(delta)l->base[id]=param_turn(amb_param_desc(l,id),l->base[id],delta);v=(l->base[id]*100+63)/127;}
+    }else if(knob==3 && (mode==FT_LP || mode==FT_HP)){
+        unsigned slope=amb_slope(k,fx);
+        if(!slope)slope=fx && !(*shape&15)?1:2;
+        if(delta){slope=clamp((int)slope+delta,1,3);amb_set_slope(k,fx,slope);}
+        name="SLOPE";unit="dB/oct";v=3<<slope;id=0;
     }else {if(label)label[0]=value[0]=0;return;}
     if(delta){if(!fx)amb_base_revision[k]++;amb_remember_edit(!fx && id?amb_param_route(id):ROUTE_COUNT);return;}
     if(!label)return;
@@ -2394,7 +2410,7 @@ static void amb_rec(void)
     if(ambr.reset_pending){
         unsigned k=ambr.edit_layer,solo=amb.layer[0].solo_plus1;uint8_t p0=amb.layer[0].reserved,p1=amb.layer[1].reserved,p3=amb.layer[3].reserved;
         ambr.last_edit_route[k]=0;amb_next_link[k]=0;
-        ambr.loading=1;amb_begin_change(k);amb.layer[k]=amb_reset_layer[k];amb_controls.filter[k]=amb_reset_filter[k];amb_controls.fx_shape[k]=amb_reset_shape[k];amb_controls.bell_gain[k]=amb_reset_bell[k];amb_controls.second[k]=amb_reset_second[k];memcpy(amb.grain[k],amb_reset_grain[k],4);memcpy(amb.layer_eq[k],amb_reset_eq[k],4);
+        ambr.loading=1;amb_begin_change(k);amb.layer[k]=amb_reset_layer[k];amb_controls.filter[k]=amb_reset_filter[k];amb_controls.fx_shape[k]=amb_reset_shape[k];amb_controls.bell_gain[k]=amb_reset_bell[k];for(unsigned fx=0;fx<2;fx++)amb_set_slope(k,fx,(amb_reset_slope[fx]>>(2*k))&3);amb_controls.second[k]=amb_reset_second[k];memcpy(amb.grain[k],amb_reset_grain[k],4);memcpy(amb.layer_eq[k],amb_reset_eq[k],4);
         amb.layer[0].solo_plus1=(uint8_t)solo;amb.layer[0].reserved=p0;amb.layer[1].reserved=p1;amb.layer[3].reserved=p3;
         if(!ambr.handoff[k])amb_apply_patch(k);
         amb_travel_rebase(k);ambr.recent_valid[k]=0;ambr.reset_pending=0;ambr.loading=0;

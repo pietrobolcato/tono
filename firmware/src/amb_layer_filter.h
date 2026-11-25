@@ -20,6 +20,8 @@ static void amb_filter_process(unsigned k,int32_t *b,unsigned n,unsigned setting
     if(!next)setting=previous;
     amb_filter_previous[k]=next;
     unsigned mode=(setting>>4)&3,shape=(setting>>8)&15;
+    unsigned slope=mode==3?0:((setting>>6)&3);
+    int svf=shape || mode==3 || slope>=2;
     unsigned pos=amb_scope_fill;
     int capture=amb_scope_target==k+1 && amb_scope_page==5 && pos<AMB_SCOPE_N;
     if(mode){
@@ -27,27 +29,28 @@ static void amb_filter_process(unsigned k,int32_t *b,unsigned n,unsigned setting
         unsigned channels=a22?2:trk[k].engine==ENGI_DRUM && dx_xon?6:1;
         int a=coefficient[setting&15];
         static const uint8_t pitch[]={20,29,38,48,57,66,71,75,80,85,89,94,99,108,117,127};
-        tsvf_t coef;int damping=amb_filter_damping(shape,mode==3);
-        if(shape || mode==3)tsvf_coef_k(&coef,pitch[setting&15]<<8,damping);
+        tsvf_t coef[2];int damping=amb_filter_damping(shape,mode==3);
+        if(svf)damping=amb_filter_coefficients(coef,pitch[setting&15]<<8,damping,slope);
         int32_t dry[CTL];
         for(unsigned c=0;c<channels;c++){
             int32_t *buf=!c?b:a22?voice_bank[k].a22.side:c==1?dx_sl:c==2?dx_sr:dx_sb[c-3];
             int32_t *state=amb_filter_state[k][c];
             if(fade){
-                if(fade==1){state[0]=0;state[1]=buf[0];}
+                if(fade==1){state[0]=0;state[1]=clamp(buf[0],-524288,524287)*512;}
                 memcpy(dry,buf,sizeof *dry*(n<CTL?n:CTL));
             }
-            if(shape || mode==3){
+            if(svf){
                 int gain=(int8_t)(setting>>8)>>4;
-                amb_svf_block(buf,n,state,&coef,damping,mode==3?FT_BELL:mode-1,amb_peak_q12[gain+6]-4096);
+                if(slope==3 && (previous&192)!=192){state[2]=0;state[3]=clamp(buf[0],-524288,524287)*512;}
+                amb_filter_stages(buf,n,state,coef,damping,mode==3?FT_BELL:mode-1,slope,amb_peak_q12[gain+6]-4096);
             }else{
-                int32_t low=state[1];
+                int32_t low=state[1]>>9;
                 for(unsigned i=0;i<n;i++){
                     int32_t x=buf[i];
                     low+=(int32_t)((((int64_t)x-low)*a)>>15);
                     buf[i]=mode==1?low:x-low;
                 }
-                state[0]=0;state[1]=low;
+                state[0]=0;state[1]=clamp(low,-524288,524287)*512;
             }
             /* Enter and leave the insert continuously over one control block. */
             if(fade)for(unsigned i=0;i<n && i<CTL;i++){
