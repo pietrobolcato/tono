@@ -38,11 +38,14 @@ static struct {
     uint8_t armed, heading;
 } auto_walk;
 static void amb_auto_reset(void){auto_walk.armed=auto_walk.heading=0;}
+static void amb_stop_automatic_changes(void);
+static uint8_t amb_paused_rhythm_bar;
 static void amb_walk_clock(unsigned unit,int enabled)
 {
     unsigned v=enabled?unit:unit==WALK_BARS?WALK_OFF:unit==WALK_SECONDS?WALK_SECONDS_OFF:unit+2u;
     if(amb_walk_config()[0]==v)return;
     amb_walk_config()[0]=(uint8_t)v;
+    if(!enabled)amb_stop_automatic_changes();
     amb_auto_reset();ambr.dirty=1;
 }
 static void amb_journey_recentre(void);

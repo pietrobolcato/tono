@@ -123,7 +123,7 @@ In **GLO → TRAVEL → EDIT**, turn **SELECT** between **Movement**, **Patterns
 | Clock | When the lane changes |
 |---|---|
 | Follow Travel | Shares the exact Auto Travel deadline, including the random wait. When AUTO is off the lane waits. Manual turns restart the Auto Travel timer. Linked changes land on a downbeat. |
-| Bars / Seconds / Minutes / Hours | Runs independently during playback, including when Auto Movement is off. Min and Max accept 1–120. Equal values give a fixed interval. A range chooses another wait each time. Time-based changes land on the first downbeat after the wait. Stop and restart begin a fresh interval. |
+| Bars / Seconds / Minutes / Hours | Runs on its own interval while Auto is on. Turning Auto off cancels queued automatic moves. Turning it on starts a fresh interval. Min and Max accept 1–120. Equal values give a fixed interval. A range chooses another wait each time. Time-based changes land on the first downbeat after the wait. Stop and restart begin a fresh interval. |
 
 Patterns changes one generator family at a time, cycling Rhythm, Phrase and Interplay. A manually queued choice takes priority for its family. Layer types changes at most one instrument per event using the layer’s existing release or crossfade. It introduces a role missing from the ensemble and keeps an audible Pad or Drone as a harmonic foundation. A replacement starts an AUTO pattern in its patch register. Layer EQ and grain settings come from the loaded arrangement when it contains the incoming role. An absent role starts with flat EQ and dry grains. Muted layers, protected layers, personal takes and layers in a handoff are ineligible for replacement. Solo pauses role replacement. These rules apply to Garden too.
 

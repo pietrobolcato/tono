@@ -7,7 +7,7 @@ static struct {
     volatile int32_t wanted;
     int32_t harmony, stage[4];
     int8_t colour;
-    uint8_t ready, chord[2*AMB_TRAVEL_RANGE+1];
+    uint8_t ready, paused, chord[2*AMB_TRAVEL_RANGE+1];
     int16_t origin_macro[4][4], origin_clip, origin_echo_colour;
     amb_layer_t origin[4];
     uint32_t turned_ms;
@@ -37,6 +37,17 @@ static unsigned amb_lane_value(unsigned lane,unsigned knob)
 static void amb_reset_lanes(void)
 {
     lane_clock[0].armed=lane_clock[1].armed=role_pending=pattern_pending=0;
+}
+static void amb_stop_automatic_changes(void)
+{
+    amb_reset_lanes();
+    amb_paused_rhythm_bar=ambr.step/16;
+    if(amb_notices.travel){
+        travel.paused=1;
+        travel.pending_layers=0;
+    }
+    amb_notices.tail=amb_notices.head;
+    amb_notices.showing=0;
 }
 static unsigned amb_travel_guard(void)
 {
@@ -244,6 +255,7 @@ static void amb_pattern_tick(void)
 }
 static void amb_ensemble_downbeat(void)
 {
+    if(!amb_walk_value(0))return;
     if(amb_lane_due(0) || pattern_pending)amb_pattern_tick();
     if(amb_lane_due(1) || role_pending){amb_change_role();role_pending=0;}
 }
@@ -358,6 +370,7 @@ static int amb_landscape_bar(void)
 static void amb_landscape_turn(int delta)
 {
     ambr.loading=1;
+    travel.paused=0;
     if(!travel.ready)amb_landscape_start();
     int previous=travel.wanted;
     int next=previous+delta;
