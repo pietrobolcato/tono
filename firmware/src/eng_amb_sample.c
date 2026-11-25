@@ -14,7 +14,7 @@ typedef struct {const uint8_t *pcm;unsigned length,root,rate_q16,loop_percent;} 
 static const amb_recording_t amb_recordings[]={
     {amb_oct_chime,amb_oct_chime_length,60,2972,24},{amb_oct_vowel,amb_oct_vowel_length,60,2972,24},
     {amb_rice_violin,amb_oct_violin_length,60,14861,29},
-    {amb_oct_cello,amb_oct_cello_length,60,17833,12},
+    {amb_rice_cello,amb_oct_cello_length,60,17833,12},
     {amb_rice_piano,amb_pcm_piano_length,72,17833,29},
     {amb_rice_tenor,amb_oct_tenor_length,72,14861,29},
     {amb_oct_flute,amb_oct_flute_length,72,14861,15},
@@ -45,7 +45,6 @@ static amb_seek_t amb_speech_block(const uint8_t *block,amb_seek_t state,int16_t
 static void amb_sample_seek_init(void)
 {
     for(unsigned k=0;k<NTRK;k++)amb_pcm_invalidate(k);
-    AMB_INIT_OFFSETS(cello);
     AMB_INIT_OFFSETS(flute);
     AMB_INIT_OFFSETS(chime);
     AMB_INIT_OFFSETS(vowel);
@@ -70,7 +69,7 @@ static int amb_recorded_at(unsigned track,unsigned source,const uint8_t *src,uns
     case 0: code=amb_octet_code(src,amb_oct_chime_offsets,amb_oct_chime_widths,at,amb_oct_chime_period);break;
     case 1: code=amb_octet_code(src,amb_oct_vowel_offsets,amb_oct_vowel_widths,at,amb_oct_vowel_period);break;
     case 2: code=amb_rice_code(track,source,src,amb_rice_violin_offsets,amb_oct_violin_period,at);break;
-    case 3: code=amb_octet_code(src,amb_oct_cello_offsets,amb_oct_cello_widths,at,amb_oct_cello_period);break;
+    case 3: code=amb_rice_code(track,source,src,amb_rice_cello_offsets,amb_oct_cello_period,at);break;
     case 4: code=amb_rice_code(track,source,src,amb_rice_piano_offsets,amb_pcm_piano_period,at);break;
     case 5: code=amb_rice_code(track,source,src,amb_rice_tenor_offsets,amb_oct_tenor_period,at);break;
     case 6: code=amb_octet_code(src,amb_oct_flute_offsets,amb_oct_flute_widths,at,amb_oct_flute_period);break;
