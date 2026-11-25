@@ -158,6 +158,7 @@ static void amb_help_actions(int lower)
             amb_help_shortcut(76,"SEQ","Open Ensemble meters",1,0);
             amb_help_shortcut(94,"ARP",ambr.zen?"Leave Zen":"Open Zen",1,0);
             amb_help_shortcut(112,ambr.zen?"SEL":"ALGO",ambr.zen?"Switch landscape":"Travel through the song",0,!ambr.zen);
+            amb_help_shortcut(130,"GLO","Toggle Auto Travel",1,0);
         }else if(ambr.help==4 && ambr.target){
             amb_help_shortcut(56,"OCT-","Toggle mute",1,0);
             amb_help_shortcut(74,"OCT+","Toggle solo",1,0);

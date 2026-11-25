@@ -2794,6 +2794,10 @@ static void amb_input(void)
             ambr.recording=ambr.reset_pending=ambr.overwrite=0;ambr.dirty=1;
         }else if(ambr.zen && b==B_SCL && !home){
             ambr.zen_train^=1;ambr.dirty=1;
+        }else if(home && b==B_GLO && !ambr.view){
+            ambr.home_used=1;
+            amb_walk_clock(amb_walk_unit(),!amb_walk_value(0));
+            amb_say(amb_walk_value(0)?"Auto: On":"Auto: Off");
         }else if(home && b==B_FX){
             ambr.home_used=1;amb_monitor_requested^=1;
             amb_say(amb_monitor_requested?"ALL FX BYPASSED":"EFFECTS ON");
