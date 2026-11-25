@@ -54,6 +54,9 @@ static inline a22_f32 a22_ease_out(a22_f32 t) { t = 1.0f - a22_sat(t); return 1.
  * turn: |error| < 4e-6. Used to build the lookup table and by the graphics. */
 static inline a22_f32 a22_sin_turns(a22_f32 t)
 {
+    /* Keep each multiply and add rounded separately, including on hosts that
+     * otherwise contract this boot polynomial into fused operations. */
+    #pragma STDC FP_CONTRACT OFF
     a22_f32 x, x2;
     t -= (a22_f32)a22_ifloor(t);                       /* 0..1 */
     if (t > 0.5f) t -= 1.0f;                   /* -0.5..0.5 */
