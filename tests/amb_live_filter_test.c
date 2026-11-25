@@ -30,7 +30,7 @@ static double slope_level(unsigned fx,unsigned type,unsigned slope,unsigned hz,u
     for(unsigned j=0;j<512;j++){
         uint32_t start=phase;
         for(unsigned i=0;i<CTL;i++,phase+=inc)b[i]=osc_sine(phase);
-        if(fx)amb_filter_process(0,b,CTL,(type+1)*16+(cutoff==71?6:0)+(slope<<6));
+        if(fx)amb_filter_process(0,b,CTL,(type+1)*16+(cutoff==71?6:0)+((slope&3)<<6)+((slope&4)<<10));
         else {
             track_t *t=&trk[0];
             t->p[P_FTYPE]=type;t->p[P_FCUT]=cutoff;t->p[P_FRES]=0;
@@ -47,10 +47,11 @@ static double slope_level(unsigned fx,unsigned type,unsigned slope,unsigned hz,u
 static void check_slopes(void)
 {
     trk[0].p[P_LD_FLT]=trk[0].p[P_ED_FLT]=0;
-    for(unsigned fx=0;fx<2;fx++)for(unsigned type=0;type<2;type++)for(unsigned slope=1;slope<=3;slope++){
+    for(unsigned fx=0;fx<2;fx++)for(unsigned type=0;type<2;type++)for(unsigned slope=1;slope<=5;slope++){
+        if(slope==4)continue;
         double a=slope_level(fx,type,slope,type?520:2300,71);
         double b=slope_level(fx,type,slope,type?260:4600,71);
-        double db=20*log10(a/b),expected=3u<<slope;
+        double db=20*log10(a/b),expected=6*amb_slope_order(slope);
         printf("%s %s %u dB/oct: measured %.1f dB/oct\n",fx?"layer":"synth",type?"HP":"LP",(unsigned)expected,db);
         assert(fabs(db-expected)<3.5);
     }
@@ -100,6 +101,50 @@ static void check_bell(void)
     assert(amb_recall(5) && amb_controls.filter[0]==54 && amb_controls.fx_shape[0]==0xdb &&
            amb_controls.bell_gain[0]==4 && amb.layer[0].base[P_FTYPE]==FT_BELL);
 }
+static void check_bandpass(void)
+{
+    trk[0].p[P_LD_FLT]=trk[0].p[P_ED_FLT]=0;
+    for(int fx=0;fx<=1;fx++){
+        ambr.view=1;ambr.edit_layer=0;ambr.page=fx?5:1;ambr.bank=1;ambr.detail=1;ambr.fx=6;
+        amb_knob(0,8);
+        amb_knob(3,-200);
+        char label[16],value[24];
+        amb_knob_value(0,label,value);assert(!strcmp(value,"Band-pass"));
+        amb_knob_value(3,label,value);assert(!strcmp(label,"WIDTH"));
+        for(unsigned order=1;order<=4;order++)for(unsigned wide=0;wide<=1;wide++){
+            amb_knob(2,-8);amb_knob(2,order-1);
+            amb_knob(3,-200);
+            amb_synth_slope[0]=amb_slope(0,0);
+            if(wide)amb_knob(3,200);
+            unsigned width=fx?(amb_controls.fx_shape[0]&15)*8:amb.layer[0].base[P_FRES];
+            double levels[3];
+            const unsigned hz[]={125,1000,8000};
+            for(unsigned j=0;j<3;j++){
+                uint32_t phase=0,step=hz[j]*(0xffffffffu/FS);
+                double before=0,after=0;
+                for(unsigned block=0;block<320;block++){
+                    int32_t b[CTL];
+                    for(unsigned i=0;i<CTL;i++,phase+=step){
+                        b[i]=osc_sine(phase)>>1;
+                        if(block>=160)before+=(double)b[i]*b[i];
+                    }
+                    if(fx)amb_filter_process(0,b,CTL,amb_layer_filter_setting(0));
+                    else tf_run(&trk[0],b,CTL,FT_BANDPASS,TF_DRY,0,0,0,71,width);
+                    if(block>=160)for(unsigned i=0;i<CTL;i++)after+=(double)b[i]*b[i];
+                }
+                levels[j]=sqrt(after/before);
+            }
+            printf("Band-pass %s width %u: 125/1000/8000 Hz %.3f %.3f %.3f\n",
+                   fx?"layer":"synth",width,levels[0],levels[1],levels[2]);
+            assert(levels[1]>.85 && levels[0]<.22 && levels[2]<.22);
+            assert(wide && order==1?levels[0]>.09:levels[0]<.045);
+            if(order>1)assert(levels[2] < .04);
+        }
+        assert(amb_response_y(125,1000,FT_BANDPASS,127,fx)>amb_response_y(1000,1000,FT_BANDPASS,127,fx));
+    }
+    ambr.slot=4;amb_save();amb_fixture_scene(0);assert(amb_recall(4));
+    assert(amb.layer[0].base[P_FTYPE]==FT_BANDPASS && (amb_controls.filter[0]>>4)==4);
+}
 int main(void)
 {
     int32_t block[CTL];
@@ -142,11 +187,16 @@ int main(void)
     assert(l<=lim_ceiling && r<lim_ceiling/8 && lim_peak_in>lim_peak_out && lim_peak_env>lim_ceiling);
     check_slopes();
     check_bell();
+    check_bandpass();
+    amb_set_slope(0,0,0);amb_set_slope(0,1,0);
     ambr.fx=6;ambr.page=5;amb_controls.filter[0]=16;amb_controls.fx_shape[0]=0;
     char label[16],value[24];amb_knob_value(3,label,value);assert(!strcmp(value,"6dB/oct"));
-    amb_knob(3,2);amb_knob_value(3,label,value);assert(!strcmp(value,"24dB/oct"));
+    amb_knob(3,2);amb_knob_value(3,label,value);assert(!strcmp(value,"18dB/oct"));
+    ambr.slot=6;amb_save();amb_fixture_scene(0);assert(amb_recall(6) && amb_slope(0,1)==5);
+    ambr.view=1;ambr.edit_layer=0;ambr.fx=6;ambr.page=5;
+    amb_knob(3,1);amb_knob_value(3,label,value);assert(!strcmp(value,"24dB/oct"));
     assert(amb_slope(0,1)==3 && amb_slope(0,0)==0 && amb_slope(1,1)==0);
-    ambr.slot=6;amb_save();amb_fixture_scene(0);assert(amb_recall(6) && amb_slope(0,1)==3);
+    ambr.slot=7;amb_save();amb_fixture_scene(0);assert(amb_recall(7) && amb_slope(0,1)==3);
 
     puts("PASS layer isolation, filter response and captured taps, linked limiter controls and metering.");
 }

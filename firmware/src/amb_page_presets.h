@@ -99,6 +99,7 @@ static void amb_apply_page_preset(void)
             amb_patch(k,l->role,amb_texture_member(l->patch,index));
             amb_travel_rebase(k);
         }else amb_apply_variation(k,index);
+        amb_controls.sound_preset[k]=index+1;
         amb_base_revision[k]++;
         ambr.dirty=1;
         return;

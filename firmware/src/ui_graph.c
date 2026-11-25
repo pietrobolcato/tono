@@ -1548,7 +1548,7 @@ static void track_col6(uint32_t c, uint32_t sel, uint32_t st, uint32_t mute, uin
         cv_rect(4, sy, 12, 3, sc);
     }
     if (lvl) {
-        int32_t d = LEVEL_DB_X10[lvl];
+        int32_t d = level_db_x10(lvl);
         fmt_int(v, (d + (d < 0 ? -5 : 5)) / 10);
     } else {
         str_cpy(v, "OFF", sizeof v);
@@ -1635,7 +1635,7 @@ static void draw_tracks(void)
             char v[8];
             knob(KB_X, KB_Y, KNOB_BIG_R, KNOB_BIG_COV, KNOB_BIG_ANG, (int32_t)lvl, 0, 127, hot == 1u ? T_ACCENT : vc);
             if (lvl) {
-                int32_t d = LEVEL_DB_X10[lvl];
+                int32_t d = level_db_x10(lvl);
                 fmt_int(v, (d + (d < 0 ? -5 : 5)) / 10);
                 GFX_HOOK_ALIGN(KB_X, 0, KB_X + 2 * KNOB_BIG_R, 0, AL_H, "mixer level text centred across");
                 cv_text_in(KB_X, KB_Y + KNOB_BIG_R + 5, 2 * KNOB_BIG_R, &AF_S, "dB", T_DIM, T_SURF);

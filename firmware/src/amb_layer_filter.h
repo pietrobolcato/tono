@@ -21,7 +21,8 @@ static void amb_filter_process(unsigned k,int32_t *b,unsigned n,unsigned setting
     if(!next)setting=previous;
     amb_filter_previous[k]=next;
     unsigned mode=(setting>>4)&3,shape=(setting>>8)&15;
-    unsigned slope=mode==3?0:((setting>>6)&3);
+    int band=mode==3 && (setting&64);
+    unsigned slope=band?setting>>12:mode==3?0:((setting>>6)&3)|((setting>>10)&4);
     int svf=shape || mode==3 || slope>=2;
     unsigned pos=amb_scope_fill;
     int capture=amb_scope_target==k+1 && amb_scope_page==5 && pos<AMB_SCOPE_N;
@@ -31,7 +32,7 @@ static void amb_filter_process(unsigned k,int32_t *b,unsigned n,unsigned setting
         int a=coefficient[setting&15];
         static const uint8_t pitch[]={20,29,38,48,57,66,71,75,80,85,89,94,99,108,117,127};
         const tsvf_t *coef=0;int damping=amb_filter_damping(shape,mode==3);
-        if(svf)coef=amb_cached_coef(k,1,pitch[setting&15]<<8,&damping,slope);
+        if(svf)coef=amb_cached_coef(k,1,pitch[setting&15]<<8,&damping,band?0:slope);
         int32_t dry[CTL];
         for(unsigned c=0;c<channels;c++){
             int32_t *buf=!c?b:a22?voice_bank[k].a22.side:c==1?dx_sl:c==2?dx_sr:dx_sb[c-3];
@@ -41,9 +42,9 @@ static void amb_filter_process(unsigned k,int32_t *b,unsigned n,unsigned setting
                 memcpy(dry,buf,sizeof *dry*(n<CTL?n:CTL));
             }
             if(svf){
-                int gain=(int8_t)(setting>>8)>>4;
-                if(slope==3 && (previous&192)!=192){state[2]=0;state[3]=clamp(buf[0],-524288,524287)*512;}
-                amb_filter_stages(buf,n,state,coef,damping,mode==3?FT_BELL:mode-1,slope,amb_peak_q12[gain+6]-4096);
+                int gain=mode==3 && !band?(int8_t)(setting>>8)>>4:0;
+                if(!band && slope>=3 && ((previous^setting)&0x10f0)){state[2]=0;state[3]=clamp(buf[0],-524288,524287)*512;}
+                amb_filter_stages(buf,n,state,coef,damping,mode==3?((setting&64)?FT_BANDPASS:FT_BELL):mode-1,slope,amb_peak_q12[gain+6]-4096);
             }else{
                 int32_t low=state[1]>>9;
                 for(unsigned i=0;i<n;i++){
@@ -58,7 +59,7 @@ static void amb_filter_process(unsigned k,int32_t *b,unsigned n,unsigned setting
                 int weight=fade==1?(int)(i+1):(int)(CTL-1-i);
                 buf[i]=dry[i]+(((buf[i]-dry[i])*weight)>>CTL_LOG2);
             }
-            if(n)amb_slope_edge(buf,n,&last[k][c],previous && next && ((previous^next)&192));
+            if(n)amb_slope_edge(buf,n,&last[k][c],previous && next && ((previous^next)&0x70c0));
         }
     }
     if(capture)amb_scope_sound(b,n);

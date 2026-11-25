@@ -42,7 +42,20 @@ def main(path):
     oct_ = inc[1856:2048]
     assert all(inc[q] == oct_[(q + 64) % 192] >> (10 - (q + 64) // 192) for q in range(2048))
     assert all((q + 64) * 21846 >> 22 == (q + 64) // 192 for q in range(2048))
-    L += arr("PITCH_OCT", "uint32_t", oct_, 8)
+    # Reconstruct the top octave exactly at boot from its third differences.
+    first = [b-a for a,b in zip(oct_,oct_[1:])]
+    second = [b-a for a,b in zip(first,first[1:])]
+    third = [b-a for a,b in zip(second,second[1:])]
+    assert all(-128 <= d <= 127 for d in third)
+    L += ["#if AMBPLUS", 'static uint32_t PITCH_OCT[192];']
+    L += arr("PITCH_DIFF", "int8_t", third)
+    L += ["static void tono_init_pitch(void) {",
+          f"    uint32_t pitch={oct_[0]}, step={first[0]}, curve={second[0]};",
+          "    for(unsigned i=0;i<192;i++){",
+          "        PITCH_OCT[i]=pitch; pitch+=step; step+=curve;",
+          "        if(i<189)curve+=PITCH_DIFF[i];",
+          "    }", "}", "#else"]
+    L += arr("PITCH_OCT", "uint32_t", oct_, 8) + ["#endif"]
     L += ["/* phase increment of pitch p in 1/16 semitone, 0..2047 (MIDI 0..127): 440 Hz * 2^((p / 16 - 69) / 12) */",
           "static inline uint32_t pitch_inc(uint32_t p)",
           "{",
@@ -51,7 +64,11 @@ def main(path):
           "}"]
     # times 1 ms .. 10 s (exponential), env in Q24 (1.0 = 1<<24)
     ms = [1.0 * (10000 ** (v / 127)) for v in range(128)]
-    L += arr("TIME_MS_X10", "uint32_t", [int(round(m * 10)) for m in ms], 10)
+    times = [int(round(m * 10)) for m in ms]
+    split = next(i for i,t in enumerate(times) if t >= 65536)
+    assert max(times) < 131072
+    L += arr("TIME_LO", "uint16_t", [t & 65535 for t in times], 10)
+    L += [f"static inline uint32_t time_ms_x10(unsigned i) {{ return TIME_LO[i] + ((i >= {split}u) << 16); }}"]
     L += arr("ENV_LIN", "uint32_t", [max(1, int((1 << 24) * CTL / (m * FS / 1000))) for m in ms], 8)
     exp_k = []
     for m in ms:
@@ -60,7 +77,8 @@ def main(path):
     L += arr("ENV_EXP", "uint16_t", exp_k)
     # LFO 0.05 .. 40 Hz, phase increment per control tick
     hz = [0.05 * (800 ** (v / 127)) for v in range(128)]
-    L += arr("LFO_HZ_X100", "uint32_t", [int(round(h * 100)) for h in hz], 10)
+    # The display table tops out at 4000 hundredths of a hertz.
+    L += arr("LFO_HZ_X100", "uint16_t", [int(round(h * 100)) for h in hz], 10)
     L += arr("LFO_INC", "uint32_t", [int(h * CTL / FS * 2 ** 32) for h in hz], 8)
     # filter cutoff 30 Hz .. 16 kHz
     fc = [30.0 * ((16000 / 30) ** (v / 127)) for v in range(128)]
@@ -70,7 +88,7 @@ def main(path):
     # level: 0 = off, else dB = (v - 112) / 2  (112 = 0 dB, 127 = +7.5 dB)
     db = [None] + [(v - 112) / 2 for v in range(1, 128)]
     L += arr("LEVEL_Q12", "uint16_t", [0] + [int(round(4096 * 10 ** (d / 20))) for d in db[1:]])
-    L += arr("LEVEL_DB_X10", "int16_t", [-999] + [int(round(d * 10)) for d in db[1:]])
+    L += ["static inline int level_db_x10(int v) { return v ? (v - 112) * 5 : -999; }"]
     # per-sample exponential decay for drum voices: 5 ms .. 4 s to -60 dB, Q16
     dms = [5.0 * (800 ** (v / 127)) for v in range(128)]
     L += arr("DECAY_K", "uint16_t", [min(65535, int(65536 * math.exp(-6.9 / (m / 1000 * FS)))) for m in dms])
@@ -113,7 +131,7 @@ def fm6_tables():
     packed = [(a & 15) | ((b & 15) << 4) for a, b in zip(third[::2], third[1::2])]
     L += ["#if AMBPLUS", 'static uint32_t FM6_EXP2[1025];']
     L += arr("EXP2_DIFFERENCES", "uint8_t", packed)
-    L += ["static void tono_init_tables(void)", "{",
+    L += ["static void tono_init_tables(void)", "{", "    tono_init_pitch();",
           "    for(unsigned i=0;i<=256;i++){",
           "        int s=SINE_QUARTER[i]; SINE[i]=SINE[512-i]=s; SINE[512+i]=SINE[1024-i]=-s;",
           "    }",

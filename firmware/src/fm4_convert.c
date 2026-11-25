@@ -141,7 +141,7 @@ static int32_t fm4_lg(uint32_t x)
 static int32_t fm4_ms(uint32_t q15) { return q15 ? fm4_lg(q15) - 15 * 256 : FM4_MUTE; }
 
 /* DIGITAL time value v (0..127) in samples */
-static int32_t fm4_samples(int32_t v) { return (int32_t)(TIME_MS_X10[v & 127] * 441u / 100u); }
+static int32_t fm4_samples(int32_t v) { return (int32_t)(time_ms_x10(v & 127) * 441u / 100u); }
 
 /* the FM6 rate (0..99) of a stage that takes `per` samples per 6 dB (msfa: (4 + q % 4) << (7 + q / 4) a block,
  * q = rate x 41 / 64): the nearest in log */

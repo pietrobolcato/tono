@@ -55,7 +55,7 @@ static const char *const N_DTYPE[] = {"SOFT", "HARD", "FOLD", "CRUSH", "RECT", "
 };   /* (JIANT) fx.c DT_*; 0.7.8 AMP */
 static const char *const N_FTYPE[] = {"LP", "HP", "BP", "COMB"
 #if AMBPLUS
-    ,"Bell"
+    ,"Bell", "Band-pass"
 #endif
 };   /* (JIANT 0.5) P_FTYPE: eng_analog.c FT_* */
 static const char *const N_VOICE[] = {"POLY", "MONO", "LEG", "UNI"};   /* V_POLY .. V_UNISON */
@@ -449,7 +449,7 @@ static void param_format(const param_desc_t *d, int32_t v, char *val, const char
         *unit = "%";
         break;
     case F_TIME: {
-        uint32_t ms10 = TIME_MS_X10[v & 127];
+        uint32_t ms10 = time_ms_x10(v & 127);
         if (ms10 < 100u) {
             fmt_fix(val, (int32_t)ms10, 1);
             *unit = "ms";
@@ -492,7 +492,7 @@ static void param_format(const param_desc_t *d, int32_t v, char *val, const char
         if (v <= 0) {
             str_cpy(val, "OFF", 6);
         } else {
-            fmt_fix(val, LEVEL_DB_X10[v], 1);
+            fmt_fix(val, level_db_x10(v), 1);
             *unit = "dB";
         }
         break;

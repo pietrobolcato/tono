@@ -557,9 +557,9 @@ Lower the ceiling to catch quieter peaks before master EQ.
 [limiter_release]
 Set how fast gain returns after a peak.
 [layer_filter_mode]
-LP softens highs. HP removes lows. Bell boosts or cuts a band around FREQ.
+LP softens highs. HP removes lows. Bell boosts or cuts a band. Band-pass keeps the band around FREQ.
 [layer_filter_cutoff]
-Move the cutoff, or the centre of the Bell. The curve shows its position over the live spectrum.
+Move the cutoff or centre frequency. The curve shows its position over the live spectrum.
 
 [bell_gain]
 Lift or dip the chosen band by up to 12 dB. At 0 dB the sound passes through.
@@ -575,4 +575,4 @@ Sine rolls smoothly. Triangle rises evenly. Saw swells then falls sharply. Squar
 Shift the right cycle relative to the left. At 0 degrees both pulse together. At 180 degrees a sine alternates sides.
 
 [filter_slope]
-Choose how quickly the filter fades beyond FREQ. At 6 dB/oct more harmonics come through. Try 12 for a smoother rolloff or 24 for a deep cut.
+Choose how quickly the filter fades beyond FREQ. At 6 dB/oct more harmonics come through. Turn up through 12 and 18 to 24 for a steeper cut. Band-pass rolls off both sides of FREQ.

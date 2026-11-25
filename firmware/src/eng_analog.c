@@ -12,7 +12,7 @@ enum { AW_SYNC = 5, AW_RING, AW_SAW3 };
 /* (JIANT 0.5) FILTER TYPE (P_FTYPE): LP as before (analog_render's loop); HP BP from the same state-variable filter
  * (analog_ext's loop, every WAVE); COMB the filter open, the part's sum through a feedback comb tuned to the newest
  * note and CUT (+-32 semitones about it), RES its feedback (voice.c track_comb) */
-enum { FT_LP, FT_HP, FT_BP, FT_COMB, FT_BELL };
+enum { FT_LP, FT_HP, FT_BP, FT_COMB, FT_BELL, FT_BANDPASS };
 /* The bell is applied to the whole synth after its voices. */
 #define VOICE_FILTER_TYPE(p) ((unsigned)(p)[P_FTYPE]>=FT_COMB?FT_COMB:(unsigned)(p)[P_FTYPE])
 static inline int32_t svf_mode(const tsvf_t *c, int32_t in, int32_t *ic1, int32_t *ic2, uint32_t ft, int32_t k)

@@ -173,7 +173,7 @@ static void amb_svf_block(int32_t *b,unsigned n,int32_t *state,const tsvf_t *c,
         int32_t v2=ic2+((c->a2*ic1+c->a3*v3)>>13);
         ic1=clamp(2*v1-ic1,-75000,75000);ic2=clamp(2*v2-ic2,-75000,75000);
         int32_t band=damping*v1>>12;
-        b[i]=type==FT_BELL?input+((gain*band)>>9):((type&1)?x-v2-band:v2)*8;
+        b[i]=type==FT_BANDPASS?band*8:type==FT_BELL?input+((gain*band)>>9):((type&1)?x-v2-band:v2)*8;
     }
     state[0]=ic1*4096;state[1]=ic2*4096;
 }
@@ -207,16 +207,25 @@ static void amb_slope_stage(int32_t *b,unsigned n,int32_t *state,const tsvf_t *c
 /* Both editors use the same biquad for resonant 6, 12 and 24 dB/oct.
  * A 4-pole Butterworth is two biquads with different damping. Resonance
  * affects only the first one, so it is not multiplied twice at the corner. */
+static unsigned amb_slope_order(unsigned slope)
+{return slope==5?3:slope==3?4:slope?slope:1;}
 static void amb_filter_stages(int32_t *b,unsigned n,int32_t *state,const tsvf_t *coef,
                               int damping,unsigned type,unsigned slope,int gain)
 {
+    if(type==FT_BANDPASS){
+        for(unsigned i=0;i<amb_slope_order(slope);i++)amb_svf_block(b,n,state+2*i,coef,damping,type,0);
+        return;
+    }
     if(!slope){amb_svf_block(b,n,state,coef,damping,type,gain);return;}
     amb_slope_stage(b,n,state,coef,damping,type,slope==1);
-    if(slope==3)amb_slope_stage(b,n,state+2,coef+1,7568,type,0);
+    if(slope>=3)amb_slope_stage(b,n,state+2,coef+1,slope==5?8192:7568,type,slope==5);
 }
 static int amb_filter_coefficients(tsvf_t coef[2],int freq,int damping,unsigned slope)
 {
-    if(slope==3){
+    if(slope==5){
+        tsvf_coef_k(coef+1,freq,8192);
+        damping/=2;
+    }else if(slope==3){
         tsvf_coef_k(coef+1,freq,7568);
         damping=damping*3135/8192;
     }else if(slope==2)damping=damping*5793/8192;
@@ -265,11 +274,11 @@ static unsigned amb_synth_channels(const track_t *t)
 {return t->engine==ENGI_AMB_A22?2:t->engine==ENGI_DRUM && dx_xon?3:1;}
 static int32_t *amb_synth_buf(unsigned ti,int32_t *out,unsigned channels,unsigned c)
 {return !c?out:channels==2?voice_bank[ti].a22.side:c==1?dx_sl:dx_sr;}
-static int32_t amb_bell_state[NTRK][3][4] __attribute__((section(".lowbuf")));
+static int32_t amb_bell_state[NTRK][3][8];
 static void amb_synth_curve(unsigned ti,int32_t *out,unsigned n,int cut,int width,unsigned type,unsigned slope)
 {
     int gain=amb_peak_q12[amb_bell_gain[ti]+6]-4096;
-    int damping=amb_filter_damping((unsigned)width>>3,type==FT_BELL);
+    int damping=amb_filter_damping((unsigned)width>>3,type>=FT_BELL);
     track_t *t=&trk[ti];
     int freq=(cut<<8)+amb_second_cut[ti]+((mulq15(t->lfo_val,t->lfo_fade)*t->p[P_LD_FLT])>>7);
     if(t->p[P_ED_FLT]){
@@ -277,7 +286,7 @@ static void amb_synth_curve(unsigned ti,int32_t *out,unsigned n,int cut,int widt
         for(unsigned i=0;i<NVOICE;i++)if(t->v[i].active && t->v[i].stage<4 && (t->v[i].env>>9)>env)env=t->v[i].env>>9;
         freq+=(env*t->p[P_ED_FLT])>>7;
     }
-    const tsvf_t *coef=amb_cached_coef(ti,0,freq,&damping,slope);
+    const tsvf_t *coef=amb_cached_coef(ti,0,freq,&damping,type==FT_BANDPASS?0:slope);
     unsigned channels=amb_synth_channels(t);
     for(unsigned c=0;c<channels;c++){
         int32_t *buf=amb_synth_buf(ti,out,channels,c);
@@ -296,7 +305,7 @@ static __attribute__((noinline)) void tf_run(track_t *t, int32_t *out, uint32_t 
     int32_t cut = p[P_FCUT] << 8, envq = 0, ic1 = tf_ic1[ti], ic2 = tf_ic2[ti], k;
     tsvf_t c;
     #if AMBPLUS
-    if(ft==FT_BELL){amb_synth_bell(ti,out,n,ccut,cres);return;}
+    if(ft>=FT_BELL){amb_synth_curve(ti,out,n,ccut,cres,ft,ft==FT_BANDPASS?amb_synth_slope[ti]:0);return;}
 #endif
     if (ft == FT_COMB) {
         if (!tf_cmb[ti])                                /* (0.6.81) in: its line cleared (the last time's, stale) */
@@ -1406,7 +1415,7 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
         track_post(t, e, out, n);
 #if AMBPLUS
     if(nr && n){
-        unsigned slope=t->p[P_FTYPE]<=FT_HP?amb_synth_slope[ti]:0;
+        unsigned slope=t->p[P_FTYPE]<=FT_HP || t->p[P_FTYPE]==FT_BANDPASS?amb_synth_slope[ti]:0;
         int changed=slope!=amb_synth_edge[ti].slope;
         unsigned channels=amb_synth_channels(t);
         for(unsigned c=0;c<channels;c++)

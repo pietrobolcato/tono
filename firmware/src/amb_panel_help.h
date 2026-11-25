@@ -76,11 +76,11 @@ static unsigned amb_knob_card(const amb_layer_t *l,unsigned knob)
     if(ambr.view==2 && ambr.page==3 && ambr.fx%5==4)return knob<2?H_limiter_ceiling+knob:0;
     if(ambr.view==2)return ambr.page<3?H_chance_of_a_chord_change+ambr.page*4+knob:ambr.page==3?H_reverb_room_size+(ambr.fx%4)*4+knob:H_low_band_gain+knob;
     if(amb_filter_editor(l)){
-        int fx=ambr.page==5,bell=fx?(amb_controls.filter[ambr.edit_layer]>>4)==3:l->base[P_FTYPE]==FT_BELL;
+        int fx=ambr.page==5,mode=fx?(amb_controls.filter[ambr.edit_layer]>>4)+1:l->base[P_FTYPE];
         if(knob==0)return H_layer_filter_mode;
         if(knob==1)return H_layer_filter_cutoff;
-        if(knob==2)return bell?H_bell_gain:H_filter_resonance;
-        if(bell)return H_bell_width;
+        if(knob==2)return mode==FT_BANDPASS?H_filter_slope:mode==FT_BELL?H_bell_gain:H_filter_resonance;
+        if(mode>=FT_BELL)return H_bell_width;
         return (fx?((amb_controls.filter[ambr.edit_layer]>>4)-1):l->base[P_FTYPE])<=FT_HP &&
                (!fx || (amb_controls.filter[ambr.edit_layer]&48))?H_filter_slope:0;
     }
