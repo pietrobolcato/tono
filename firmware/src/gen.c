@@ -1429,7 +1429,7 @@ static void gen_sound(track_t *t, uint32_t role, uint32_t ri)
     {   /* (0.9.17) the release inside the tempo: a plucked or short part's tail three sixteenths at most at the genre's
          * tempo (a pad's, a texture's: as long as they are), never under the role's floor */
         uint32_t ms10 = 3u * 150000u / ((gs.g->bpm_lo + gs.g->bpm_hi) / 2u + 1u), v = (uint32_t)t->p[P_REL];
-        if (role != RL_PAD && role != RL_TEX && t->p[P_SUS] < 100) while (v > GREL[role][0] && TIME_MS_X10[v] > ms10) v--;
+        if (role != RL_PAD && role != RL_TEX && t->p[P_SUS] < 100) while (v > GREL[role][0] && time_ms_x10(v) > ms10) v--;
         t->p[P_REL] = (int16_t)clamp((int32_t)v, GREL[role][0], GREL[role][1]);   /* (0.9.13: never dry) */
     }
     if (e == ENGI_FM6) {                                /* (0.9.14) FM6: its carriers' R4 left at 40 at least (~4 s at the
@@ -2041,7 +2041,7 @@ static uint32_t gc_cost(int steps)                      /* steps 0: before the p
         else if (!on) v = 0;
         else {
             uint32_t g100 = t->p[P_SGATE] < 100 ? (uint32_t)t->p[P_SGATE] : 100u;
-            uint32_t tail = 5u * TIME_MS_X10[e == ENGI_FM6 ? 112u : t->p[P_REL] & 127] / 600u * bpm *   /* (0.9.14: FM6's own
+            uint32_t tail = 5u * time_ms_x10(e == ENGI_FM6 ? 112u : t->p[P_REL] & 127) / 600u * bpm *   /* (0.9.14: FM6's own
                                                          * release, its patch's R4: ~2..4 s) */
                             GC_DIVQ[(uint32_t)t->p[P_SDIV] % 6u] / 100u;
             f = (on * (g100 + tail) + tie * 100u) / len;

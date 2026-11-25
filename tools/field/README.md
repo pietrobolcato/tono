@@ -1,6 +1,6 @@
 # Field recordings
 
-Kiel Harbour (8 seconds) follows the Kiel–Oslo ferry horn at two in the afternoon. Subway Voice (6.5 seconds) follows a New York subway announcement over the train rumble. Both are continuous excerpts, with their original timing. Find them in Texture → Sound or Sample → Source. They default to forward looping at the recorded speed. Loop direction, pitch, trim and normal layer effects remain available.
+Kiel Harbour (8 seconds) follows the Kiel–Oslo ferry horn at two in the afternoon. Subway Voice (6.5 seconds) follows a New York subway announcement over the train rumble. Both are continuous excerpts, with their original timing. Choose Kiel Harbour directly under Texture → Sound. For Subway Voice, choose Texture → Sound → Voices, turn PRESETS to Subway Voice and press REC. Both recordings are also available under Sample → Source. They default to forward looping at the recorded speed. Loop direction, pitch, trim and normal layer effects remain available.
 
 The Kiel recording was made by schaarsen. The subway recording was made by swelltoe77. Both are released under CC0. The manifest includes each original page, download URL and SHA-256. Source offsets are 0:00–0:08 and 0:01.25–0:07.75, respectively. The mono device renditions have a narrower bandwidth than the originals.
 

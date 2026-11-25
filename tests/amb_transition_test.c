@@ -83,10 +83,16 @@ int main(void)
         assert(trk[0].engine==amb.layer[0].engine && ambr.held_n[0]);
     }
     /* Style commits occur at four bars without forcibly retiring held voices. */
-    amb_fixture_scene(0);amb.auto_index=0;ambr.step=63;
+    amb_fixture_scene(0);amb.auto_index=0;
+    for(i=0;i<FS*4u/CTL;i++)mix_block(out,CTL);
+    travel.ready=0;role_pending=pattern_pending=0;
+    memset(ambr.fade_slot,0,sizeof ambr.fade_slot);
+    memset(ambr.handoff,0,sizeof ambr.handoff);
+    ambr.step=63;
     for(k=0;k<3;k++)amb_policy_choose(&amb.policy,k,3,1);
     amb_step();for(k=0;k<3;k++)assert(amb.policy.active[k]!=3);
     amb_step();for(k=0;k<3;k++)assert(amb.policy.active[k]==3);
+    for(k=0;k<4;k++)assert(!ambr.handoff[k] && !ambr.fade_slot[k]);
     /* Either EDIT or a second SEQ press returns to AUTO without deleting manual notes. */
     amb_fixture_scene(0);song.playing=0;amb_target(1);ambr.view=1;ambr.page=4;
     amb.layer[0].generated=0;amb.layer[0].notes[3]=61;manual=amb.layer[0];press(B_EDIT);assert(amb.layer[0].generated);

@@ -67,6 +67,7 @@ typedef struct {
     int8_t bell_gain[4];
     amb_trem_t trem[4];
     uint8_t sound_preset[4]; /* Confirmed picker choice + 1; older songs omit it. */
+    uint8_t slope18, reserved[3]; /* one bit per layer and filter; word-aligned record */
 } amb_song_controls_t;
 static const amb_song_controls_t amb_factory_controls={
     .tag='T',.schema=1,.walk={1,4,16,32,2,2}
@@ -83,23 +84,29 @@ static uint8_t amb_reset_sound_preset[4];
 static int8_t amb_reset_grain[4][4];
 static uint8_t amb_reset_filter[4],amb_reset_shape[4];
 static int8_t amb_reset_bell[4];
-static uint8_t amb_reset_slope[2];
+static uint8_t amb_reset_slope[2],amb_reset_slope18;
 static unsigned amb_slope(unsigned layer,unsigned fx)
-{return (amb_controls.slope[fx]>>(2*layer))&3;}
+{if(amb_controls.slope18 & (1u<<(fx*4+layer)))return 5;
+ return (amb_controls.slope[fx]>>(2*layer))&3;}
 static void amb_set_slope(unsigned layer,unsigned fx,unsigned value)
 {
+    unsigned bit=1u<<(fx*4+layer);
+    amb_controls.slope18=(amb_controls.slope18&~bit)|(value==5?bit:0);
+    value&=3;
     unsigned shift=2*layer;
     amb_controls.slope[fx]=(amb_controls.slope[fx]&~(3u<<shift))|(value<<shift);
 }
 static unsigned amb_layer_filter_setting(unsigned k)
-{/* Bell never uses slope bits. Use its first slope code for the band-only output. */
-    unsigned filter=amb_controls.filter[k];
-    unsigned packed=filter>=64?0x70u|(filter&15):filter>=48?filter:filter|(amb_slope(k,1)<<6);
-    return packed|((unsigned)amb_controls.fx_shape[k]<<8);}
+{
+    unsigned filter=amb_controls.filter[k],shape=amb_controls.fx_shape[k],slope=amb_slope(k,1);
+    if(filter>=64)return 0x70u|(filter&15)|((shape&15)<<8)|(slope<<12);
+    if(filter>=48)return filter|(shape<<8);
+    return filter|((slope&3)<<6)|((shape&15)<<8)|((slope&4)<<10);
+}
 static uint16_t amb_tail_filter[NTRK];
 static int8_t amb_tail_octave[4];
 static uint16_t amb_filter_previous[NTRK];
-static int32_t amb_filter_state[NTRK][6][4] __attribute__((section(".lowbuf")));
+static int32_t amb_filter_state[NTRK][6][8] __attribute__((section(".lowbuf")));
 static int8_t amb_reset_eq[4][4];
 static amb_layer_t amb_reset_layer[4]; /* last loaded piece, never a flash snapshot */
 /* Main-loop edits publish a revision; audio copies a full deep baseline only
@@ -782,7 +789,7 @@ typedef struct {
     };
     amb_song_controls_t extended;
 } amb_song_record_t;
-_Static_assert(sizeof(amb_song_controls_t)==84 && sizeof(amb_take_song_t)==3648 &&
+_Static_assert(sizeof(amb_song_controls_t)==88 && sizeof(amb_take_song_t)==3648 &&
                sizeof(amb_song_record_t)<=ST_PAYLOAD_MAX,"preserve full-length takes and old wire offsets");
 static amb_song_record_t amb_pending_song __attribute__((section(".pool")));
 #define amb_pending amb_pending_song.piece
@@ -813,7 +820,7 @@ static void amb_install(const amb_piece_t *p)
     }else ambr.piece_transition=0;
     memcpy(amb_reset_sound_preset,incoming->sound_preset,4);
     memcpy(amb_reset_trem,incoming->trem,sizeof amb_reset_trem);
-    amb_controls=*incoming;memcpy(amb_reset_second,incoming->second,sizeof amb_reset_second);memset(amb_second,0,sizeof amb_second);memcpy(amb_reset_filter,amb_controls.filter,4);memcpy(amb_reset_shape,incoming->fx_shape,4);memcpy(amb_reset_bell,incoming->bell_gain,4);memcpy(amb_reset_slope,incoming->slope,2);amb_limiter_settings(amb_controls.ceiling,amb_controls.release);amb_load_controls=0;
+    amb_controls=*incoming;memcpy(amb_reset_second,incoming->second,sizeof amb_reset_second);memset(amb_second,0,sizeof amb_second);memcpy(amb_reset_filter,amb_controls.filter,4);memcpy(amb_reset_shape,incoming->fx_shape,4);memcpy(amb_reset_bell,incoming->bell_gain,4);memcpy(amb_reset_slope,incoming->slope,2);amb_reset_slope18=incoming->slope18;amb_limiter_settings(amb_controls.ceiling,amb_controls.release);amb_load_controls=0;
     for(k=0;k<4;k++)amb_bar_octave[k]=amb_controls.octave[k];
     memcpy(ambr.octave_seen,(const void *)ambr.octave_taps,sizeof ambr.octave_seen);
     ambr.zen_train=amb_controls.flags&1u;
@@ -1469,12 +1476,11 @@ static void amb_step(void)
             amb.chord=(uint8_t)amb_walk_next(&ambr.harmony_walk,amb.policy.seed,amb.chord,count);amb_revoice();
         }
     }
-    {uint8_t before[3];memcpy(before,amb.policy.active,3);
-        if(!(ambr.step%16u)){amb_ensemble_downbeat();amb_commit_evolution();}
-        if(!(ambr.step%64u))amb_commit_generate();
-        amb_policy_boundary(&amb.policy,ambr.step);
-        if(memcmp(before,amb.policy.active,3))for(k=0;k<4;k++)if(amb.layer[k].generated)amb_begin_change(k);
-    }
+    if(!(ambr.step%16u)){amb_ensemble_downbeat();amb_commit_evolution();}
+    if(!(ambr.step%64u))amb_commit_generate();
+    /* A generator change schedules future notes on the same instruments.
+     * Keep sounding voices, gates and effect tails on their normal clocks. */
+    amb_policy_boundary(&amb.policy,ambr.step);
     if(amb.policy.active[0]==8)garden_harmony(ambr.step);
     else garden_drift.limit=0;
     amb_participation(part,ambr.step);
@@ -1759,7 +1765,7 @@ static int amb_loadable(const amb_piece_t *p,int n)
 }
 /* Song controls are append-only. A record may use the earliest revision
  * which can represent its settings. Missing controls start at zero. */
-static const uint8_t amb_trailer_bytes[]={20,24,32,56,64,80,sizeof(amb_song_controls_t)};
+static const uint8_t amb_trailer_bytes[]={20,24,32,56,64,80,84,sizeof(amb_song_controls_t)};
 static unsigned amb_trailer_index(unsigned used)
 {
     unsigned index=0;
@@ -2228,11 +2234,12 @@ static void amb_filter_control(unsigned knob,int delta,char *label,char *value)
         name=knob==3?"WIDTH":"RES";unit="%";
         if(fx){int n=clamp((*shape&15)+delta,0,15);if(delta)*shape=(*shape&240)|n;v=(n*100+7)/15;}
         else{id=amb_sound_id(l,1,2);if(delta)l->base[id]=param_turn(amb_param_desc(l,id),l->base[id],delta);v=(l->base[id]*100+63)/127;}
-    }else if(knob==3 && (mode==FT_LP || mode==FT_HP)){
+    }else if((knob==3 && (mode==FT_LP || mode==FT_HP)) || (knob==2 && mode==FT_BANDPASS)){
         unsigned slope=amb_slope(k,fx);
-        if(!slope)slope=fx && !(*shape&15)?1:2;
-        if(delta){slope=clamp((int)slope+delta,1,3);amb_set_slope(k,fx,slope);}
-        name="SLOPE";unit="dB/oct";v=3<<slope;id=0;
+        if(!slope)slope=mode==FT_BANDPASS || (fx && !(*shape&15))?1:2;
+        unsigned order=amb_slope_order(slope);
+        if(delta){order=clamp((int)order+delta,1,4);amb_set_slope(k,fx,order==3?5:order==4?3:order);}
+        name="SLOPE";unit="dB/oct";v=6*order;id=0;
     }else {if(label)label[0]=value[0]=0;return;}
     if(delta){if(!fx)amb_base_revision[k]++;amb_remember_edit(!fx && id?amb_param_route(id):ROUTE_COUNT);return;}
     if(!label)return;
@@ -2463,7 +2470,7 @@ static void amb_rec(void)
     if(ambr.reset_pending){
         unsigned k=ambr.edit_layer,solo=amb.layer[0].solo_plus1;uint8_t p0=amb.layer[0].reserved,p1=amb.layer[1].reserved,p3=amb.layer[3].reserved;
         ambr.last_edit_route[k]=0;amb_next_link[k]=0;
-        ambr.loading=1;amb_begin_change(k);amb.layer[k]=amb_reset_layer[k];amb_controls.sound_preset[k]=amb_reset_sound_preset[k];amb_controls.trem[k]=amb_reset_trem[k];amb_controls.filter[k]=amb_reset_filter[k];amb_controls.fx_shape[k]=amb_reset_shape[k];amb_controls.bell_gain[k]=amb_reset_bell[k];for(unsigned fx=0;fx<2;fx++)amb_set_slope(k,fx,(amb_reset_slope[fx]>>(2*k))&3);amb_controls.second[k]=amb_reset_second[k];memcpy(amb.grain[k],amb_reset_grain[k],4);memcpy(amb.layer_eq[k],amb_reset_eq[k],4);
+        ambr.loading=1;amb_begin_change(k);amb.layer[k]=amb_reset_layer[k];amb_controls.sound_preset[k]=amb_reset_sound_preset[k];amb_controls.trem[k]=amb_reset_trem[k];amb_controls.filter[k]=amb_reset_filter[k];amb_controls.fx_shape[k]=amb_reset_shape[k];amb_controls.bell_gain[k]=amb_reset_bell[k];for(unsigned fx=0;fx<2;fx++)amb_set_slope(k,fx,(amb_reset_slope18&(1u<<(fx*4+k)))?5:(amb_reset_slope[fx]>>(2*k))&3);amb_controls.second[k]=amb_reset_second[k];memcpy(amb.grain[k],amb_reset_grain[k],4);memcpy(amb.layer_eq[k],amb_reset_eq[k],4);
         amb.layer[0].solo_plus1=(uint8_t)solo;amb.layer[0].reserved=p0;amb.layer[1].reserved=p1;amb.layer[3].reserved=p3;
         if(!ambr.handoff[k])amb_apply_patch(k);
         amb_travel_rebase(k);ambr.recent_valid[k]=0;ambr.reset_pending=0;ambr.loading=0;
@@ -3079,7 +3086,7 @@ static void amb_sound_preview(const amb_layer_t *current,unsigned next,char *cue
         cv_text(12,88,&AF_S,amb_proposed_sound(current->role,next),AINK);
     }else{
         next=amb_sound_from_browser(current->role,next);
-        cv_text(83,68,&AF_M,amb_proposed_sound(current->role,next),AINK);
+        cv_text(83,68,&AF_M,current->role==5 && next==22?"Voices":amb_proposed_sound(current->role,next),AINK);
     }
     amb_help_paragraph(106,cue,135,0);
 
@@ -3523,7 +3530,7 @@ static void amb_draw(void)
         }else patch=ambr.proposal==amb_sound_count(l->role)?amb_auto_sound:amb_sound_from_browser(l->role,ambr.proposal);
         unsigned card=cue_patches[cue_roles[l->role]+patch]+index;
         static unsigned previous;
-        static char cached[HELP_TEXT_CAP] __attribute__((section(".pool")));
+        static char cached[HELP_TEXT_CAP];
         if(card!=previous){amb_help_read(overview,cached,card,card);previous=card;}
         str_cpy(hint,cached,HELP_TEXT_CAP);
     }
@@ -3616,6 +3623,10 @@ static void amb_draw(void)
                 unsigned preset=amb_controls.sound_preset[ambr.edit_layer];
                 const char *subtitle=preset && preset<=amb_sound_presets(l)?amb_sound_preset_name(l,preset-1):0;
                 const char *title=subtitle && amb_family_size(l)>1?amb_sound_preset_name(l,0):amb_current_sound(l);
+                if(l->role==5 && amb_texture_member(l->patch,0)==22){
+                    title="Voices";
+                    subtitle=amb_patch_name(l);
+                }
                 cv_text(12,76,&AF_M,title,AINK);
                 if(subtitle)amb_text(12,94,subtitle,ADIM,30);
                 if(amb_mic_page()){

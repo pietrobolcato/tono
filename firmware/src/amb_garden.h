@@ -113,7 +113,7 @@ static void garden_advance(unsigned k, unsigned frames)
     garden_layer_t *g = &garden_layer[k];
     if (!g->ready)
         return;
-    if (!amb.layer[k].generated || amb.policy.active[0] != 8 || amb.layer[k].role != g->role || !song.playing ||
+    if (!amb.layer[k].generated || amb.layer[k].role != g->role || !song.playing ||
         ambr.handoff[k] || amb.layer[k].base[P_MUTE] || (ambr.solo >= 0 && ambr.solo != (int)k)) {
         garden_cancel(k);
         return;
@@ -122,13 +122,14 @@ static void garden_advance(unsigned k, unsigned frames)
     if ((int32_t)(g->now - g->next_event) < 0)
         return;
     g->next_event = g->now + FS;
+    unsigned remaining=0;
 
     for (unsigned i = 0; i < NELEM(g->event); i++) {
         garden_event_t *e = &g->event[i];
         if (!e->velocity)
             continue;
         if (!e->playing && (int32_t)(g->now - e->due) >= 0) {
-            if(!amb_keep_onset(k,e->due)){
+            if(amb.policy.active[0]!=8 || !amb_keep_onset(k,e->due)){
                 *e=(garden_event_t){0};
                 continue;
             }
@@ -149,14 +150,18 @@ static void garden_advance(unsigned k, unsigned frames)
             }
         }
         if (e->playing && (int32_t)(g->now - e->off) >= 0) {
-            trk_note_off(&trk[k], e->note);
+            unsigned held=0;
+            for(unsigned j=0;j<ambr.held_n[k];j++)held|=ambr.held[k][j]==e->note;
+            if(!held)trk_note_off(&trk[k], e->note);
             *e = (garden_event_t){0};
         } else {
+            remaining=1;
             uint32_t next = e->playing ? e->off : e->due;
             if ((int32_t)(next - g->next_event) < 0)
                 g->next_event = next;
         }
     }
+    if(!remaining && amb.policy.active[0]!=8)g->ready=0;
 }
 static void garden_pulse(garden_layer_t *g, unsigned k, unsigned step, unsigned density, unsigned evolve, int allow)
 {

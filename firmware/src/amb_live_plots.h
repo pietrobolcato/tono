@@ -44,6 +44,10 @@ static int amb_response_y(unsigned hz,int cutoff,int type,int resonance,int laye
         int a=(4096-(int)(ratio*ratio))/64,b=(int)ratio*amb_filter_damping(shape,1)/4096;
         int boosted=b*(int)amb_peak_q12[db+6]/4096;
         gain=256*(type==FT_BANDPASS?(unsigned)b:isqrt32(1+a*a+boosted*boosted))/isqrt32(1+a*a+b*b);
+        if(type==FT_BANDPASS){
+            unsigned single=gain;
+            for(unsigned i=1;i<amb_slope_order(amb_slope(k,layer));i++)gain=gain*single/256;
+        }
     }else{
         unsigned slope=amb_slope(ambr.edit_layer,layer);
         if(!slope && layer && !resonance)slope=1;
@@ -51,6 +55,7 @@ static int amb_response_y(unsigned hz,int cutoff,int type,int resonance,int laye
         int lo=256*cutoff/norm,hi=256*hz/norm;
         int a=(lo*lo-hi*hi)>>8,b=(lo*hi)>>8;
         int damping=8192-resonance*7600/127;
+        if(slope==5)damping/=2;
         if(slope==3)damping=damping*3135/8192;
         if(slope==2 && layer)damping=damping*5793/8192;
         int kd=b*damping>>12;
@@ -58,6 +63,7 @@ static int amb_response_y(unsigned hz,int cutoff,int type,int resonance,int laye
         unsigned d=isqrt32(1+a*a+kd*kd);
         if(slope==1)num=isqrt32(num*num+b*b);
         gain=num*256/d;
+        if(slope==5)gain=gain*(type==FT_LP?lo:hi)/isqrt32(1+lo*lo+hi*hi);
         if(slope==3){
             kd=b*7568>>12;
             gain=gain*num/isqrt32(1+a*a+kd*kd);

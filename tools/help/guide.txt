@@ -575,4 +575,4 @@ Sine rolls smoothly. Triangle rises evenly. Saw swells then falls sharply. Squar
 Shift the right cycle relative to the left. At 0 degrees both pulse together. At 180 degrees a sine alternates sides.
 
 [filter_slope]
-Choose how quickly the filter fades beyond FREQ. At 6 dB/oct more harmonics come through. Try 12 for a smoother rolloff or 24 for a deep cut.
+Choose how quickly the filter fades beyond FREQ. At 6 dB/oct more harmonics come through. Turn up through 12 and 18 to 24 for a steeper cut. Band-pass rolls off both sides of FREQ.

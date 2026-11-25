@@ -79,7 +79,7 @@ static unsigned amb_knob_card(const amb_layer_t *l,unsigned knob)
         int fx=ambr.page==5,mode=fx?(amb_controls.filter[ambr.edit_layer]>>4)+1:l->base[P_FTYPE];
         if(knob==0)return H_layer_filter_mode;
         if(knob==1)return H_layer_filter_cutoff;
-        if(knob==2)return mode==FT_BANDPASS?0:mode==FT_BELL?H_bell_gain:H_filter_resonance;
+        if(knob==2)return mode==FT_BANDPASS?H_filter_slope:mode==FT_BELL?H_bell_gain:H_filter_resonance;
         if(mode>=FT_BELL)return H_bell_width;
         return (fx?((amb_controls.filter[ambr.edit_layer]>>4)-1):l->base[P_FTYPE])<=FT_HP &&
                (!fx || (amb_controls.filter[ambr.edit_layer]&48))?H_filter_slope:0;
