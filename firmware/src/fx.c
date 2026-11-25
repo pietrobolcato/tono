@@ -216,7 +216,12 @@ static __attribute__((noinline)) void amb_knee_block(track_t *t,int32_t *b,unsig
     t->dist_lp1=low_l;t->dist_lp2=low_r;
 }
 #endif
+#if AMBPLUS
+/* The wet circuit is shared by both mixer cores. Most layers bypass it. */
+static __attribute__((noinline)) void track_dist_wet(track_t *t,int32_t *b,uint32_t n)
+#else
 static void track_dist(track_t *t, int32_t *b, uint32_t n)
+#endif
 {
     int32_t d = t->p[P_DIST], i, g, k, mk, b0 = softclip(2400), w0, w1, dw, full;
     uint32_t type = (uint32_t)t->p[P_DTYPE], ti = (uint32_t)(t - trk) % NTRK;
@@ -266,6 +271,13 @@ static void track_dist(track_t *t, int32_t *b, uint32_t n)
         t->dist_lp2 = l2;
     }
 }
+
+#if AMBPLUS
+static inline void track_dist(track_t *t,int32_t *b,uint32_t n)
+{
+    if(t->p[P_DIST] || dist_w[(uint32_t)(t-trk)%NTRK])track_dist_wet(t,b,n);
+}
+#endif
 
 /* master: peak limiter in front of the soft clipper. Fast attack (~0.1 ms),
  * ~150 ms release, threshold where tanh is still nearly linear, so chords
@@ -2110,6 +2122,38 @@ static __attribute__((noinline)) void amb_a22_stereo(const int *side,int *l,int 
 }
 #endif
 
+#if AMBPLUS
+/* Factor stereo gain into a common level for the mono FX sends and two
+ * pan gains for the dry stereo image. Their product is the requested gain
+ * on each channel, including Drum-X and the A22 stereo side signal. */
+static void amb_trem_endpoint(int gain_l,int gain_r,int *level,int *pan_l,int *pan_r)
+{
+    int sum=gain_l+gain_r;
+    *level=mulq16(*level,sum*8u);
+    if(gain_l!=gain_r){
+        *pan_l=*pan_l*(2*gain_l)/sum;
+        *pan_r=*pan_r*(2*gain_r)/sum;
+    }
+}
+static __attribute__((noinline)) void amb_trem_mix(unsigned k,unsigned n,
+    int *level,int *dl,int *left,int *dgl,int *right,int *dgr)
+{
+    amb_trem_t v=amb_trem_audio[k];
+    uint32_t phase=amb_trem_phase[k]+n*(LFO_INC[(int)v.rate+64]/CTL);
+    amb_trem_phase[k]=phase;
+    int end_level=*level+*dl*(int)n,end_l=*left+*dgl*(int)n,end_r=*right+*dgr*(int)n;
+    amb_trem_endpoint(4096-amb_trem_dip[k][0],4096-amb_trem_dip[k][1],level,left,right);
+    for(unsigned channel=0;channel<2;channel++){
+        int wave=lfo_shape(v.shape,0,phase+(channel?(uint32_t)v.phase<<24:0));
+        amb_trem_dip[k][channel]=((32767-wave)*v.depth+800)/1600;
+    }
+    amb_trem_endpoint(4096-amb_trem_dip[k][0],4096-amb_trem_dip[k][1],&end_level,&end_l,&end_r);
+    *dl=(end_level-*level)>>CTL_LOG2;
+    *dgl=(end_l-*left)>>CTL_LOG2;
+    *dgr=(end_r-*right)>>CTL_LOG2;
+}
+#endif
+
 /* one synth part into the dry mix and the sends; a part with no voice sounding costs
  * the LFO tick and a cleared buffer only (after the DIST tail has run out) */
 static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t n)   /* (0.6.78: inlined in both
@@ -2210,6 +2254,8 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
         }
         int32_t lq0 = lq, gl0 = gl, gr0 = gr;           /* (0.7.5: uin_mix, the same ramps) */
 #if AMBPLUS
+        if(amb_trem_audio[ti].depth || amb_trem_dip[ti][0] || amb_trem_dip[ti][1])
+            amb_trem_mix(ti,n,&lq,&dl,&gl,&dgl,&gr,&dgr);
         if(t->engine==ENGI_AMB_A22)
             amb_a22_stereo(voice_bank[ti].a22.side,ol,or_,n,lq,dl,gl,dgl,gr,dgr,pm0,pm1);
 #endif

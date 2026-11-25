@@ -566,5 +566,13 @@ Lift or dip the chosen band by up to 12 dB. At 0 dB the sound passes through.
 [bell_width]
 Narrow focuses on one frequency. Wide shapes more of the surrounding tone.
 
+[tremolo]
+Cycle the level of this layer. Raise DEPTH to hear it pulse. The curves show left and right gain across the cycle.
+[tremolo_rate]
+Set cycles per second. Slow rates create a swell across sustained notes.
+Choose how far the volume dips. Off holds the level steady. At 100% each channel reaches silence.
+Sine rolls smoothly. Triangle rises evenly. Saw swells then falls sharply. Square alternates loud and quiet.
+Shift the right cycle relative to the left. At 0 degrees both pulse together. At 180 degrees a sine alternates sides.
+
 [filter_slope]
 Choose how quickly the filter fades beyond FREQ. At 6 dB/oct more harmonics come through. Try 12 for a smoother rolloff or 24 for a deep cut.

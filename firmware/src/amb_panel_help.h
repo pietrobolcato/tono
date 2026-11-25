@@ -104,6 +104,7 @@ static unsigned amb_knob_card(const amb_layer_t *l,unsigned knob)
         if(!l->generated)return (l->role==4?manual_drum:manual)[knob];
         return (l->role==4?H_generated_hit_density:H_note_selection_pattern)+knob;
     }
+    if(ambr.page==5 && ambr.fx==7)return H_tremolo_rate+knob;
     if(ambr.page==5 && ambr.fx==2 && knob==3)return H_shared_delay_algorithm;
     if(ambr.page==5 && ambr.fx==5)return H_grain+knob;
     return ambr.page==5?amb_param_hint(l,amb_fx_id(l,knob)):H_low_band_gain+knob;

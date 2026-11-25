@@ -42,6 +42,11 @@ static void amb_layer_process(unsigned k,int32_t *b,uint32_t n);
 #if AMBPLUS
 /* Audio-thread performance offset; stored notes and drum lane IDs stay literal. */
 static int8_t amb_bar_octave[NTRK];
+typedef struct { int8_t rate; uint8_t depth, shape, phase; } amb_trem_t;
+static amb_trem_t amb_trem_audio[NTRK];
+static uint32_t amb_trem_phase[NTRK];
+/* Reductions in Q12. Zero starts each new layer at unity. */
+static uint16_t amb_trem_dip[NTRK][2];
 #endif
 #define NSTEP 64
 #define HALF_FRAMES 128          /* I2S half buffer: 2.9 ms at 44.1 kHz (a key waits 0..1 half, then plays 1 half later) */
