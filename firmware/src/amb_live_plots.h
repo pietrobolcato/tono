@@ -29,7 +29,14 @@ static int amb_response_y(unsigned hz,int cutoff,int type,int resonance,int laye
         int cosine=osc_sine(0x40000000u+hz*(0xffffffffu/(fundamental?fundamental:1)));
         unsigned feedback=125+resonance;
         gain=(256-feedback)*256/isqrt32(1+(256-feedback)*(256-feedback)+feedback*((32767-cosine)>>6));
-    }else if(layer){
+    }else if(type==FT_BELL){
+        int k=ambr.edit_layer;
+        int shape=layer?(amb_controls.fx_shape[k]&15):(resonance>>3);
+        int db=layer?((int8_t)amb_controls.fx_shape[k]>>4):amb_controls.bell_gain[k];
+        int a=(4096-(int)(ratio*ratio))/64,b=(int)ratio*amb_filter_damping(shape,1)/4096;
+        int boosted=b*(int)amb_peak_q12[db+6]/4096;
+        gain=256*isqrt32(1+a*a+boosted*boosted)/isqrt32(1+a*a+b*b);
+    }else if(layer && !resonance){
         unsigned d=isqrt32(64*64+ratio*ratio);
         gain=(type==0?64:ratio)*256/d;
     }else{
@@ -51,7 +58,8 @@ static void amb_wave_plot(int layer)
     unsigned setting=amb_controls.filter[k];
     int type=layer?(int)(setting>>4)-1:l->base[P_FTYPE];
     int cut=layer?amb_filter_hz[setting&15]:CUTOFF_HZ[l->base[amb_sound_id(l,1,1)]&127];
-    int res=layer?0:l->base[amb_sound_id(l,1,2)];
+    if(layer && type==2)type=FT_BELL;
+    int res=layer?(amb_controls.fx_shape[k]&15)*127/15:l->base[amb_sound_id(l,1,2)];
     amb_display(69,72);
     int ready=amb_scope_fill==AMB_SCOPE_N && fm1_ms-amb_wave_ms<160;
     int last=81,last_height=0;

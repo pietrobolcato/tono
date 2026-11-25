@@ -12,7 +12,9 @@ enum { AW_SYNC = 5, AW_RING, AW_SAW3 };
 /* (JIANT 0.5) FILTER TYPE (P_FTYPE): LP as before (analog_render's loop); HP BP from the same state-variable filter
  * (analog_ext's loop, every WAVE); COMB the filter open, the part's sum through a feedback comb tuned to the newest
  * note and CUT (+-32 semitones about it), RES its feedback (voice.c track_comb) */
-enum { FT_LP, FT_HP, FT_BP, FT_COMB };
+enum { FT_LP, FT_HP, FT_BP, FT_COMB, FT_BELL };
+/* The bell is applied to the whole synth after its voices. */
+#define VOICE_FILTER_TYPE(p) ((unsigned)(p)[P_FTYPE]>=FT_COMB?FT_COMB:(unsigned)(p)[P_FTYPE])
 static inline int32_t svf_mode(const tsvf_t *c, int32_t in, int32_t *ic1, int32_t *ic2, uint32_t ft, int32_t k)
 {
     int32_t v3 = in - *ic2;
@@ -66,7 +68,7 @@ static __attribute__((noinline)) void analog_morph(track_t *t, voice_t *v, int32
                                                    int32_t mpos0, int32_t mpos1)   /* (0.6.50: ramped mpos0 -> mpos1) */
 {
     const int16_t *p = t->p;
-    uint32_t i, inc1 = m->inc, ph0 = v->ph[0], ph1 = v->ph[1], ft = (uint32_t)p[P_FTYPE] & 3u;
+    uint32_t i, inc1 = m->inc, ph0 = v->ph[0], ph1 = v->ph[1], ft = VOICE_FILTER_TYPE(p);
     uint32_t inc2 = p[P_E1] || p[P_E7] ? cents_inc(m->pitch16 + p[P_E7] * 16, p[P_E1], 0) : inc1;
     int32_t m2 = p[P_E2] * 258, m1 = 32767 - m2, nz = p[P_E3] * 200, drv = p[P_E6], kd = 8192 - p[P_E5] * 7600 / 127;
     int32_t drive = 32768 + drv * 512, cut = (p[P_E4] << 8) + m->cutoff + ((v->pitch16 - 60 * 16) << 2);
@@ -105,7 +107,7 @@ static __attribute__((noinline)) void analog_ext(track_t *t, voice_t *v, int32_t
 {
     const int16_t *p = t->p;
     uint32_t wave = (uint32_t)p[P_E0], i, inc1 = m->inc, ph0 = v->ph[0], ph1 = v->ph[1], ph2 = v->ph[2], r, inc2, inc3;
-    uint32_t ft = (uint32_t)p[P_FTYPE] & 3u, pw = an_pw(t, m);
+    uint32_t ft = VOICE_FILTER_TYPE(p), pw = an_pw(t, m);
     int32_t mx = wave >= AW_SYNC ? an_mext(t->mo_cur, m) : 0;   /* (0.6.81) MORPH, SHAPE on SYNC RING SAW3 */
     int32_t det = p[P_E1] + (wave == AW_SAW3 ? mx * 40 / (127 << 8) : 0), m2 = p[P_E2] * 258, m1 = 32767 - m2, nz = p[P_E3] * 200, drv = p[P_E6], kd = 8192 - p[P_E5] * 7600 / 127;
     int32_t drive = 32768 + drv * 512, cut = (p[P_E4] << 8) + m->cutoff + ((v->pitch16 - 60 * 16) << 2);

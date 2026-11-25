@@ -3,6 +3,7 @@
  * Uses voice-local existing phase/filter state, no sample RAM or flash writes. */
 #include "amb_pcm_octets.h"
 #include "amb_acoustic_pcm.h"
+#include "amb_pcm_rice.h"
 #include "amb_texture_pcm.h"
 #include "amb_speech.h"
 #include "amb_field_pcm.h"
@@ -12,11 +13,11 @@ static const char *const N_AS_SOURCE[]={"SOFT CHIME","TAPE VOWEL","SOLO VIOLIN",
 typedef struct {const uint8_t *pcm;unsigned length,root,rate_q16,loop_percent;} amb_recording_t;
 static const amb_recording_t amb_recordings[]={
     {amb_oct_chime,amb_oct_chime_length,60,2972,24},{amb_oct_vowel,amb_oct_vowel_length,60,2972,24},
-    {amb_oct_violin,amb_oct_violin_length,60,14861,29},
-    {amb_oct_cello,amb_oct_cello_length,60,17833,12},
-    {amb_pcm_piano,amb_pcm_piano_length,72,17833,29},
-    {amb_oct_tenor,amb_oct_tenor_length,72,14861,29},
-    {amb_oct_flute,amb_oct_flute_length,72,14861,15},
+    {amb_rice_violin,amb_oct_violin_length,60,14861,29},
+    {amb_rice_cello,amb_oct_cello_length,60,17833,12},
+    {amb_rice_piano,amb_pcm_piano_length,72,17833,29},
+    {amb_rice_tenor,amb_oct_tenor_length,72,14861,29},
+    {amb_rice_flute,amb_oct_flute_length,72,14861,15},
     /* Six phrase maps, each addressing grains of its own percussion take. */
     {amb_texture_frames[0],24576,60,8025,9},{amb_texture_frames[1],24576,60,8025,11},
     {amb_texture_frames[2],24576,60,8025,7},{amb_texture_frames[3],24576,60,8025,13},
@@ -43,12 +44,10 @@ static amb_seek_t amb_speech_block(const uint8_t *block,amb_seek_t state,int16_t
 }
 static void amb_sample_seek_init(void)
 {
-    AMB_INIT_OFFSETS(flute);
+    /* LOWBUF persists across startup. Invalidate cached flash offsets after an update. */
+    memset(&amb_pcm_low_cache,0,sizeof amb_pcm_low_cache);
     AMB_INIT_OFFSETS(chime);
     AMB_INIT_OFFSETS(vowel);
-    AMB_INIT_OFFSETS(violin);
-    AMB_INIT_OFFSETS(tenor);
-    AMB_INIT_OFFSETS(cello);
     for(unsigned n=0;n<3;n++){
         const amb_recording_t *r=&amb_recordings[13+n];
         amb_seek_t state={0,1};
@@ -63,35 +62,17 @@ static inline int32_t amb_pcm_at(const uint8_t *pcm,unsigned at)
 {
     return amb_pcm_decode[pcm[at]];
 }
-/* Sixteen samples spaced one period apart share a base and an unsigned
- * bit width. The two adjacent offsets encode the width as 1 + 2*width
- * bytes per group. A lookup never decodes preceding audio. */
-static inline unsigned amb_packed_code(const uint8_t *data,const uint16_t *offsets,
-                                       const uint32_t *widths,unsigned at,unsigned period)
-{
-    unsigned cycle=at/period;
-    unsigned group=(cycle>>4)*period+(at-cycle*period);
-    unsigned slot=group&7u, word=widths[group>>3];
-    unsigned width=(word>>(4*slot))&15u;
-    unsigned before=word & ~(~0u<<(4*slot));
-    unsigned pairs=(before&0x0f0f0f0fu)+((before>>4)&0x0f0f0f0fu);
-    unsigned offset=offsets[group>>3]+slot+2*((pairs*0x01010101u)>>24);
-    unsigned bit=(cycle&15)*width;
-    const uint8_t *bytes=data+offset+1+(bit>>3);
-    unsigned bits=bytes[0] | ((unsigned)bytes[1]<<8);
-    return data[offset]+((bits>>(bit&7))&((1u<<width)-1));
-}
-static int amb_recorded_at(unsigned source,const uint8_t *src,unsigned at)
+static int amb_recorded_at(amb_pcm_cache_t *cache,unsigned source,const uint8_t *src,unsigned at)
 {
     unsigned code;
     switch(source){
     case 0: code=amb_octet_code(src,amb_oct_chime_offsets,amb_oct_chime_widths,at,amb_oct_chime_period);break;
     case 1: code=amb_octet_code(src,amb_oct_vowel_offsets,amb_oct_vowel_widths,at,amb_oct_vowel_period);break;
-    case 2: code=amb_octet_code(src,amb_oct_violin_offsets,amb_oct_violin_widths,at,amb_oct_violin_period);break;
-    case 3: code=amb_octet_code(src,amb_oct_cello_offsets,amb_oct_cello_widths,at,amb_oct_cello_period);break;
-    case 4: code=amb_packed_code(src,amb_pcm_piano_offsets,amb_pcm_piano_widths,at,amb_pcm_piano_period);break;
-    case 5: code=amb_octet_code(src,amb_oct_tenor_offsets,amb_oct_tenor_widths,at,amb_oct_tenor_period);break;
-    case 6: code=amb_octet_code(src,amb_oct_flute_offsets,amb_oct_flute_widths,at,amb_oct_flute_period);break;
+    case 2: code=amb_rice_code(cache,source,src,amb_rice_violin_offsets,amb_oct_violin_period,at);break;
+    case 3: code=amb_rice_code(cache,source,src,amb_rice_cello_offsets,amb_oct_cello_period,at);break;
+    case 4: code=amb_rice_code(cache,source,src,amb_rice_piano_offsets,amb_pcm_piano_period,at);break;
+    case 5: code=amb_rice_code(cache,source,src,amb_rice_tenor_offsets,amb_oct_tenor_period,at);break;
+    case 6: code=amb_rice_code(cache,source,src,amb_rice_flute_offsets,amb_oct_flute_period,at);break;
     default: return amb_pcm_at(src,at);
     }
     return amb_pcm_decode[code];
@@ -186,6 +167,8 @@ static void amb_sample_render(track_t *t,voice_t *v,int32_t *out,uint32_t n,cons
     unsigned repeat=t->p[P_E3];
     unsigned block_id[2]={~0u,~0u};int16_t decoded[2][32];amb_seek_t even_end={0,1};
     unsigned cached=~0u;int32_t first=0,second=0,overlap=0;
+    unsigned track=(unsigned)(t-trk);
+    amb_pcm_cache_t *pcm_cache=track<5?&amb_pcm_main_cache[track]:&amb_pcm_low_cache;
     for(i=0;i<n;i++) {
         unsigned at=ph>>16,frac=(ph>>1)&32767u;int32_t x,b;
         if(at<start || at>=end) {
@@ -227,9 +210,9 @@ static void amb_sample_render(track_t *t,voice_t *v,int32_t *out,uint32_t n,cons
                 first=amb_texture_read(bank,read);second=amb_texture_read(bank,following);
                 if(at>=end-fade)overlap=amb_texture_read(bank,tail);
             }else{
-                first=cached!=~0u && at==cached+1?second:amb_recorded_at(source,src,read);
-                second=amb_recorded_at(source,src,following);
-                if(at>=end-fade)overlap=amb_recorded_at(source,src,tail);
+                first=cached!=~0u && at==cached+1?second:amb_recorded_at(pcm_cache,source,src,read);
+                second=amb_recorded_at(pcm_cache,source,src,following);
+                if(at>=end-fade)overlap=amb_recorded_at(pcm_cache,source,src,tail);
             }
             cached=at;
         }

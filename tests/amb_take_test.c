@@ -11,7 +11,7 @@ static void check_packed_factory_recordings(void)
         const amb_recording_t *r=&amb_recordings[source];
         uint32_t hash=2166136261u;
         for(unsigned frame=0;frame<r->length;frame++){
-            uint16_t sample=(uint16_t)amb_recorded_at(source,r->pcm,frame);
+            uint16_t sample=(uint16_t)amb_recorded_at(&amb_pcm_low_cache,source,r->pcm,frame);
             hash=(hash^sample)*16777619u;
         }
         assert(hash==expected[i]);

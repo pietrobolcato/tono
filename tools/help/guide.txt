@@ -1,7 +1,7 @@
 # Groups occupy consecutive entries. Each line is one card.
 [home]
-Choose Master to shape the whole mix, or a layer to shape one instrument. The level pot follows the selected target.
-The level pot follows this layer. The four knobs shape its sound. Hold HOME for the second set of controls shown on the next page.
+Choose Master to shape the whole mix, or a layer to shape one instrument. Hold HOME while moving the level pot to reposition it at the same gain.
+The level pot follows this layer. Hold HOME to reposition the pot at the same gain or use the second set of four knobs.
 [ensemble]
 Read each layer's peak after its gain. NOTE is held, REL is fading and TAIL is a sound handoff. REST can still leave echoes.
 [zen]
@@ -9,7 +9,7 @@ Notes animate the landscape. The transport moves the scene and travel changes it
 [mode]
 Preview a role with ALGO and confirm with REC. A new role starts its own pattern at the same layer level.
 [sound]
-Browse patches silently. Auto suggests a sound for the mix. REC applies it with fresh macros, full HOME density and the grain mix off.
+ALGO browses patches. PRESETS browses versions of the selected sound. Read the cue, then REC to apply or HOME to cancel. Auto suggests a patch for the mix.
 Set the oscillator or engine colours before the layer filter and effects.
 The live spectrum shows the synth sound from low to high. The curve shows how the filter shapes frequencies around cutoff.
 Set how this layer plays its notes and where it sits in stereo.
@@ -24,7 +24,7 @@ Shape a note from its first attack to the tail after release. Try a longer attac
 Shape each percussion hit. Short hits leave room between steps.
 Trim the sample and soften its edges to avoid abrupt starts or stops.
 [lfo]
-Press LFO again to switch LFO 1/2. Both use the same controls. Choose a target and raise depth. Off stops this LFO.
+HOME + LFO links the last control to LFO 1, then 2, in turn per layer. Press LFO to switch lanes. Raise depth to hear a link.
 Set a steady cycle or pick a new rate each cycle for this LFO. Press LFO to switch between LFO 1 and 2.
 [pattern]
 Build phrases from the chord and scale. Set how often notes arrive and how densely the layer plays.
@@ -557,6 +557,11 @@ Lower the ceiling to catch quieter peaks before master EQ.
 [limiter_release]
 Set how fast gain returns after a peak.
 [layer_filter_mode]
-Low pass softens highs. High pass removes lows. Off passes the whole layer.
+LP softens highs. HP removes lows. Bell boosts or cuts a band around FREQ.
 [layer_filter_cutoff]
-Move the cutoff between 80 Hz and 16 kHz. Watch the curve move across the live spectrum.
+Move the cutoff, or the centre of the Bell. The curve shows its position over the live spectrum.
+
+[bell_gain]
+Lift or dip the chosen band by up to 12 dB. At 0 dB the sound passes through.
+[bell_width]
+Narrow focuses on one frequency. Wide shapes more of the surrounding tone.

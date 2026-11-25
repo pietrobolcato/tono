@@ -35,7 +35,7 @@ static void auto_sound_browser(void)
         assert(ambr.proposal==count-1);
         amb_browse_proposal(1);
         unsigned choice=amb_auto_sound;
-        assert(ambr.proposal==count && choice>0 && choice<count);
+        assert(ambr.proposal==count && choice>0 && choice<(role==5?amb_patch_count(role):count));
         assert(amb_controls.layer_thinning[0]==90 && amb_controls.second[0].depth==70);
         assert(role!=6 || choice!=AMB_MIC_SOURCE);
         assert(!memcmp(&amb,&before,sizeof before));
@@ -70,6 +70,34 @@ static void auto_sound_browser(void)
     for(unsigned j=1;j<4;j++)amb.layer[j].base[P_MUTE]=1;
     assert(amb_pick_auto_sound(0,0)==bright);
     puts("Auto sound follows the mix, browses silently, wraps, cancels and commits the displayed recommendation for all roles PASS");
+}
+static void texture_family_browser(void)
+{
+    unsigned seen=0;
+    amb_fixture_scene(AMB_SCENE_GARDEN);
+    amb_target(1);press(B_EDIT);press(B_EDIT);
+    unsigned families=amb_sound_count(5);
+    assert(families==12 && amb_patch_count(5)==30);
+    for(unsigned family=0;family<families;family++){
+        unsigned head=amb_sound_from_browser(5,family);
+        for(unsigned i=0;i<amb_texture_count(head);i++){
+            unsigned member=amb_texture_member(head,i);
+            assert(amb_texture_family(member)==family && !(seen&(1u<<member)));
+            seen|=1u<<member;
+            amb_patch(0,5,member);
+            amb_piece_t before=amb;
+            amb_browse_proposal(1);
+            assert(ambr.proposal==family+1 && !memcmp(&before,&amb,sizeof amb));
+            amb_browse_proposal(-1);
+            assert(ambr.proposal==255 && !memcmp(&before,&amb,sizeof amb));
+            if(family+1<families){
+                amb_browse_proposal(1);amb_rec();
+                assert(amb.layer[0].patch==amb_sound_from_browser(5,family+1));
+            }
+        }
+    }
+    assert(seen==(1u<<amb_patch_count(5))-1);
+    puts("All 30 texture IDs reachable across 12 sound families; silent browse and stable member ID PASS");
 }
 int main(void)
 {
@@ -128,6 +156,7 @@ int main(void)
     amb.layer[0].role=6;amb.layer[0].base[P_E0]=AMB_MIC_SOURCE;
     assert(!amb_role_proposal(0,0,&proposed_role,&proposed_patch));
     auto_sound_browser();
+    texture_family_browser();
     puts("Focused sound matches the first selected-seat Auto destination in all three journeys and both directions PASS");
     puts("EDIT MODE Texture to Pad restores role timing, octave, grain and EQ; gain and siblings preserved PASS");
     puts("Layer evolution browse, manual patch retention, queued role replacement and sibling isolation PASS");

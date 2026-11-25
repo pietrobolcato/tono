@@ -21,6 +21,7 @@ static void check_knobs(void)
            (ambr.view==1 && ambr.page==3 && ambr.bank &&
             (knob==3 || (knob==2 && amb_edit_rate(&amb.layer[0])<AMB_RANDOM_BARS))) ||
            (ambr.view==2 && ambr.page==1 && knob==3) ||
+           (knob==3 && ambr.view==1 && ambr.page==1 && amb_filter_editor(&amb.layer[0]) && amb.layer[0].base[P_FTYPE]!=FT_BELL) ||
            (knob>1 && ((ambr.view==2 && ambr.page==3 && ambr.fx==4) ||
                        (ambr.view==1 && ambr.page==5 && ambr.fx==6)))){
             amb_knob(knob,2);amb_knob_value(knob,label,after);
@@ -58,7 +59,17 @@ static void audit_help_text(void)
         assert(!strcmp(line,overview) && !strcmp(line,hint));
         card++;
     }
-    assert(card==HELP_COUNT);
+    assert(card==HELP_GUIDE_COUNT);
+    FILE *cues=fopen("tools/help/sound-cues.tsv","r");
+    assert(cues);
+    while(fgets(line,sizeof line,cues)){
+        if(line[0]=='#')continue;
+        char *cue=strrchr(line,'\t');
+        assert(cue);cue++;cue[strcspn(cue,"\r\n")]=0;
+        amb_help_read(overview,hint,card,card);
+        assert(!strcmp(cue,hint));card++;
+    }
+    fclose(cues);assert(card==HELP_COUNT);
     fclose(source);
     printf("%u Help paragraphs decoded byte for byte\n",card-1);
 }

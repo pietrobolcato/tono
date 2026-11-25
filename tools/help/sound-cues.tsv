@@ -1,0 +1,423 @@
+# Role	Patch/source	Variation	Sound	Preset	Live cue
+0	0	0	Cloud Bloom	Original	Warm balanced pad for main bed
+0	0	1	Cloud Bloom	Veil	Dark muted veil for deep background
+0	0	2	Cloud Bloom	Open brass	Bright brassy pad for forward presence
+0	1	0	Soft Choir	Original	Smooth vocal pad for steady chords
+0	1	1	Soft Choir	Slow bloom	Slow-swelling choir for gradual entries
+0	1	2	Soft Choir	Reed edge	Nasal reed edge for extra cut
+0	2	0	Velvet Saw	Original	Mellow velvet saw for warm foundation
+0	2	1	Velvet Saw	Veil	Soft dark filter for quiet space
+0	2	2	Velvet Saw	Open brass	Open buzzy brass for bright lift
+0	3	0	Glass Haze	Original	Warm airy glass pad, medium swell
+0	3	1	Glass Haze	Silver tine	Brighter tine attack, glassy shimmer
+0	3	2	Glass Haze	Slow bloom	Slow swelling pad, soft ambient onset
+0	4	0	Warm Strings	Original	Warm detuned FM strings, steady sustain
+0	4	1	Warm Strings	Close mic	Dry direct strings, tight room presence
+0	4	2	Warm Strings	Low pedal	Dark quiet low-passed string bed
+0	5	0	Low Sun	Original	Deep dark warm pad, rich lows
+0	5	1	Low Sun	Low pedal	Darker sub drone, subdued upper mids
+0	5	2	Low Sun	Slow bloom	Gradual low pad swell, soft entry
+0	6	0	Slow Orbit	Original	Warm balanced pad, steady core
+0	6	1	Slow Orbit	Dub send	Brighter pad with dub echo
+0	6	2	Slow Orbit	Veil	Soft dark pad, background layer
+0	7	0	Distant Light	Original	Airy distant pad, long reverb
+0	7	1	Distant Light	Close mic	Dry close reedy pad, clear
+0	7	2	Distant Light	Palm mute	Damped, darker notes with short tail
+0	8	0	Open Aah	Original	Warm vocal pad, balanced space
+0	8	1	Open Aah	Reed edge	Buzzy reedy vocal, cuts mix
+0	8	2	Open Aah	Far bank	Distant soft choir, deep background
+0	9	0	Round Ooh	Original	Warm vocal ooh pad, soft attack
+0	9	1	Round Ooh	Close mic	Dry, forward vocal pad, tight space
+0	9	2	Round Ooh	Slow bloom	Slower swell, softer warm ooh pad
+0	10	0	Plainchant	Original	Steady choral organ pad, balanced
+0	10	1	Plainchant	Veil	Darker, filtered choral pad, soft
+0	10	2	Plainchant	Reed edge	Bright, reedy edge with upper grit
+0	11	0	Reed Cloud	Original	Soft, airy reed cloud, muted highs
+0	11	1	Reed Cloud	Close mic	Dry, close reed timbre, less wash
+0	11	2	Reed Cloud	Open brass	Brighter, open brassy reed swell
+0	12	0	Float Garden	Original	Warm dark ambient pad
+0	12	1	Float Garden	Close mic	Drier, brighter, forward close presence
+0	12	2	Float Garden	Dub send	Softer dry level, subtle dub wash
+0	13	0	Amber Brass	Original	Warm balanced FM brass pad
+0	13	1	Amber Brass	Open brass	Bright cutting FM brass lead
+0	13	2	Amber Brass	Veil	Soft muted background brass
+0	14	0	Cedar Triangle	Original	Warm hollow woody FM pad
+0	14	1	Cedar Triangle	Low pedal	Deep dark low pedal tone
+0	14	2	Cedar Triangle	Dub send	Hollow pad with dub echo
+0	15	0	Umber Pulse	Original	Warm pulsing pad, smooth swell
+0	15	1	Umber Pulse	Palm mute	Short damped notes, rhythmic space
+0	15	2	Umber Pulse	Slow bloom	Ultra-slow swell, soft ambient bed
+0	16	0	Garden Rhodes	Original	Warm mellow Rhodes pad, balanced
+0	16	1	Garden Rhodes	Felt	Dark felt-damped tone, intimate
+0	16	2	Garden Rhodes	Silver tine	Brighter silver tine, clear highs
+0	16	3	Garden Rhodes	Dub send	Subtle dub echo wash, spacious
+0	17	0	Sunroom Keys	Original	Clear bell keys, gentle room
+0	17	1	Sunroom Keys	Close mic	Drier close-mic keys, direct
+0	17	2	Sunroom Keys	Dub send	Soft dub send tail, atmospheric
+0	18	0	Linen Pad	Original	Warm soft pad, balanced decay
+0	18	1	Linen Pad	Silver tine	Brighter tine sheen on attack
+0	18	2	Linen Pad	Slow bloom	Slower swell, softer ambient bloom
+0	19	0	Solo Violin	Original	Expressive solo violin, moderate room
+0	19	1	Solo Violin	Close mic	Dry close-mic presence, less reverb
+0	19	2	Solo Violin	Slow bloom	Gentle slow swell, softer bow entry
+0	20	0	Chamber Cello	Original	Warm chamber cello, balanced space
+0	20	1	Chamber Cello	Close mic	Dry woody focus, tight close mic
+0	20	2	Chamber Cello	Far bank	Distant hall wash, deeper reverb
+0	21	0	Tenor Sax	Original	Balanced warm sax pad, default
+0	21	1	Tenor Sax	Reed edge	Brighter reedy bite, cuts mix
+0	21	2	Tenor Sax	Far bank	Softer distant sax, background pad
+0	22	0	Concert Flute	Original	Soft airy flute pad, balanced
+0	22	1	Concert Flute	Close mic	Drier direct flute, closer presence
+0	22	2	Concert Flute	Slow bloom	Gentle slow swell, soft attack
+0	23	0	A22 Electric Organ	Original	Steady buzzy organ, clean attack
+0	23	1	A22 Electric Organ	Reed edge	Sharper nasal edge, forward organ
+0	23	2	A22 Electric Organ	Far bank	Darker recessed organ, soft bed
+0	24	0	A22 Electric Tape	Original	Warm reedy tape pad, balanced
+0	24	1	A22 Electric Tape	Felt	Muted felt top, soft background
+0	24	2	A22 Electric Tape	Dub send	Dub delay echoes for wide space
+0	25	0	A22 Analog Super	Original	Bright wide super analog pad
+0	25	1	A22 Analog Super	Veil	Filtered dark veil, sits behind
+0	25	2	A22 Analog Super	Open brass	Bright open brassy filter bite
+0	26	0	A22 Analog Brass	Original	Classic warm analog brass pad
+0	26	1	A22 Analog Brass	Felt	Very dark felt, deep background
+0	26	2	A22 Analog Brass	Slow bloom	Slow swelling attack, smooth bloom
+0	27	0	A22 Analog Chord	Original	Bright analog chord, crisp attack
+0	27	1	A22 Analog Chord	Palm mute	Darker, muted filter, soft attack
+0	27	2	A22 Analog Chord	Far bank	Distant, reverb-washed ambient pad
+1	0	0	Deep Current	Original	Deep, dark rumbling sub drone
+1	0	1	Deep Current	Low pedal	Sub-heavy pedal bed, highs tamed
+1	0	2	Deep Current	Open brass	Wide, buzzy brass harmonics opened
+1	1	0	Hollow Earth	Original	Warm, hollow mid-low resonant drone
+1	1	1	Hollow Earth	Veil	Airier upper overtones, lighter bass
+1	1	2	Hollow Earth	Slow bloom	Gradual soft swell, warm low end
+1	2	0	Quiet Organ	Original	Warm smooth low-mid organ bed
+1	2	1	Quiet Organ	Reed edge	Brighter nasal reed buzz on top
+1	2	2	Quiet Organ	Far bank	Distant dark washed organ background
+1	3	0	Tape Hum	Original	Quiet steady low tape hum
+1	3	1	Tape Hum	Close mic	Slightly closer warmer hum presence
+1	3	2	Tape Hum	Slow bloom	Slow fading swell into soft hum
+1	4	0	Underwater	Original	Deep watery resonant low-mid drone
+1	4	1	Underwater	Low pedal	Heavier darker sub-bass pedal weight
+1	4	2	Underwater	Dub send	Echoing dub delay wash and space
+1	5	0	Harmonic Bed	Original	Warm balanced harmonic drone bed
+1	5	1	Harmonic Bed	Veil	Soft filtered bed for background
+1	5	2	Harmonic Bed	Reed edge	Brighter reedy buzz on top
+1	6	0	Dark Air	Original	Low airy wind rumble drone
+1	6	1	Dark Air	Reed edge	Brighter resonant mid-band air sweep
+1	6	2	Dark Air	Far bank	Distant muted dark air wash
+1	7	0	Warm Voltage	Original	Rich warm analog synth drone
+1	7	1	Warm Voltage	Low pedal	Deep dark sub pedal foundation
+1	7	2	Warm Voltage	Open brass	Open buzzy brassy synth tone
+1	8	0	Low Ooh	Original	Warm steady low ooh drone
+1	8	1	Low Ooh	Veil	Subtly softer darker veiled ooh
+1	8	2	Low Ooh	Reed edge	Buzzy reedy upper harmonic edge
+1	9	0	Chapel Aah	Original	Balanced resonant chapel aah drone
+1	9	1	Chapel Aah	Close mic	Dry close forward vocal buzz
+1	9	2	Chapel Aah	Far bank	Distant recessed dark chapel wash
+1	10	0	Cantus	Original	Warm smooth cantus pad drone
+1	10	1	Cantus	Reed edge	Subtle reedy mid harmonic edge
+1	10	2	Cantus	Slow bloom	Gradual swell smooth slow bloom
+1	11	0	Slow Chip	Original	Warm buzzing chip drone, slow sweep
+1	11	1	Slow Chip	Palm mute	Darker damped chip drone, less buzz
+1	11	2	Slow Chip	Far bank	Distant washed chip drone, soft edges
+1	12	0	Skylight	Original	Smooth airy pad, soft upper shimmer
+1	12	1	Skylight	Silver tine	Brighter metallic tine shimmer on top
+1	12	2	Skylight	Veil	Darker veiled pad, recessed highs
+1	13	0	Bowed Cello	Original	Rich bowed cello drone, clear grit
+1	13	1	Bowed Cello	Close mic	Closer drier cello, forward bow rasp
+1	13	2	Bowed Cello	Slow bloom	Slow swelling cello, soft ambient bloom
+2	0	0	Felt Glass	Original	Warm glassy bell, balanced decay
+2	0	1	Felt Glass	Felt	Darker, soft felt-damped bell
+2	0	2	Felt Glass	Silver tine	Brighter metallic tine bell shimmer
+2	1	0	Distant Chime	Original	Soft ambient chime, gentle wash
+2	1	1	Distant Chime	Close mic	Drier, closer chime with clear body
+2	1	2	Distant Chime	Far bank	Recessed distant chime, longer tail
+2	2	0	Wooden Star	Original	Woody percussive bell, light space
+2	2	1	Wooden Star	Palm mute	Tighter, damped woody bell plucks
+2	2	2	Wooden Star	Dub send	Woody bell with stereo dub echo
+2	3	0	Rain Glass	Original	Crisp glassy chimes, balanced shimmer
+2	3	1	Rain Glass	Felt	Warm damped attack, softer highs
+2	3	2	Rain Glass	Slow bloom	Swelled soft attack, gentle bloom
+2	4	0	Soft FM	Original	Warm rounded FM tines, soft decay
+2	4	1	Soft FM	Silver tine	Brighter metallic tine, crisp overtone
+2	4	2	Soft FM	Dub send	Subtle spatial delay, soft dub tail
+2	5	0	Resonant Dust	Original	Hollow resonant bell, airy transient
+2	5	1	Resonant Dust	Pinpoints	Tighter decay, focused pinpoint strike
+2	5	2	Resonant Dust	Far bank	Distant dark wash, pushed back
+2	6	0	Floating Metal	Original	Bright glassy bell, long shimmer
+2	6	1	Floating Metal	Palm mute	Damped metallic bell, shorter decay
+2	6	2	Floating Metal	Slow bloom	Soft-attack bell, swelling pad bloom
+2	7	0	Night Sparks	Original	Warm dark bell, gentle space
+2	7	1	Night Sparks	Silver tine	Brighter silvery tine attack
+2	7	2	Night Sparks	Far bank	Distant washed bell, soft attack
+2	8	0	Felt Piano	Original	Warm rounded FM piano, soft
+2	8	1	Felt Piano	Slow bloom	Slow swell attack, smooth pad bloom
+2	8	2	Felt Piano	Close mic	Dry direct piano, tighter decay
+2	9	0	Nylon Harp	Original	Warm plucked harp-bell, gentle tail
+2	9	1	Nylon Harp	Palm mute	Tighter damped decay, drier pluck
+2	9	2	Nylon Harp	Silver tine	Bright glassy metallic tine ring
+2	10	0	Porcelain	Original	Delicate glassy bell, light space
+2	10	1	Porcelain	Pinpoints	Short dry pinpoint percussive plucks
+2	10	2	Porcelain	Slow bloom	Softer attack with gentle bloom
+2	11	0	Garden Bell	Original	Clear resonant bell, balanced sustain
+2	11	1	Garden Bell	Felt	Warm felt-damped tone, soft attack
+2	11	2	Garden Bell	Silver tine	Brighter metallic tine, crisp shimmer
+2	11	3	Garden Bell	Slow bloom	Smoothly swelling bell without strike
+2	12	0	Willow Tine	Original	Warm woody bell, balanced dry core
+2	12	1	Willow Tine	Silver tine	Brighter metallic tine, crisp upper cut
+2	12	2	Willow Tine	Far bank	Distant washed tine, deep reverb bed
+2	13	0	Dew Bell	Original	Clear glassy bell, gentle stereo tail
+2	13	1	Dew Bell	Pinpoints	Tight dry bell, short focused decay
+2	13	2	Dew Bell	Dub send	Spacious bell with rhythmic dub echoes
+2	14	0	Kawai Grand	Original	Warm FM grand, natural room decay
+2	14	1	Kawai Grand	Felt	Muted felt tone, soft intimate attack
+2	14	2	Kawai Grand	Far bank	Distant grand in long ambient wash
+2	15	0	A22 Electric Rhodes	Original	Warm Rhodes bell, balanced tine
+2	15	1	A22 Electric Rhodes	Felt	Soft damped felt, muted tine
+2	15	2	A22 Electric Rhodes	Silver tine	Brighter silver tine, crisp chime
+2	16	0	A22 Electric Wurli	Original	Dry reedy Wurli, warm midrange
+2	16	1	A22 Electric Wurli	Reed edge	Sharper reed bite, extra bark
+2	16	2	A22 Electric Wurli	Dub send	Spacious dub delay, ambient tail
+2	17	0	A22 Electric DX EP	Original	Classic glassy DX bell EP
+2	17	1	A22 Electric DX EP	Silver tine	Crisper FM chime, bright attack
+2	17	2	A22 Electric DX EP	Felt	Warm muted DX, rolled-off bell
+2	18	0	A22 Electric Clav	Original	Bright plucky FM clav, crisp attack
+2	18	1	A22 Electric Clav	Palm mute	Tighter damped tail, shorter decay
+2	18	2	A22 Electric Clav	Dub send	Adds rhythmic dub echo and space
+2	19	0	A22 Electric Felt	Original	Warm soft felt bell, gentle decay
+2	19	1	A22 Electric Felt	Close mic	Drier close attack, more mid presence
+2	19	2	A22 Electric Felt	Slow bloom	Slower swelling attack, pad-like bloom
+2	20	0	A22 Electric Vibes	Original	Smooth FM vibes, balanced bell shimmer
+2	20	1	A22 Electric Vibes	Silver tine	Brighter metallic tine on initial hit
+2	20	2	A22 Electric Vibes	Far bank	Distant washed vibes, softer attack
+3	0	0	Round Sub	Original	Warm round sub bass, clean decay
+3	0	1	Round Sub	Low pedal	Darker sustained sub, soft attack
+3	0	2	Round Sub	Palm mute	Tighter damped sub, short decay
+3	1	0	Soft Pulse	Original	Hollow soft pulse, medium sustain
+3	1	1	Soft Pulse	Palm mute	Short muted pulse, tight thump
+3	1	2	Soft Pulse	Dub send	Soft pulse with spacious dub tail
+3	2	0	Breathing Low	Original	Warm breathing bass, rich low-mids
+3	2	1	Breathing Low	Low pedal	Very dark sub pedal, soft sustain
+3	2	2	Breathing Low	Reed edge	Brighter reedy buzz, edgy harmonics
+3	3	0	Warm Fifth	Original	Warm fifth bass, balanced space
+3	3	1	Warm Fifth	Close mic	Dry close fifth, punchy mid
+3	3	2	Warm Fifth	Dub send	Dubbed fifth, echoing space
+3	4	0	Faded Mono	Original	Soft faded mono bass, steady
+3	4	1	Faded Mono	Low pedal	Deep sub pedal, darker tone
+3	4	2	Faded Mono	Palm mute	Short muted pluck, tight decay
+3	5	0	Slow Glide	Original	Warm gliding bass, subtle room
+3	5	1	Slow Glide	Close mic	Dry close glide, clear mid
+3	5	2	Slow Glide	Dub send	Dubbed glide, spacious echo
+3	6	0	Low Echo	Original	Warm pulsing bass, soft echo
+3	6	1	Low Echo	Felt	Softer transient, slightly darker thump
+3	6	2	Low Echo	Dub send	Deeper dub repeats, wider space
+3	7	0	Root Bed	Original	Warm sustained bass, gentle buzz
+3	7	1	Root Bed	Low pedal	Dark sub pedal, harmonics removed
+3	7	2	Root Bed	Open brass	Bright open brass, rich harmonics
+3	8	0	Reed Pedal	Original	Steady pulsing reed bass, warm
+3	8	1	Reed Pedal	Reed edge	Sharper reed bite, more presence
+3	8	2	Reed Pedal	Palm mute	Tight palm-muted pulse, short decay
+3	9	0	Garden Pedal	Original	Soft warm low bass drone
+3	9	1	Garden Pedal	Low pedal	Deeper sub bass dark pedal
+3	9	2	Garden Pedal	Silver tine	Warm bass with glassy tine shimmer
+3	10	0	Linden Bass	Original	Warm woody rounded FM bass
+3	10	1	Linden Bass	Palm mute	Tight short damped bass plucks
+3	10	2	Linden Bass	Reed edge	Brighter reedy midrange bass pluck
+3	11	0	Acid Undertow	Original	Punchy resonant FM acid bass
+3	11	1	Acid Undertow	Palm mute	Dark muted short sub bass
+3	11	2	Acid Undertow	Liquid acid	Bright squelchy resonant acid sweep
+3	11	3	Acid Undertow	Dub send	Softened bass with dub delay
+3	12	0	Dub Felt	Original	Warm muted felt sub pulse
+3	12	1	Dub Felt	Close mic	Dryer, punchier close-miked bass
+3	12	2	Dub Felt	Dub send	Spacious dub delay bass wash
+3	13	0	Bowed Current	Original	Resonant bowed bass string texture
+3	13	1	Bowed Current	Close mic	Direct dry close-miked bow detail
+3	13	2	Bowed Current	Low pedal	Darker sub-heavy sustained pedal
+3	14	0	Copper Sub	Original	Warm rounded metallic sub pulse
+3	14	1	Copper Sub	Low pedal	Deep dark sub-focused low pedal
+3	14	2	Copper Sub	Open brass	Brighter brassy harmonic sub bite
+3	15	0	Tarmac Pulse	Original	Punchy woody FM bass pluck
+3	15	1	Tarmac Pulse	Palm mute	Tight damped percussive bass thud
+3	15	2	Tarmac Pulse	Dub send	Subtle syncopated dub delay tail
+3	16	0	Loom Hollow	Original	Warm hollow woody FM bass
+3	16	1	Loom Hollow	Silver tine	Bright metallic tine attack layer
+3	16	2	Loom Hollow	Low pedal	Darker sub-focused soft pedal tone
+3	17	0	Silt Throat	Original	Gritty nasal reedy FM bass
+3	17	1	Silt Throat	Reed edge	Sharper biting upper reed harmonics
+3	17	2	Silt Throat	Low pedal	Dark filtered low sub pedal
+3	18	0	A22 Analog Sub	Original	Warm sub bass with gentle buzz
+3	18	1	A22 Analog Sub	Low pedal	Pure dark sub foundation, no buzz
+3	18	2	A22 Analog Sub	Palm mute	Short muted plucks, tight decay
+3	19	0	A22 Analog Acid	Original	Classic squelchy resonant acid line
+3	19	1	A22 Analog Acid	Palm mute	Tight muted acid pluck, dry
+3	19	2	A22 Analog Acid	Liquid acid	Bubbly high-resonance wet acid squelch
+4	0	0	Dust Steps	Original	Dusty lo-fi clicks and soft thud
+4	0	1	Dust Steps	Brushwork	Soft airy brushwork, gentle transients
+4	0	2	Dust Steps	Floor tom	Deep boomy floor-tom thuds, dark
+4	1	0	Soft Pulse	Original	Warm soft pulse with light room
+4	1	1	Soft Pulse	Palm mute	Dry damped thuds, no sustain
+4	1	2	Soft Pulse	Dub send	Echoing dub delay on soft hits
+4	2	0	Brush Rain	Original	Gentle brush taps with warm thump
+4	2	1	Brush Rain	Brushwork	Drier brush taps, reduced low thump
+4	2	2	Brush Rain	Pinpoints	Tiny high pinpoint clicks, no sub
+4	3	0	Broken Clock	Original	Syncopated clock ticks with warm sub
+4	3	1	Broken Clock	Pinpoints	Thin dry pinpoint clicks, no body
+4	3	2	Broken Clock	Dub send	Spacious dub echoes on clock hits
+4	4	0	Slow Ritual	Original	Deep slow drum with woody click
+4	4	1	Slow Ritual	Floor tom	Heavy booming low-end floor tom
+4	4	2	Slow Ritual	Far bank	Distant, softer, pushed-back beat
+4	5	0	Hollow Perc	Original	Hollow woody perc, clean room
+4	5	1	Hollow Perc	Floor tom	Deeper, heavier low-mid tom body
+4	5	2	Hollow Perc	Dub send	Dub delay echoes tailing hits
+4	6	0	Hidden Beat	Original	Soft muted thump, subtle ticks
+4	6	1	Hidden Beat	Brushwork	Crisp brush ticks, lighter low
+4	6	2	Hidden Beat	Palm mute	Tight, dry, damped low thud
+4	7	0	Sparse Ticks	Original	Warm low pulse, crisp sparse ticks
+4	7	1	Sparse Ticks	Pinpoints	Dry high ticks, low thud removed
+4	7	2	Sparse Ticks	Far bank	Darker washed ticks, deep room tail
+4	8	0	Garden Pulse	Original	Soft muffled pulse, light woody taps
+4	8	1	Garden Pulse	Brushwork	Lighter drier taps, less low thump
+4	8	2	Garden Pulse	Floor tom	Deep resonant floor tom thump
+4	8	3	Garden Pulse	Dub send	Spacious dub echoes on soft pulse
+5	0	0	Ocean Air	Original	Warm mids, slow sweep
+5	1	0	Tape Mist	Original	Close to Ocean Air
+5	2	0	High Air	Original	Bright hiss up front
+5	3	0	Paper Grain	Original	Close, steady crackle
+5	4	0	Distant Hiss	Original	Soft hiss behind the lead
+5	5	0	Rainfield	Original	Faint, muffled rustle
+5	6	0	Organic Noise	Original	Dense, bright air
+5	7	0	Midnight Static	Original	Very quiet, distant hiss
+5	8	0	Shore Wash	Original	Smooth low-mid swell
+5	9	0	Rain on Tin	Original	Close, irregular grit
+5	10	0	Ember Bed	Original	Sparse, muted ticks
+5	11	0	Window Draft	Original	Dark air, slow sweep
+5	12	0	Ocean Beads	Original	Smooth, wide wash
+5	13	0	Cabasa Silk	Original	Dry ticks over dark pads
+5	14	0	Wood Rasp	Original	Low, gritty rattle
+5	15	0	Seed Rain	Original	Soft pulsing swells
+5	16	0	Clockwork	Original	Steady top-end fizz
+5	17	0	Bowed Sheet	Original	Steady bowed metal drone, rich mids
+5	17	1	Bowed Sheet	Close mic	Closer brighter bow grit, less wash
+5	17	2	Bowed Sheet	Slow bloom	Soft dark swell, gradual harmonic bloom
+5	18	0	Undertow	Original	Steady surf noise, balanced wide wash
+5	18	1	Undertow	Low pedal	Darker muffled surf, heavy low rumble
+5	18	2	Undertow	Far bank	Distant washed surf, subtle room tail
+5	19	0	Wire Brush	Original	Dry rhythmic chatter
+5	20	0	Dry Timber	Original	Distant low rumble
+5	21	0	Distant Cogs	Original	Steady upper fizz
+5	22	0	Eagle Landed	Original	Clear radio speech, dry vintage grit
+5	22	1	Eagle Landed	Intercom	Dry, bright, forward intercom voice
+5	22	2	Eagle Landed	Far bank	Distant radio speech, roomy reverb tail
+5	23	0	Radio Check	Original	Muffled looped speech, dark tight dry
+5	23	1	Radio Check	Close mic	Tighter, drier low voice loop
+5	23	2	Radio Check	Dub send	Spacious dub echoes, overlapping speech
+5	24	0	Moon Address	Original	Warm archival speech, light room
+5	24	1	Moon Address	Intercom	Tighter radio bandpass, brighter mids
+5	24	2	Moon Address	Far bank	Distant reverb wash, softer speech
+5	25	0	Rail Crossing	Original	Steady crossing pulse, medium room
+5	25	1	Rail Crossing	Close mic	Drier, closer pulse, tighter tail
+5	25	2	Rail Crossing	Far bank	Distant washed pulse, longer tail
+5	26	0	Concourse	Original	Deep airy concourse pad, full lows
+5	26	1	Concourse	Intercom	Thin PA-filtered pad, nasal mids
+5	26	2	Concourse	Slow bloom	Softer attack swell, smoother entry
+5	27	0	Passing Cars	Original	Quiet then swells up
+5	28	0	Kiel Harbour	Original	Warm low harbour drone base
+5	28	1	Kiel Harbour	Close mic	Forward mid-bright close texture
+5	28	2	Kiel Harbour	Far bank	Dark distant low-passed rumble
+5	29	0	Subway Voice	Original	Distant subway rumble and PA
+5	29	1	Subway Voice	Intercom	Mid-focused boxy intercom voice
+5	29	2	Subway Voice	Dub send	Spacious echoing dub-washed voice
+6	0	0	SOFT CHIME	Original	Warm soft rounded chime pad
+6	0	1	SOFT CHIME	Silver tine	Brighter metallic tine sparkle
+6	0	2	SOFT CHIME	Dub send	Softer washy ambient chime tail
+6	1	0	TAPE VOWEL	Original	Warm tape vowel pad, smooth
+6	1	1	TAPE VOWEL	Close mic	Drier, closer, more direct vowel
+6	1	2	TAPE VOWEL	Slow bloom	Slow swell-in, soft dark pad
+6	2	0	SOLO VIOLIN	Original	Natural solo violin, light room
+6	2	1	SOLO VIOLIN	Close mic	Dry upfront bow, brighter edge
+6	2	2	SOLO VIOLIN	Slow bloom	Gentle slow swell, soft attack
+6	3	0	BOWED CELLO	Original	Warm bowed cello, balanced room
+6	3	1	BOWED CELLO	Close mic	Dry close cello, woody mid
+6	3	2	BOWED CELLO	Far bank	Distant dark wash, deep reverb
+6	4	0	KAWAI GRAND	Original	Warm balanced grand, gentle sustain
+6	4	1	KAWAI GRAND	Felt	Darker muted felt, soft intimate tone
+6	4	2	KAWAI GRAND	Far bank	Distant washed grand, recessed in space
+6	5	0	TENOR SAX	Original	Smooth airy tenor, balanced room space
+6	5	1	TENOR SAX	Close mic	Dry close tenor, clear reed presence
+6	5	2	TENOR SAX	Dub send	Spacious dub echoes, wet trailing tail
+6	6	0	CONCERT FLUTE	Original	Airy balanced flute, gentle reverb
+6	6	1	CONCERT FLUTE	Close mic	Dry close flute, direct breath detail
+6	6	2	CONCERT FLUTE	Slow bloom	Slow swelling flute, soft pad bloom
+6	7	0	OCEAN DRUM	Original	Natural swelling bead wave
+6	7	1	OCEAN DRUM	Brushwork	Crisper bead sheen, closer swell
+6	7	2	OCEAN DRUM	Far bank	Darker, distant wave bed
+6	8	0	CABASA RUB	Original	Balanced rhythmic cabasa rub
+6	8	1	CABASA RUB	Brushwork	Softer, rounder cabasa texture
+6	8	2	CABASA RUB	Pinpoints	Bright, focused bead clicks
+6	9	0	GUIRO SCRAPE	Original	Woody guiro scrape, natural room
+6	9	1	GUIRO SCRAPE	Close mic	Dry, immediate woody scrape
+6	9	2	GUIRO SCRAPE	Dub send	Dub delay wash on scrapes
+6	10	0	SEED SHAKER	Original	Dry crisp close seed shaker
+6	10	1	SEED SHAKER	Pinpoints	Thin high-passed isolated grain clicks
+6	10	2	SEED SHAKER	Far bank	Distant shaker in soft room wash
+6	11	0	RATCHET	Original	Crisp dry mechanical ratchet rattle
+6	11	1	RATCHET	Palm mute	Damped dark palm-muted ratchet clicks
+6	11	2	RATCHET	Dub send	Ratchet into rhythmic dub delay tail
+6	12	0	BOWED CYMBAL	Original	Bright shimmering bowed cymbal sustain
+6	12	1	BOWED CYMBAL	Veil	Soft filtered distant cymbal wash
+6	12	2	BOWED CYMBAL	Slow bloom	Gradual slow swell bowed cymbal
+6	13	0	EAGLE LANDED	Original	Warm archival speech, mild room tail
+6	13	1	EAGLE LANDED	Intercom	Thin bright intercom, tight dry edge
+6	13	2	EAGLE LANDED	Far bank	Dark distant wash, soft recessed loop
+6	14	0	RADIO CHECK	Original	Lo-fi radio loop, moderate echo tail
+6	14	1	RADIO CHECK	Close mic	Dry close speech, tight clear focus
+6	14	2	RADIO CHECK	Dub send	Wet dub echoes, overlapping delay wash
+6	15	0	MOON SPEECH	Original	Archival JFK loop, balanced room wash
+6	15	1	MOON SPEECH	Intercom	Crisp nasal intercom, dry upfront cut
+6	15	2	MOON SPEECH	Far bank	Distant dark wash, soft background loop
+6	16	0	MIC TAKE	Original	Your take with a soft room tail
+6	16	1	MIC TAKE	Close mic	Dry, upfront body, tighter space
+6	16	2	MIC TAKE	Far bank	Distant, dark wash, recessed
+6	17	0	KIEL HARBOUR	Original	Wide harbour pad, balanced space
+6	17	1	KIEL HARBOUR	Close mic	Closer, drier mids, tighter focus
+6	17	2	KIEL HARBOUR	Far bank	Distant, wet wash, soft presence
+6	18	0	SUBWAY VOICE	Original	Natural station rumble, faint PA
+6	18	1	SUBWAY VOICE	Intercom	Bandpass mids, tight intercom tone
+6	18	2	SUBWAY VOICE	Dub send	Deep rumble, spacious dub tail
+7	0	0	Amber Glide	Original	Warm glide lead, light ambient tail
+7	0	1	Amber Glide	Close mic	Dry, close, direct glide lead
+7	0	2	Amber Glide	Dub send	Warm glide with spacious dub delay
+7	1	0	Acid Ribbon	Original	Balanced squelchy acid ribbon lead
+7	1	1	Acid Ribbon	Palm mute	Dark, damped, muted acid pluck
+7	1	2	Acid Ribbon	Liquid acid	Brighter, resonant liquid acid bite
+7	1	3	Acid Ribbon	Dub send	Acid ribbon with spacious dub echo
+7	2	0	Muted Cornet	Original	Soft, mellow muted cornet lead
+7	2	1	Muted Cornet	Reed edge	Subtle reedy edge on cornet
+7	2	2	Muted Cornet	Open brass	Brighter, open brassy cornet tone
+7	3	0	Reed Lantern	Original	Warm reed lead with gentle reverb
+7	3	1	Reed Lantern	Close mic	Dry, bright reed for forward cut
+7	3	2	Reed Lantern	Far bank	Softer, distant reed in deep wash
+7	4	0	Porcelain Wire	Original	Clean wire pluck with light space
+7	4	1	Porcelain Wire	Silver tine	Brighter metallic tine attack, crisp
+7	4	2	Porcelain Wire	Dub send	Wire pluck with ambient dub delay
+7	5	0	Velvet Pulse	Original	Warm, smooth pulsing synth lead
+7	5	1	Velvet Pulse	Palm mute	Dark, short muted thump for lows
+7	5	2	Velvet Pulse	Open brass	Bright, open brassy FM lead
+7	6	0	Vitreous Arc	Original	Balanced glassy lead, light room
+7	6	1	Vitreous Arc	Close mic	Dry upfront pluck, tight focus
+7	6	2	Vitreous Arc	Slow bloom	Slow swell attack, lush wash
+7	7	0	Aether Chiff	Original	Breathy chiff pluck, soft echo
+7	7	1	Aether Chiff	Reed edge	Drier woody bite, crisp attack
+7	7	2	Aether Chiff	Dub send	Rhythmic stereo dub delay tail
+7	8	0	Meridian Fold	Original	Warm folded FM lead, balanced
+7	8	1	Meridian Fold	Silver tine	Brighter tine shimmer, crisp top
+7	8	2	Meridian Fold	Far bank	Distant reverb wash, soft highs
+7	9	0	A22 Analog Dual	Original	Dry punchy dual analog lead
+7	9	1	A22 Analog Dual	Open brass	Brighter open brass with stereo air
+7	9	2	A22 Analog Dual	Dub send	Original lead with stereo dub echo
+7	10	0	A22 Analog TZFM	Original	Soft rounded TZFM bell lead
+7	10	1	A22 Analog TZFM	Silver tine	Crisp metallic tine with airy tail
+7	10	2	A22 Analog TZFM	Veil	Softened tone in ambient reverb veil
+7	11	0	A22 Analog Sync	Original	Dry nasal hard-sync analog lead
+7	11	1	A22 Analog Sync	Reed edge	Sharper reedy bite in upper mids
+7	11	2	A22 Analog Sync	Dub send	Sync lead with rhythmic dub delay

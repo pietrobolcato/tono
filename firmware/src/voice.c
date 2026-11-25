@@ -155,6 +155,48 @@ static inline __attribute__((always_inline)) void tf_steady_lowpass(int32_t *sam
 #endif
 #if AMBPLUS
 static int amb_second_cut[NTRK];
+static int8_t amb_bell_gain[NTRK]; /* two-dB steps, zero is a flat response */
+static const uint16_t amb_peak_q12[]={1029,1295,1631,2053,2584,3254,4096,5157,6492,8173,10289,12952,16306};
+static int amb_filter_damping(unsigned shape,int bell)
+{
+    /* Normalized band-pass width in octaves, approximately 1/4 to 2. */
+    return bell?720+(int)shape*360:8192-(int)shape*500;
+}
+static void amb_svf_block(int32_t *b,unsigned n,int32_t *state,const tsvf_t *c,
+                          int damping,unsigned type,int gain)
+{
+    int32_t ic1=state[0],ic2=state[1];
+    for(unsigned i=0;i<n;i++){
+        int32_t input=b[i], x=clamp(input>>3,-60000,60000);
+        int32_t v3=x-ic2,v1=(c->a1*ic1+c->a2*v3)>>13;
+        int32_t v2=ic2+((c->a2*ic1+c->a3*v3)>>13);
+        ic1=clamp(2*v1-ic1,-75000,75000);ic2=clamp(2*v2-ic2,-75000,75000);
+        int32_t band=damping*v1>>12;
+        b[i]=type==FT_BELL?input+((gain*band)>>9):type==FT_HP?(x-v2-band)*8:v2*8;
+    }
+    state[0]=ic1;state[1]=ic2;
+}
+static int32_t amb_bell_state[NTRK][3][2] __attribute__((section(".lowbuf")));
+static void amb_synth_bell(unsigned ti,int32_t *out,unsigned n,int cut,int width)
+{
+    int gain=amb_peak_q12[amb_bell_gain[ti]+6]-4096;
+    int damping=amb_filter_damping((unsigned)width>>3,1);
+    tsvf_t coef;
+    track_t *t=&trk[ti];
+    int freq=(cut<<8)+amb_second_cut[ti]+((mulq15(t->lfo_val,t->lfo_fade)*t->p[P_LD_FLT])>>7);
+    if(t->p[P_ED_FLT]){
+        int env=0;
+        for(unsigned i=0;i<NVOICE;i++)if(t->v[i].active && t->v[i].stage<4 && (t->v[i].env>>9)>env)env=t->v[i].env>>9;
+        freq+=(env*t->p[P_ED_FLT])>>7;
+    }
+    tsvf_coef_k(&coef,freq,damping);
+    amb_svf_block(out,n,amb_bell_state[ti][0],&coef,damping,FT_BELL,gain);
+    if(trk[ti].engine==ENGI_AMB_A22)amb_svf_block(voice_bank[ti].a22.side,n,amb_bell_state[ti][1],&coef,damping,FT_BELL,gain);
+    if(trk[ti].engine==ENGI_DRUM && dx_xon){
+        amb_svf_block(dx_sl,n,amb_bell_state[ti][1],&coef,damping,FT_BELL,gain);
+        amb_svf_block(dx_sr,n,amb_bell_state[ti][2],&coef,damping,FT_BELL,gain);
+    }
+}
 #endif
 static __attribute__((noinline)) void tf_run(track_t *t, int32_t *out, uint32_t n, uint32_t ft, uint32_t fo, int32_t w0,
                                              int32_t dw, uint32_t own, int32_t ccut, int32_t cres)
@@ -163,6 +205,9 @@ static __attribute__((noinline)) void tf_run(track_t *t, int32_t *out, uint32_t 
     uint32_t ti = (uint32_t)(t - trk) % NTRK, i;
     int32_t cut = p[P_FCUT] << 8, envq = 0, ic1 = tf_ic1[ti], ic2 = tf_ic2[ti], k;
     tsvf_t c;
+    #if AMBPLUS
+    if(ft==FT_BELL){amb_synth_bell(ti,out,n,ccut,cres);return;}
+#endif
     if (ft == FT_COMB) {
         if (!tf_cmb[ti])                                /* (0.6.81) in: its line cleared (the last time's, stale) */
             memset(comb_buf[ti], 0, sizeof comb_buf[ti]);
@@ -239,10 +284,10 @@ static int32_t tf_tmp[CTL];
 static __attribute__((noinline)) void track_filter(track_t *t, int32_t *out, uint32_t n, uint32_t own, int32_t ccut,
                                                    int32_t cres)
 {
-    uint32_t ti = (uint32_t)(t - trk) % NTRK, r = (uint32_t)t->p[P_FTYPE] & 3u, ft, fo, i;
+    uint32_t ti = (uint32_t)(t - trk) % NTRK, r = (uint32_t)t->p[P_FTYPE], ft, fo, i;
     uint32_t act = (tf_on[ti] && !own) || tf_cmb[ti];
     int32_t w0, dw;
-    if (own && r != FT_COMB)
+    if (own && r < FT_COMB)
         r = FT_LP;                                      /* (an engine's own filter: COMB or nothing here) */
     if (!tf_xb[ti]) {
         if (r != tf_ft[ti] && (act || r == FT_COMB)) {
@@ -262,7 +307,7 @@ static __attribute__((noinline)) void track_filter(track_t *t, int32_t *out, uin
     fo = tf_fo[ti];
     w0 = (int32_t)(((TF_XB - tf_xb[ti]) << 12) / TF_XB);
     dw = (4096 / (int32_t)TF_XB) >> CTL_LOG2;
-    if (fo != TF_DRY && fo != FT_COMB && ft != FT_COMB && !own) {
+    if (fo != TF_DRY && fo < FT_COMB && ft < FT_COMB && !own) {
         tf_run(t, out, n, ft, fo, w0, dw, own, ccut, cres);   /* (one SVF, two of its outputs) */
     } else {
         for (i = 0; i < n; i++)
