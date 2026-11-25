@@ -21,9 +21,9 @@ static void check_knobs(void)
            (ambr.view==1 && ambr.page==3 && ambr.bank &&
             (knob==3 || (knob==2 && amb_edit_rate(&amb.layer[0])<AMB_RANDOM_BARS))) ||
            (ambr.view==2 && ambr.page==1 && knob==3) ||
-           (knob==3 && ambr.view==1 && ambr.page==1 && amb_filter_editor(&amb.layer[0]) && amb.layer[0].base[P_FTYPE]!=FT_BELL) ||
+           (knob==3 && ambr.view==1 && ambr.page==1 && amb_filter_editor(&amb.layer[0]) && amb.layer[0].base[P_FTYPE]>FT_HP && amb.layer[0].base[P_FTYPE]!=FT_BELL) ||
            (knob>1 && ((ambr.view==2 && ambr.page==3 && ambr.fx==4) ||
-                       (ambr.view==1 && ambr.page==5 && ambr.fx==6)))){
+                       (ambr.view==1 && ambr.page==5 && ambr.fx==6 && !(amb_controls.filter[0]&48))))){
             amb_knob(knob,2);amb_knob_value(knob,label,after);
             assert(!*label && !*after && !memcmp(&amb,&piece,sizeof amb) && ambr.cursor==runtime.cursor);
             assert(!memcmp(&amb_controls,&controls,sizeof controls));
