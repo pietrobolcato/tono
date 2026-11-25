@@ -28,8 +28,8 @@ static void check_eq_display(void)
             assert(!memcmp(original,stereo,sizeof stereo));
         }
         for(unsigned j=0;j<3;j++)if(j!=band)assert(amb_spectrum_height(frequency[band])>amb_spectrum_height(frequency[j]));
-        int bands[4]={0};assert(amb_eq_response_y(16,bands)==82);
-        bands[band]=9;assert(amb_eq_response_y((unsigned[]){0,16,31}[band],bands)<76);
+        int bands[4]={256,256,256,0};assert(amb_eq_response_scaled(16,bands)==82);
+        bands[band]=amb_eq_gain(18,0)/16;assert(amb_eq_response_scaled((unsigned[]){0,16,31}[band],bands)<76);
     }
     amb_scope_target=0;
     puts("EQ spectrum: low/mid/high tones, opposite stereo polarity, separate targets and untouched audio PASS");

@@ -97,7 +97,8 @@ static void amb_wave_plot(int layer)
     const amb_layer_t *l=&amb.layer[k];
     unsigned setting=amb_controls.filter[k];
     int type=layer?(int)(setting>>4)-1:l->base[P_FTYPE];
-    int cut=layer?amb_filter_hz[setting&15]:CUTOFF_HZ[l->base[amb_sound_id(l,1,1)]&127];
+    unsigned effective=layer?amb_layer_filter_setting(k):0;
+    int cut=layer?amb_frequency_hz(effective&15,effective>>16):CUTOFF_HZ[l->base[amb_sound_id(l,1,1)]&127];
     if(layer && type>=2)type+=FT_BELL-2;
     int res=layer?(amb_controls.fx_shape[k]&15)*127/15:l->base[amb_sound_id(l,1,2)];
     amb_display(69,72);
@@ -149,7 +150,7 @@ static void amb_limiter_plot(void)
 
 /* Real and imaginary gain of the DSP's 26/1024 and 307/1024 one-pole
  * crossovers at each log-frequency bin: H = a / (1 - (1-a) exp(-jw)). */
-static int amb_eq_response_y(unsigned bin,const int gain[4])
+static int amb_eq_response_scaled(unsigned bin,const int gain[4])
 {
     static const int8_t crossover[32][4]={
         {124,-20,127,-1},{122,-25,127,-2},{120,-29,127,-2},{117,-34,127,-2},
@@ -161,13 +162,12 @@ static int amb_eq_response_y(unsigned bin,const int gain[4])
         {2,-6,52,-47},{2,-5,44,-42},{2,-4,38,-37},{2,-3,33,-31},
         {2,-2,29,-25},{2,-2,26,-20},{2,-1,24,-15},{2,-1,23,-8}
     };
-    static const uint16_t db[25]={64,72,81,91,102,114,128,144,162,181,203,228,256,287,322,362,406,455,511,573,643,722,810,908,1019};
     const int8_t *p=crossover[bin];
-    int hi=db[gain[2]+12],mid=db[gain[1]+12],lo=db[gain[0]+12];
+    int hi=gain[2],mid=gain[1],lo=gain[0];
     int re=hi+((lo-mid)*p[0]+(mid-hi)*p[2])/127;
     int im=((lo-mid)*p[1]+(mid-hi)*p[3])/127;
     unsigned magnitude=isqrt32(re*re+im*im);
     int exp=31-__builtin_clz(magnitude?magnitude:1);
     int db2=(exp-8)*12+(int)((magnitude-(1u<<exp))*12>>exp);
-    return clamp(82-db2-gain[3]*2,55,107);
+    return clamp(82-db2-gain[3],55,107);
 }

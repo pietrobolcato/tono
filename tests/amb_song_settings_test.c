@@ -61,9 +61,9 @@ static void check_held_home(void)
         amb_knob_value(0,label,value);
         assert(!strcmp(label,role==4 || role==6?"LOW EQ":"ATTACK"));
         amb_knob(0,200);amb_knob_value(0,label,value);
-        assert(!strcmp(value,role==4 || role==6?"12dB":"100%"));
+        assert(!strcmp(value,role==4 || role==6?"18dB":"100%"));
         amb_knob(0,-200);amb_knob_value(0,label,value);
-        assert(!strcmp(value,role==4 || role==6?"-12dB":"0%"));
+        assert(!strcmp(value,role==4 || role==6?"-24dB":"0%"));
         assert(ambr.last_edit_route[0]==1+(role==4 || role==6?ROUTE_EQ:amb_param_route(P_ATK)));
         btn_up(B_HOME);frame();
     }

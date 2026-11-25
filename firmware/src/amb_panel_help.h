@@ -61,6 +61,7 @@ static unsigned amb_knob_card(const amb_layer_t *l,unsigned knob)
 {
     static const uint16_t manual[]={H_select_an_edit_slot,H_layer_step_interval,H_pitch_of_this_slot,H_strength_of_this_slot};
     static const uint16_t manual_drum[]={H_select_an_edit_slot,H_choose_a_drum_voice,H_enable_this_slot,H_delay_offbeat_hits};
+    if((ambr.view==2 && ambr.page==4) || (ambr.view==1 && ambr.page==6))return knob?H_low_band_gain+knob-1:H_eq_mode;
     if(ambr.view==4)return H_layer_output_level;
     if(ambr.view==0 || (ambr.view==1 && ambr.page==0)){
         if(!ambr.view){
@@ -126,6 +127,11 @@ static unsigned amb_route_card(const amb_layer_t *l)
     if(r<ROUTE_EQ)return amb_macro_card(l,r-ROUTE_MACRO);
     if(r<ROUTE_MODE)return H_low_band_gain+r-ROUTE_EQ;
     if(r<ROUTE_GRAIN)return pattern[r-ROUTE_MODE];
+    if(r>=ROUTE_FX_TYPE){
+        static const uint16_t cards[]={H_layer_filter_mode,H_layer_filter_cutoff,H_filter_resonance,H_bell_gain,H_filter_slope,H_bell_gain,H_filter_slope,
+            H_tremolo_rate,H_tremolo_rate+1,H_tremolo_rate+2,H_tremolo_rate+3,H_masterfx+1,H_eq_mode};
+        return cards[r-ROUTE_FX_TYPE];
+    }
     return r==ROUTE_HOME_DENSITY?H_fewer_notes_home_macro:H_grain+r-ROUTE_GRAIN;
 }
 

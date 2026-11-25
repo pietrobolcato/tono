@@ -14,6 +14,9 @@ constant tables (firmware/src/sing.c reads them), from tools/lyrics/:
 Spanish and Japanese text is read by rules on the device; English only through the dictionary (and rough letter rules
 for a word it lacks). The phoneme list here is the order of sing.c's PHON[] (a static assert checks the count).
   tools/gen_lyrics.py OUT.h"""
+import os
+import subprocess
+import tempfile
 import re
 import sys
 from pathlib import Path
@@ -117,8 +120,8 @@ def huff_code(count):
     return code, table
 
 
-EN_BLK = 8                                           # (0.9.0) the dictionary's words a block (an index entry)
-LUT_BITS = {"P": 6, "L": 6, "H": 7}                 # the codes' lookup tables: 99.6 %, 96 %, 94 % of the symbols
+EN_BLK = 16 if os.environ.get("AMBPLUS") == "1" else 8                                           # (0.9.0) the dictionary's words a block (an index entry)
+LUT_BITS = {"P": 4, "L": 5, "H": 6} if os.environ.get("AMBPLUS") == "1" else {"P": 6, "L": 6, "H": 7}                 # the codes' lookup tables: 99.6 %, 96 %, 94 % of the symbols
 
 
 def huff_lut(code, k):
@@ -405,6 +408,61 @@ def c_strs(items):
     return "\n    ".join(out)
 
 
+def fallback_phones(words, enum):
+    """Run the very same letter rules used by the instrument at build time."""
+    source = Path(__file__).resolve().parents[1] / "firmware" / "src"
+    program = """#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+""" + enum + """
+#include "sing_letter_rules.h"
+int main(void) {
+    char word[24];
+    while (scanf("%23s", word) == 1) {
+        uint8_t code[SW_MAX], kind[SW_MAX], result[SW_MAX];
+        uint32_t syllables, n = sy_en_rules(word, strlen(word), code, kind);
+        n = sy_syl(code, kind, n, result, &syllables);
+        for (unsigned i = 0; i < n; i++) printf("%02x", result[i] | 128);
+        puts("");
+    }
+    return 0;
+}
+"""
+    with tempfile.TemporaryDirectory() as tmp:
+        exe = Path(tmp) / "letter-rules"
+        subprocess.run([os.environ.get("HOST_CC", "cc"), "-x", "c", "-", "-I", source, "-o", exe],
+                       input=program, text=True, check=True)
+        result = subprocess.run([exe], input="\n".join(words) + "\n", text=True,
+                                capture_output=True, check=True)
+    return [bytes.fromhex(line) for line in result.stdout.splitlines()]
+
+
+def exceptions(words, recs, enum):
+    out_words, out = [], []
+    for word, record, prediction in zip(words, recs, fallback_phones(words, enum), strict=True):
+        phones = record[2]
+        if phones == prediction:
+            continue
+        left = 0
+        while left < min(len(phones), len(prediction)) and phones[left] == prediction[left]:
+            left += 1
+        right = 0
+        while right < min(len(phones), len(prediction)) - left and phones[-1-right] == prediction[-1-right]:
+            right += 1
+        literal = phones[left:len(phones)-right]
+        assert prediction[:left] + literal + prediction[len(prediction)-right:] == phones
+        patch = bytes((128 + left, 128 + right)) + literal
+        assert len(patch) <= 32
+        prefix = 0
+        if len(out) % EN_BLK:
+            last = out_words[-1]
+            while prefix < min(len(last), len(word)) and last[prefix] == word[prefix]:
+                prefix += 1
+        out.append((prefix, word[prefix:], patch))
+        out_words.append(word)
+    return out_words, out
+
+
 def main():
     out = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("felucca_lyrics.h")
     en = load_en_dict()
@@ -432,6 +490,10 @@ def main():
             p16 += 1
         plain += 1 + len(w) - p16 + len(ph) + 2 * (k % 16 == 0)
         prev = w
+    reference_words, reference_records = words, recs
+    if os.environ.get("AMBPLUS") == "1":
+        words, recs = exceptions(words, recs, L[1])
+        L.append("#define LY_EN_DELTA 1")
     blob, idx, (tp, tl, th), codes = en_dict_pack(recs)
     if en_dict_unpack(blob, idx, (tp, tl, th), len(words)) != [(w, r[2]) for w, r in zip(words, recs)]:
         raise SystemExit("gen_lyrics: the dictionary does not decode back")
@@ -457,6 +519,11 @@ def main():
              c_strs(f'"{w}"' for w in words) + "};")
     L.append("static const char *const LY_EN_REF_PH[LY_EN_N] = {\n    " +
              c_strs('"' + "".join(f"\\x{b:02x}" for b in r[2]) + '"' for r in recs) + "};")
+    if reference_words is not words:
+        L.append("static const char *const LY_EN_FULL_W[] = {" +
+                 c_strs(f'"{w}"' for w in reference_words) + "};")
+        L.append("static const char *const LY_EN_FULL_PH[] = {" +
+                 c_strs('"' + "".join(f"\\x{b:02x}" for b in r[2]) + '"' for r in reference_records) + "};")
     L.append("#endif")
     # the banks
     nsyl = {"es": es_nsyl, "en": lambda w: nsyl_en[w] if w in nsyl_en else 0, "ja": ja_nmora}
