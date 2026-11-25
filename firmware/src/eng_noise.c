@@ -125,6 +125,7 @@ static void noise_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const
 {
 #if AMBPLUS
     if(t->p[P_E0]==NZ_RAIN){rain_render(t,v,out,n,m);return;}
+    if((uint32_t)v->s[6]==RAIN_STATE_TAG)noise_note_on(t,v);
 #endif
     const int16_t *p = t->p;
     uint32_t mode = (uint32_t)p[P_E0] & 3u, sel = ((uint32_t)p[P_E5] >> 4) & 7u, i;

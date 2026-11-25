@@ -3,9 +3,25 @@
 #include "amb_native_test.c"
 #include "../firmware/src/amb_sound_variations.h"
 
+/* Changing the NOISE source while holding a key must reinitialise its engine-specific history. */
+static void check_held_rain_change(void)
+{
+    track_t t={0};voice_t v={0};vmod_t m={0};m.amp0=m.amp1=32767;m.shape=64<<8;
+    t.p[P_E0]=NZ_ANLG;t.p[P_E1]=76;t.p[P_E2]=64;t.p[P_E3]=64;t.p[P_E6]=100;
+    noise_note_on(&t,&v);int64_t energy=0;
+    for(unsigned j=0;j<10000;j++){
+        if(!(j%100))t.p[P_E0]=t.p[P_E0]==NZ_RAIN?NZ_ANLG:NZ_RAIN;
+        int32_t b[CTL]={0};noise_render(&t,&v,b,CTL,&m);
+        for(unsigned k=0;k<CTL;k++)energy+=(int64_t)b[k]*b[k];
+        if(t.p[P_E0]==NZ_RAIN)assert((uint32_t)v.s[6]==RAIN_STATE_TAG);
+    }
+    assert(energy>1000000);
+}
+
 int main(void)
 {
     memset(amb_nor,255,sizeof amb_nor);ui_power_on();amb_init();
+    check_held_rain_change();
     unsigned count=0;
     for(unsigned role=0;role<8;role++){
         unsigned patches=role==6?NELEM(N_AS_SOURCE):amb_patch_count(role);

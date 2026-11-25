@@ -51,30 +51,58 @@ for take, onset in [(puddle,30160),(yard,72400)]:
 grains += encode(plop4[21880:21880+1024], 24, 155)
 array('rain_drops', grains)
 array('rain_thunder', encode(thunder[:2048], 36, 100))
-# Hold the recorded amplitude and colour rhythm of rain on three surfaces.
-# Two independent one-pole crossovers match the firmware noise analysis.
+# Keep the forest shower at its native speed, with local quantisation for its quietest splashes.
 forest=source_dir/'forest.mp3'
 if hashlib.sha256(forest.read_bytes()).hexdigest() != 'bfdef90ca4cf5bdf5adbce7abb9432948e8ec0c7e54417f8ab23a65900161001':
     raise ValueError('Unexpected ForestRainShower1a source')
 # Decode only this short excerpt. The full 9-minute recording is unnecessary at runtime.
 def forest_pcm(rate):
-    data=subprocess.check_output(['ffmpeg','-loglevel','error','-ss','45.744','-i',str(forest),'-t','4','-ar',str(rate),'-ac','1','-f','s16le','-'])
+    data=subprocess.check_output(['ffmpeg','-loglevel','error','-ss','45.744','-i',str(forest),'-t','25','-ar',str(rate),'-ac','1','-f','s16le','-'])
     result=arrays.array('h',data)
     if sys.byteorder!='little':result.byteswap()
     return result
-wet=forest_pcm(12000)[0:8192]
-array('rain_forest',encode(wet,12,32))
+# Preserve the recorded spectral motion across nearly 24 seconds at a
+# 1024-sample hop. The runtime uses the same three crossovers. Normalising
+# each band by the excitation's energy avoids a tilt toward the widest band.
+from math import sqrt
 full=forest_pcm(44100)
-spectral=[]
-mid=0.
-for i in range(0,512*256,512):
-    energy=0.
-    for x in full[i:i+512]:
-        mid+=(x-mid)*.37
-        energy+=(x-mid)**2
-    spectral.append((energy/512)**.5)
-ref=sum(spectral)/len(spectral)
-array('rain_spectrum',[min(255,round(v*64/ref)) for v in spectral])
+def measure(take):
+    slow=body=air=0.
+    env=[]
+    for start in range(0,1024*1024,1024):
+        total=[0.,0.,0.,0.]
+        for x in take[start:start+1024]:
+            slow+=(x-slow)*.0234375
+            body+=(x-body)*.15625
+            air+=(x-air)*.53125
+            for i,b in enumerate((slow,body-slow,air-body,x-air)):
+                total[i]+=b*b
+        env.append([sqrt(y/1024) for y in total])
+    return env
+env=measure(full)
+import random
+rng=random.Random(95)
+white=measure([rng.randint(-32768,32767) for _ in range(1024*1024)])
+norm=[sum(x[i] for x in white)/1024 for i in range(4)]
+weights=[[v/norm[i] for i,v in enumerate(frame)] for frame in env]
+# Robust peak: leave space for the loudest 0.25% of microphone transients.
+ref=sorted(v for frame in weights for v in frame)[-10]
+array('rain_bands',[min(255,round(150*(weights[j][k]+weights[j+1][k])/(2*ref))) for j in range(0,1024,2) for k in (2,3)])
+# Four seconds of actual low-mid rain carry the fine timing that a set of
+# smoothed noise envelopes cannot convey. Scale each short block independently.
+wet=forest_pcm(4096)[:16384]
+peak=max(map(abs,wet))
+scales=[]
+codes=[]
+for i in range(0,len(wet),32):
+    block=wet[i:i+32]
+    rms=(sum(x*x for x in block)/32)**.5
+    scale=max(1,min(255,round(255*rms*1.55/peak)))
+    scales.append(scale)
+    for x in block:
+        codes.append((2 if x<0 else 0)+(1 if abs(x)*255/peak>scale*.65 else 0))
+array('rain_forest',[codes[j]|codes[j+1]<<2|codes[j+2]<<4|codes[j+3]<<6 for j in range(0,len(codes),4)])
+array('rain_scales',scales)
 # Keep the changing low-mid crack of the real thunder alongside its bass PCM.
 th=pcm('thunder','8036733e48a347e0a36d249f4b783dafaf09d7a69ab3962f43e51ac8c0af796c',2048)
 slow=0.;env=[]

@@ -123,9 +123,10 @@ static void amb_apply_variation(unsigned k,unsigned index)
     if(index>=amb_variation_count(l))return;
     const unsigned id=amb_variation_id(l,index);
     if(l->role==5 && l->patch==30){
-        l->base[P_E1]=index==1?68:index==2?54:35;
-        l->base[P_E5]=index==1?115:index==2?66:31;
+        l->base[P_E1]=index==1?66:index==2?35:20;
+        l->base[P_E5]=index==1?98:index==2?44:11;
         l->base[P_E6]=index==2?112:0;
+        l->base[P_FCUT]=index==1?99:index==2?94:95;
         return;
     }
     const int tone=amb_voicing[id].tone,body=amb_voicing[id].body;

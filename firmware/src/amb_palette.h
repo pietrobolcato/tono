@@ -96,7 +96,7 @@ static const amb_recipe_t amb_texture_patches[] = {
   AR("Concourse",5,3,39,90,80,58,13,61),AR("Passing Cars",11,4,44,85,92,14,0,62),
   AR("Kiel Harbour",15,0,13,85,92,16,0,123),
   AR("Subway Voice",15,0,5,80,93,10,0,124),
-  AR("Rain",11,0,28,88,100,32,0,117)
+  AR("Rain",11,0,32,92,100,70,3,117)
 };
 #undef A22
 #undef AR

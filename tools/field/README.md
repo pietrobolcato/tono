@@ -22,7 +22,7 @@ Repeat --wav to supply both slots. Slot 1 takes the first 8 seconds. Slot 2 take
 
 ## Rain
 
-Rain is one Texture patch. PRESETS selects Chill Rain, Steady Downpour or Rain & Thunder. Short, separately recorded surface splashes arrive at varying speeds and intervals over randomly crossfaded excerpts of real woodland rain. The storm preset plays a separate low-frequency thunder take at irregular intervals. The device handoff uses 1,024 bytes for four 64 ms drop grains at 8 kHz and 1,024 bytes for eight seconds of thunder at 256 Hz. The forest bed uses 4,096 more bytes, plus 256 bytes of recorded high-band envelopes. The source excerpts use signed, companded four-bit PCM.
+Rain is one Texture patch. PRESETS selects Chill Rain, Steady Downpour or Rain & Thunder. A four-second recording of woodland rain supplies the lower frequencies. Two upper bands follow the changing levels of nearly 24 seconds from the same shower. Two 64 ms recordings of rain on different surfaces and one 256 ms close water drop provide irregular foreground splashes. Rain & Thunder plays an independent eight-second thunder recording, with additional rolls at irregular intervals while held. The forest bed uses 4,096 bytes of two-bit samples, 512 bytes for local scales and 1,024 bytes for the upper bands. The drops and thunder use 1,024 bytes each, plus 128 bytes for the thunder's higher-frequency envelope.
 
 All five recordings are CC0. Save the linked previews under the filenames below and run `python3 tools/field/rain.py /path/to/previews` to regenerate the data header. The generator verifies the source hashes and records the sample offsets.
 
