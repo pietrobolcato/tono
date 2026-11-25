@@ -1588,6 +1588,10 @@ static void amb_master(int32_t raw,int boot)
 }
 /* Bounded three-band output EQ. One-pole splits at ~180 Hz / ~3 kHz;
  * smoothed gains, headroom and a final soft knee, both stereo channels. */
+/* pi32v2 emits a hardware divide even for signed power-of-two constants.
+ * Add the discarded mask only for negatives to preserve C truncation. */
+static inline int32_t amb_eq_shift(int32_t sample,unsigned shift)
+{return (sample+((sample>>31)&((1<<shift)-1)))>>shift;}
 static inline __attribute__((always_inline)) void amb_master_eq_output(int32_t *out,uint32_t n)
 {
     static int32_t low[2],high[2],g[4]={4096,4096,4096,4096};
@@ -1604,12 +1608,17 @@ static inline __attribute__((always_inline)) void amb_master_eq_output(int32_t *
         return;
     }
     for(k=0;k<4;k++){int d=(int)db[eq[k]+12]-g[k];g[k]+=d/16;if(d>-16 && d<16)g[k]=db[eq[k]+12];}
-    for(i=0;i<n;i++) for(c=0;c<2;c++) {
-        int32_t x=out[2*i+c], y;
-        low[c]+=(x-low[c])*26/1024; high[c]+=(x-high[c])*307/1024;
-        y=(low[c]*g[0]+(high[c]-low[c])*g[1]+(x-high[c])*g[2])/4096;
-        y=(int32_t)((clamp(y,-65535,65535)*g[3])/4096);
-        out[2*i+c]=soft_knee(y,12000);
+    for(c=0;c<2;c++){
+        int32_t lo=low[c],hi=high[c];
+        for(i=c;i<n*2;i+=2){
+            int32_t x=out[i];
+            lo+=amb_eq_shift((x-lo)*26,10);
+            hi+=amb_eq_shift((x-hi)*307,10);
+            int32_t y=amb_eq_shift(lo*g[0]+(hi-lo)*g[1]+(x-hi)*g[2],12);
+            y=amb_eq_shift(clamp(y,-65535,65535)*g[3],12);
+            out[i]=soft_knee(y,12000);
+        }
+        low[c]=lo;high[c]=hi;
     }
 }
 static __attribute__((noinline)) void amb_output(int32_t *out,uint32_t n)
