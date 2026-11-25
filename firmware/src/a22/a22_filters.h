@@ -87,7 +87,7 @@ static inline a22_f32 a22_tape_sat(a22_f32 x)
 static inline a22_f32 a22_fold_sin(a22_f32 x) { return a22_tsin(x * 0.25f); }
 
 /* equal-power stereo pan law, pan in [-1, 1] */
-static inline void a22_pan_gains(a22_f32 pan, a22_f32 *gl, a22_f32 *gr)
+static A22_COEFFICIENT void a22_pan_gains(a22_f32 pan, a22_f32 *gl, a22_f32 *gr)
 {
     a22_f32 t = a22_clampf(pan, -1.0f, 1.0f) * 0.125f + 0.125f;   /* 0 .. 0.25 turns */
     *gl = a22_tcos(t);
@@ -96,7 +96,7 @@ static inline void a22_pan_gains(a22_f32 pan, a22_f32 *gl, a22_f32 *gr)
 
 /* ZDF Trapezoidal State-Variable Filter (12 dB/oct LP/BP/HP/Notch) */
 typedef struct a22_Svf { a22_f32 g, k, a1, a2, a3; } a22_Svf;
-static inline void a22_svf_set(a22_Svf *f, a22_f32 fc, a22_f32 q, a22_f32 isr)
+static A22_COEFFICIENT void a22_svf_set(a22_Svf *f, a22_f32 fc, a22_f32 q, a22_f32 isr)
 {
     a22_f32 x = fc * isr;
     if (x > 0.42f) x = 0.42f;
@@ -118,7 +118,7 @@ static inline void a22_svf_set(a22_Svf *f, a22_f32 fc, a22_f32 q, a22_f32 isr)
 
 /* 24 dB/oct Zero-Delay-Feedback Non-Linear Analog a22_Ladder Filter (Moog/Digitone style) */
 typedef struct a22_Ladder { a22_f32 g, k, comp; } a22_Ladder;
-static inline void a22_ladder_set(a22_Ladder *f, a22_f32 fc, a22_f32 reso, a22_f32 isr)
+static A22_COEFFICIENT void a22_ladder_set(a22_Ladder *f, a22_f32 fc, a22_f32 reso, a22_f32 isr)
 {
     a22_f32 x = a22_clampf(fc * isr, 0.00025f, 0.40f);
     a22_f32 t = a22_tanfx(a22_H1_PI * x);
@@ -144,7 +144,7 @@ static inline a22_f32 a22_ladder_tick(const a22_Ladder *f, a22_f32 *s, a22_f32 x
 static inline a22_f32 a22_noise_s(uint32_t *s) { return (a22_f32)(int32_t)a22_rng_next(s) * (1.0f / 2147483648.0f); }
 
 /* one-pole smoothing coefficient for a time constant in seconds */
-static inline a22_f32 a22_onepole_k(a22_f32 seconds, a22_f32 rate)
+static A22_COEFFICIENT a22_f32 a22_onepole_k(a22_f32 seconds, a22_f32 rate)
 {
     if (seconds <= 0.0f) return 1.0f;
     return 1.0f - a22_exp2fx(-1.442695f / (seconds * rate));

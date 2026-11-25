@@ -3,6 +3,13 @@
 #pragma once
 #include <stdint.h>
 
+/* Share control-rate coefficient math across the sixteen instrument models. */
+#ifdef TONO_A22_FM1
+#define A22_COEFFICIENT __attribute__((noinline))
+#else
+#define A22_COEFFICIENT inline
+#endif
+
 typedef float a22_f32;
 
 #define a22_H1_PI 3.14159265f
@@ -62,7 +69,7 @@ static inline a22_f32 a22_cos_turns(a22_f32 t) { return a22_sin_turns(t + 0.25f)
  * Any x: below 2^-126 it is 0, above 2^126 it stays there, and not-a-number is 0. (It used to
  * trust x to be small: a decay written as a22_exp2fx(-age * 30) wrapped the exponent bits four
  * seconds into a held note and came back as an enormous number.) */
-static inline a22_f32 a22_exp2fx(a22_f32 x)
+static A22_COEFFICIENT a22_f32 a22_exp2fx(a22_f32 x)
 {
     union { a22_f32 f; int32_t i; } v;
     int32_t n;
