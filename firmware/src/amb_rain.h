@@ -19,7 +19,8 @@ static int rain_bed(unsigned j)
 
 /* Randomly scatter recorded splashes over a continuous air and water bed.
  * The thunder envelope has its own clock, independent of the drop triggers. */
-static void rain_render(track_t *t,voice_t *v,int32_t *out,uint32_t n,const vmod_t *m)
+/* Keep the optional field-recording path out of the other noise modes. */
+static __attribute__((noinline)) void rain_render(track_t *t,voice_t *v,int32_t *out,uint32_t n,const vmod_t *m)
 {
     if((uint32_t)v->s[6]!=RAIN_STATE_TAG)noise_note_on(t,v);
     int32_t rng=v->s[2],mid=v->s[1],thunder=v->s[3];
