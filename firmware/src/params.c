@@ -55,7 +55,7 @@ static const char *const N_DTYPE[] = {"SOFT", "HARD", "FOLD", "CRUSH", "RECT", "
 };   /* (JIANT) fx.c DT_*; 0.7.8 AMP */
 static const char *const N_FTYPE[] = {"LP", "HP", "BP", "COMB"
 #if AMBPLUS
-    ,"Bell"
+    ,"Bell", "Band-pass"
 #endif
 };   /* (JIANT 0.5) P_FTYPE: eng_analog.c FT_* */
 static const char *const N_VOICE[] = {"POLY", "MONO", "LEG", "UNI"};   /* V_POLY .. V_UNISON */

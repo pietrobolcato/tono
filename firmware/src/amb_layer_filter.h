@@ -43,7 +43,7 @@ static void amb_filter_process(unsigned k,int32_t *b,unsigned n,unsigned setting
             if(svf){
                 int gain=(int8_t)(setting>>8)>>4;
                 if(slope==3 && (previous&192)!=192){state[2]=0;state[3]=clamp(buf[0],-524288,524287)*512;}
-                amb_filter_stages(buf,n,state,coef,damping,mode==3?FT_BELL:mode-1,slope,amb_peak_q12[gain+6]-4096);
+                amb_filter_stages(buf,n,state,coef,damping,mode==3?((setting&64)?FT_BANDPASS:FT_BELL):mode-1,slope,amb_peak_q12[gain+6]-4096);
             }else{
                 int32_t low=state[1]>>9;
                 for(unsigned i=0;i<n;i++){

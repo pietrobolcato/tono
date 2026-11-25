@@ -173,7 +173,7 @@ static void amb_svf_block(int32_t *b,unsigned n,int32_t *state,const tsvf_t *c,
         int32_t v2=ic2+((c->a2*ic1+c->a3*v3)>>13);
         ic1=clamp(2*v1-ic1,-75000,75000);ic2=clamp(2*v2-ic2,-75000,75000);
         int32_t band=damping*v1>>12;
-        b[i]=type==FT_BELL?input+((gain*band)>>9):((type&1)?x-v2-band:v2)*8;
+        b[i]=type==FT_BANDPASS?band*8:type==FT_BELL?input+((gain*band)>>9):((type&1)?x-v2-band:v2)*8;
     }
     state[0]=ic1*4096;state[1]=ic2*4096;
 }
@@ -269,7 +269,7 @@ static int32_t amb_bell_state[NTRK][3][4] __attribute__((section(".lowbuf")));
 static void amb_synth_curve(unsigned ti,int32_t *out,unsigned n,int cut,int width,unsigned type,unsigned slope)
 {
     int gain=amb_peak_q12[amb_bell_gain[ti]+6]-4096;
-    int damping=amb_filter_damping((unsigned)width>>3,type==FT_BELL);
+    int damping=amb_filter_damping((unsigned)width>>3,type>=FT_BELL);
     track_t *t=&trk[ti];
     int freq=(cut<<8)+amb_second_cut[ti]+((mulq15(t->lfo_val,t->lfo_fade)*t->p[P_LD_FLT])>>7);
     if(t->p[P_ED_FLT]){
@@ -296,7 +296,7 @@ static __attribute__((noinline)) void tf_run(track_t *t, int32_t *out, uint32_t 
     int32_t cut = p[P_FCUT] << 8, envq = 0, ic1 = tf_ic1[ti], ic2 = tf_ic2[ti], k;
     tsvf_t c;
     #if AMBPLUS
-    if(ft==FT_BELL){amb_synth_bell(ti,out,n,ccut,cres);return;}
+    if(ft>=FT_BELL){amb_synth_curve(ti,out,n,ccut,cres,ft,0);return;}
 #endif
     if (ft == FT_COMB) {
         if (!tf_cmb[ti])                                /* (0.6.81) in: its line cleared (the last time's, stale) */
