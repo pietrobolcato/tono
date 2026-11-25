@@ -52,7 +52,10 @@ static void rain_render(track_t *t,voice_t *v,int32_t *out,uint32_t n,const vmod
             field=(field*(int)tail+head*(int)(256-tail))>>8;
         }
         field_pos+=24;
-        if(field_pos>=16384*256u)field_pos-=(16384-256)*256u;
+        if(field_pos>=16384*256u){
+            /* Wrap into the first 256 frames already crossfaded above. */
+            field_pos=(field_pos&(16384*256u-1)) | (256*256u);
+        }
         body+=(noise-body)*40>>8;
         mid+=(noise-mid)*136>>8;
         int upper=(mid-body)*weights[0]+(noise-mid)*weights[1];
