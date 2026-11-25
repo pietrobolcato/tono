@@ -222,6 +222,19 @@ static int amb_filter_coefficients(tsvf_t coef[2],int freq,int damping,unsigned 
     }
     return damping;
 }
+static void amb_slope_edge(int32_t *buf,unsigned n,int32_t *last,int changed)
+{
+    if(changed){
+        int32_t step=*last-buf[0];
+        for(unsigned i=0;i<n && i<CTL;i++)buf[i]+=(step*(int)(CTL-1-i))>>CTL_LOG2;
+    }
+    *last=buf[n-1];
+}
+static struct {int32_t last[3];uint8_t slope;} amb_synth_edge[NTRK] __attribute__((section(".pool")));
+static unsigned amb_synth_channels(const track_t *t)
+{return t->engine==ENGI_AMB_A22?2:t->engine==ENGI_DRUM && dx_xon?3:1;}
+static int32_t *amb_synth_buf(unsigned ti,int32_t *out,unsigned channels,unsigned c)
+{return !c?out:channels==2?voice_bank[ti].a22.side:c==1?dx_sl:dx_sr;}
 static int32_t amb_bell_state[NTRK][3][4] __attribute__((section(".lowbuf")));
 static void amb_synth_curve(unsigned ti,int32_t *out,unsigned n,int cut,int width,unsigned type,unsigned slope)
 {
@@ -236,9 +249,9 @@ static void amb_synth_curve(unsigned ti,int32_t *out,unsigned n,int cut,int widt
         freq+=(env*t->p[P_ED_FLT])>>7;
     }
     damping=amb_filter_coefficients(coef,freq,damping,slope);
-    unsigned channels=t->engine==ENGI_AMB_A22?2:t->engine==ENGI_DRUM && dx_xon?3:1;
+    unsigned channels=amb_synth_channels(t);
     for(unsigned c=0;c<channels;c++){
-        int32_t *buf=!c?out:channels==2?voice_bank[ti].a22.side:c==1?dx_sl:dx_sr;
+        int32_t *buf=amb_synth_buf(ti,out,channels,c);
         amb_filter_stages(buf,n,amb_bell_state[ti][c],coef,damping,type,slope,gain);
     }
 }
@@ -1362,6 +1375,16 @@ static uint32_t track_render(track_t *t, int32_t *out, uint32_t n)
                tf_xb[(uint32_t)(t - trk) % NTRK] || tf_cmb[(uint32_t)(t - trk) % NTRK]))
         /* (JIANT 0.5) the FILTER (track_post); 0.6.8: and a block more to leave the chain (track_filter's fade) */
         track_post(t, e, out, n);
+#if AMBPLUS
+    if(nr && n){
+        unsigned slope=t->p[P_FTYPE]<=FT_HP?amb_synth_slope[ti]:0;
+        int changed=slope!=amb_synth_edge[ti].slope;
+        unsigned channels=amb_synth_channels(t);
+        for(unsigned c=0;c<channels;c++)
+            amb_slope_edge(amb_synth_buf(ti,out,channels,c),n,&amb_synth_edge[ti].last[c],changed);
+        amb_synth_edge[ti].slope=slope;
+    }
+#endif
     if (snap)
         memcpy(t->p, p_new, sizeof p_new);
     else if (fade)

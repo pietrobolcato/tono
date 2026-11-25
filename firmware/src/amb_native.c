@@ -466,7 +466,7 @@ static __attribute__((noinline)) int amb_move_release(unsigned k)
     amb_trem_phase[dst]=amb_trem_phase[k];
     memcpy(amb_trem_dip[dst],amb_trem_dip[k],sizeof amb_trem_dip[k]);
     memcpy(amb_grain_controls[dst],amb_grain_controls[k],4);
-    memcpy(amb_bell_state[dst],amb_bell_state[k],sizeof amb_bell_state[k]);amb_bell_gain[dst]=amb_bell_gain[k];amb_synth_slope[dst]=amb_synth_slope[k];amb_filter_previous[dst]=amb_filter_previous[k];amb_tail_filter[dst]=amb_tail_filter[k];memcpy(amb_filter_state[dst],amb_filter_state[k],sizeof amb_filter_state[k]);
+    memcpy(amb_bell_state[dst],amb_bell_state[k],sizeof amb_bell_state[k]);amb_bell_gain[dst]=amb_bell_gain[k];amb_synth_slope[dst]=amb_synth_slope[k];amb_synth_edge[dst]=amb_synth_edge[k];amb_filter_previous[dst]=amb_filter_previous[k];amb_tail_filter[dst]=amb_tail_filter[k];memcpy(amb_filter_state[dst],amb_filter_state[k],sizeof amb_filter_state[k]);
     memcpy(ambr.tail_eq[dst],ambr.tail_eq[k],4);
     if(ambr.fade_slot[k]){
         unsigned gain=amb_fade_level(k,65536);
@@ -488,7 +488,7 @@ static void amb_apply_patch(unsigned k)
     load_begin(t,LOAD_SOUND);t->eng_req=l->engine;
     t->preset=(uint8_t)amb_patch_preset(l);
     memcpy(t->p,l->base,sizeof t->p);fm6_track_loaded(t);
-    panic_req|=(uint8_t)(1u<<k);load_end(t);ambr.handoff[k]=0;amb_filter_previous[k]=0;memset(amb_bell_state[k],0,sizeof amb_bell_state[k]);memset(amb_filter_state[k],0,sizeof amb_filter_state[k]);
+    panic_req|=(uint8_t)(1u<<k);load_end(t);ambr.handoff[k]=0;amb_filter_previous[k]=0;memset(&amb_synth_edge[k],0,sizeof amb_synth_edge[k]);memset(amb_bell_state[k],0,sizeof amb_bell_state[k]);memset(amb_filter_state[k],0,sizeof amb_filter_state[k]);
     amb_trem_dip[k][0]=amb_trem_dip[k][1]=0;
     amb_grain[k].mix=amb_grain[k].valid=amb_grain[k].phase=0;
     for(unsigned j=0;j<4;j++)ambr.macro_smooth[k][j]=l->macro[j]*256;
