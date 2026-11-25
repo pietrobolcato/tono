@@ -46,13 +46,13 @@ int main(void)
     trk[0].p[P_REL]=0;trk_note_on(&trk[0],60,100);for(i=0;i<FS/5u/CTL;i++)track_render(&trk[0],out,CTL);
     trk_note_off(&trk[0],60);for(i=0;i<FS/2u/CTL;i++)track_render(&trk[0],out,CTL);
     assert(!amb_track_active(0) && !ambr.handoff[0]);
-    /* A user PHRASE commits on four bars and releases only generated parts. */
+    /* A user PHRASE commits on four bars while sounding notes keep their musical envelopes. */
     song.playing=0;amb_fixture_scene(0);amb_controls.walk[5]=1;amb.layer[2].generated=0;amb.layer[2].notes[3]=61;
     {amb_layer_t manual=amb.layer[2];
         amb_prepare();for(k=0;k<4;k++)trk[k].engine=trk[k].eng_req;panic_req=0;
         trk_note_on(&trk[0],60,100);for(i=0;i<FS/5u/CTL;i++)mix_block(out,CTL);
         ambr.step=63;amb_policy_choose(&amb.policy,1,3,1);amb_step();assert(!ambr.handoff[0]);
-        amb_step();assert(amb.policy.active[1]==3 && ambr.handoff[0] && !ambr.handoff[2]);
+        amb_step();assert(amb.policy.active[1]==3 && !ambr.handoff[0] && amb_track_active(0) && !ambr.handoff[2]);
         assert(!memcmp(&manual,&amb.layer[2],sizeof manual));}
     /* Whole-song recalls hold old FX, output EQ and master until all old
      * voices have released; silent incoming layers cannot enter early. */
