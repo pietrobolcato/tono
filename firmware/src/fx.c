@@ -2505,7 +2505,7 @@ static inline __attribute__((always_inline)) void mix_part_t(track_t *t, uint32_
     mc_tk[i] = d > mc_tk[i] ? mc_tk[i] + ((d - mc_tk[i]) >> 1) : mc_tk[i] - ((mc_tk[i] - d) >> 3);   /* (up fast) */
 }
 static void mix_part_m(track_t *t, uint32_t n) { mix_part_t(t, n); }   /* (core 1: from the flash) */
-#if FELUCCA_HOTRAM && !AMBPLUS                           /* (0.6.78) core 0's copy, in RAM (app.ld .hot_text) */
+#if FELUCCA_HOTRAM                           /* (0.6.78) core 0's copy, in RAM (app.ld .hot_text) */
 static __attribute__((noinline)) void mix_part_m0(track_t *t, uint32_t n) { mix_part_t(t, n); }
 #else
 #define mix_part_m0 mix_part_m
