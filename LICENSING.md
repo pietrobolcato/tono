@@ -128,4 +128,4 @@ Tono’s microphone companion independently implements the host-to-instrument au
 - Kiel Harbour by schaarsen and Subway Voice by swelltoe77 are CC0. See `tools/field/manifest.json` for source links and hashes.
 - The Nostalgic New Inn factory song is a Tono project arrangement by the project owner. The factory bank is distributed with Tono.
 - The optional desktop emulator is [fm1-emu](https://github.com/joakimeriksson/fm1-emu), under MIT. Its bundle includes the emulator notice and a patch against the pinned upstream revision.
-- The Rain texture includes CC0 surface drops by xkeril, vfrattaroli and GammaGool, forest rain by AlanCat, and distant thunder by Fission9. Source links, adaptation and verified preview hashes are in `tools/field/README.md` and `tools/field/rain.py`.
+- The Abstract Rain texture includes CC0 surface drops by xkeril, vfrattaroli and GammaGool, forest rain by AlanCat, and distant thunder by Fission9. Source links, adaptation and verified preview hashes are in `tools/field/README.md` and `tools/field/rain.py`.
