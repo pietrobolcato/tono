@@ -14,7 +14,7 @@ static const uint16_t amb_filter_hz[]={80,125,200,315,500,800,1000,1250,1600,200
 static void amb_filter_process(unsigned k,int32_t *b,unsigned n,unsigned setting)
 {
     static const uint16_t coefficient[]={371,578,921,1438,2253,3530,4351,5345,6681,8126,9817,11843,14230,19423,24873,29414};
-    static int32_t last[NTRK][6] __attribute__((section(".pool")));
+    static int32_t last[NTRK][6] __attribute__((section(".lowbuf")));
     unsigned previous=amb_filter_previous[k];
     unsigned next=(setting&48)?setting:0;
     unsigned fade=next?(previous?0:1):(previous?2:0);

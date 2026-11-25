@@ -225,12 +225,14 @@ static int amb_filter_coefficients(tsvf_t coef[2],int freq,int damping,unsigned 
 static void amb_slope_edge(int32_t *buf,unsigned n,int32_t *last,int changed)
 {
     if(changed){
+        /* A control block is 32 samples; the mixer and filter feed bounded
+         * audio (< 2^20), so the difference times 31 fits int32. */
         int32_t step=*last-buf[0];
         for(unsigned i=0;i<n && i<CTL;i++)buf[i]+=(step*(int)(CTL-1-i))>>CTL_LOG2;
     }
     *last=buf[n-1];
 }
-static struct {int32_t last[3];uint8_t slope;} amb_synth_edge[NTRK] __attribute__((section(".pool")));
+static struct {int32_t last[3];uint8_t slope;} amb_synth_edge[NTRK] __attribute__((section(".lowbuf")));
 static unsigned amb_synth_channels(const track_t *t)
 {return t->engine==ENGI_AMB_A22?2:t->engine==ENGI_DRUM && dx_xon?3:1;}
 static int32_t *amb_synth_buf(unsigned ti,int32_t *out,unsigned channels,unsigned c)
