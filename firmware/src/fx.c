@@ -2252,13 +2252,18 @@ static inline __attribute__((always_inline)) void mix_part(track_t *t, uint32_t 
                 mod_end(t);
             return;
         }
-        int32_t lq0 = lq, gl0 = gl, gr0 = gr;           /* (0.7.5: uin_mix, the same ramps) */
 #if AMBPLUS
-        if(amb_trem_audio[ti].depth || amb_trem_dip[ti][0] || amb_trem_dip[ti][1])
-            amb_trem_mix(ti,n,&lq,&dl,&gl,&dgl,&gr,&dgr);
+        if(amb_trem_audio[ti].depth || amb_trem_dip[ti][0] || amb_trem_dip[ti][1]){
+            /* Only the wet path passes ramp addresses to flash. Keep the dry
+             * mixing loop's gains register-eligible across the whole block. */
+            int level=lq, dlevel=dl, left=gl, dleft=dgl, right=gr, dright=dgr;
+            amb_trem_mix(ti,n,&level,&dlevel,&left,&dleft,&right,&dright);
+            lq=level;dl=dlevel;gl=left;dgl=dleft;gr=right;dgr=dright;
+        }
         if(t->engine==ENGI_AMB_A22)
             amb_a22_stereo(voice_bank[ti].a22.side,ol,or_,n,lq,dl,gl,dgl,gr,dgr,pm0,pm1);
 #endif
+        int32_t lq0=lq, gl0=gl, gr0=gr;       /* uin_mix shares the final ramps. */
         if (dx_xon && ENGINES[t->engine] == &ENG_DRUM)  /* (0.6.48) IMAGE, SENDs: from the same ramps as below */
         {
             int32_t *const sx[3] = {sc, sd, sr};

@@ -1013,8 +1013,13 @@ static __attribute__((noinline)) void amb_prepare(void)
         t->p[P_DLY]=l->base[P_DLY];t->p[P_CHOR]=l->base[P_CHOR];
         t->p[P_E1]=l->base[P_E1];t->p[P_E2]=l->base[P_E2];t->p[P_E3]=l->base[P_E3];
         t->p[P_E4]=l->base[P_E4];t->p[P_E6]=l->base[P_E6];t->p[P_APDEP]=l->base[P_APDEP];
+        /* Most layers have no LFO routed to these control banks. Skip the
+         * eight per-knob route lookups, without changing smoothing or rates. */
+        int macro_route=(l->lfo_depth && (unsigned)(l->lfo_dest-ROUTE_MACRO)<4) ||
+            (other->depth && (unsigned)(other->dest-ROUTE_MACRO)<4);
         for(i=0;i<4;i++) {
-            int want=amb_routed(k,ROUTE_MACRO+i,l->macro[i],0,127)*256;
+            int value=l->macro[i];
+            int want=(macro_route?amb_routed(k,ROUTE_MACRO+i,value,0,127):value)*256;
             int diff=want-ambr.macro_smooth[k][i];
             int increment=diff/(stagger?8:32);
             ambr.macro_smooth[k][i]+=increment?increment:diff;
@@ -1025,8 +1030,12 @@ static __attribute__((noinline)) void amb_prepare(void)
         int tone=(l->role==6?0:warm)+heat/2;
         int room=ambr.master_offset[0]/256, echo=ambr.master_offset[1]/256;
         int movement=motion+ambr.master_offset[2]/512;
-        for(unsigned j=0;j<4;j++)amb_grain_controls[k][j]=amb_routed(k,ROUTE_GRAIN+j,
-            amb.grain[k][j],j==2?-12:0,j==2?12:100);
+        int grain_route=(l->lfo_depth && (unsigned)(l->lfo_dest-ROUTE_GRAIN)<4) ||
+            (other->depth && (unsigned)(other->dest-ROUTE_GRAIN)<4);
+        for(unsigned j=0;j<4;j++){
+            int value=amb.grain[k][j];
+            amb_grain_controls[k][j]=grain_route?amb_routed(k,ROUTE_GRAIN+j,value,j==2?-12:0,j==2?12:100):value;
+        }
         int dust=l->role==5?bloom:l->role==6?motion:l->role==2?bloom/2:l->role<2?space/3:0;
         if(l->role==5 || l->role==6 || l->role==2){
             int master_motion=ambr.master_offset[2]/256;
