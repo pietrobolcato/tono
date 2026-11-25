@@ -97,7 +97,7 @@ static void texture_family_browser(void)
         }
     }
     assert(seen==(1u<<amb_patch_count(5))-1);
-    puts("All 31 texture IDs reachable across 13 sound families; silent browse and stable member ID PASS");
+    printf("All %u texture IDs reachable across %u sound families; silent browse and stable member ID PASS\n",amb_patch_count(5),families);
 }
 int main(void)
 {
