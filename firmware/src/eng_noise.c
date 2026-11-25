@@ -19,10 +19,10 @@
  * register, the held sample or META's DC blocker, ph[2] the drift. */
 static const char *const N_NOISE_MODE[] = {"ANLG", "DUST", "LFSR", "META"
 #if AMBPLUS
-, "RAIN"
+, "RAIN", "FIELD RAIN"
 #endif
 };
-enum { NZ_ANLG, NZ_DUST, NZ_LFSR, NZ_META, NZ_RAIN };
+enum { NZ_ANLG, NZ_DUST, NZ_LFSR, NZ_META, NZ_RAIN, NZ_FIELD_RAIN };
 static const char *const N_NOISE_LONG[] = {"L23", "L20", "L17", "L15", "L13", "L11", "L9", "L7", 0};
 static const char *const N_NOISE_META[] = {"127", "127B", "93", "63", "63B", "31", "15", "7", 0};
 static const param_desc_t NOISE_LONG = {"LEN", F_INT, 0, 127, 0, N_NOISE_LONG, 0};   /* = edit[5] but the names */
@@ -50,7 +50,7 @@ static const param_desc_t *noise_param_desc(const int16_t *p, uint32_t k)
 {
     int32_t mode = p[P_E0];
 #if AMBPLUS
-    if(mode==NZ_RAIN && k>0 && k<=7){
+    if(mode>=NZ_RAIN && k>0 && k<=7){
 #define RAIN_PARAM(label) {label,F_PCT,0,127,0,0,0}
         static const param_desc_t controls[]={
             RAIN_PARAM("AIR"),RAIN_PARAM("BRIGHT"),RAIN_PARAM("LEVEL"),RAIN_PARAM("SIZE"),
@@ -104,7 +104,7 @@ static void noise_note_on(track_t *t, voice_t *v)
 {
     uint32_t seed = (v->note + 1u) * 0x9E3779B9u ^ (uint32_t)v->fine * 0x85EBCA6Bu;   /* UNISON: each its own */
 #if AMBPLUS
-    if(t->p[P_E0]==NZ_RAIN)seed^=t->lfo_ph; /* Each new drop field starts at the layer's live phase. */
+    if(t->p[P_E0]>=NZ_RAIN)seed^=t->lfo_ph; /* Each new drop field starts at the layer's live phase. */
 #else
     (void)t;
 #endif
@@ -124,7 +124,7 @@ static void noise_note_on(track_t *t, voice_t *v)
 static void noise_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const vmod_t *m)
 {
 #if AMBPLUS
-    if(t->p[P_E0]==NZ_RAIN){rain_render(t,v,out,n,m);return;}
+    if(t->p[P_E0]>=NZ_RAIN){rain_render(t,v,out,n,m);return;}
     if((uint32_t)v->s[6]==RAIN_STATE_TAG)noise_note_on(t,v);
 #endif
     const int16_t *p = t->p;

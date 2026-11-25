@@ -9,9 +9,9 @@ int main(void)
         song.playing=0;amb_fixture_scene(0);amb_patch(0,5,i);
         unsigned engine=ENGI_AMB_SAMPLE;
         if(i==26)engine=ENGI_VOICE;
-        if(i<12 || i==25 || i==27 || i==30)engine=ENGI_NOISE;
+        if(i<12 || i==25 || i==27 || i>=30)engine=ENGI_NOISE;
         assert(amb.layer[0].engine==engine && amb.layer[0].mode==0 && amb.layer[0].density==100);
-        if(i==30)assert(amb.layer[0].base[P_E0]==NZ_RAIN);
+        if(i>=30)assert(amb.layer[0].base[P_E0]==(i==30?NZ_RAIN:NZ_FIELD_RAIN));
         amb_prepare();trk[0].engine=trk[0].eng_req;panic_req=0;
         for(k=0;k<128;k++){uint8_t notes[2];unsigned gate;
             assert(amb_generated_notes(0,k,0,notes,&gate)==(k%2?0:1));if(!(k%2))assert(notes[0]==60 && gate>=FS*30u);}

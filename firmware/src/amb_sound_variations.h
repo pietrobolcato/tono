@@ -87,7 +87,7 @@ static const amb_voicing_menu_t amb_lead_voicings[]={
 static const amb_voicing_menu_t amb_texture_voicings[]={
     [17]={V_CLOSE,V_BLOOM},[18]={V_PEDAL,V_WASH},[22]={V_RADIO,V_WASH},
     [23]={V_CLOSE,V_DUB},[24]={V_RADIO,V_WASH},[25]={V_CLOSE,V_WASH},
-    [26]={V_RADIO,V_BLOOM},[28]={V_CLOSE,V_WASH},[29]={V_RADIO,V_DUB},[30]={V_DOWNPOUR,V_STORM}
+    [26]={V_RADIO,V_BLOOM},[28]={V_CLOSE,V_WASH},[29]={V_RADIO,V_DUB},[30]={V_DOWNPOUR,V_STORM},[31]={V_STORM}
 };
 #define AMB_CHECK_MENU(role) _Static_assert(NELEM(amb_##role##_voicings)==NELEM(amb_##role##_patches), "Every patch has a voicing menu")
 AMB_CHECK_MENU(pad);AMB_CHECK_MENU(drone);_Static_assert(NELEM(amb_bell_voicings)==NELEM(amb_bells_patches),"Bells menus");
@@ -106,14 +106,14 @@ static const uint8_t *amb_variation_menu(const amb_layer_t *l)
 static unsigned amb_variation_count(const amb_layer_t *l)
 {
     const uint8_t *menu=amb_variation_menu(l);
-    return menu[2]?4:menu[0]?3:1;
+    return menu[2]?4:menu[1]?3:menu[0]?2:1;
 }
 static unsigned amb_variation_id(const amb_layer_t *l,unsigned index)
 {
     return index && index<amb_variation_count(l)?amb_variation_menu(l)[index-1]:V_ORIGINAL;
 }
 static const char *amb_variation_name(const amb_layer_t *l,unsigned index)
-{return l->role==5 && l->patch==30 && !index?"Chill Rain":amb_voicing[amb_variation_id(l,index)].name;}
+{return l->role==5 && (l->patch==30 || l->patch==31) && !index?"Chill Rain":amb_voicing[amb_variation_id(l,index)].name;}
 static void amb_voice_offset(amb_layer_t *l,const amb_layer_t *original,unsigned id,int delta)
 {
     const param_desc_t *d=amb_param_desc(l,id);
@@ -124,7 +124,11 @@ static void amb_apply_variation(unsigned k,unsigned index)
     amb_layer_t *l=&amb.layer[k];
     if(index>=amb_variation_count(l))return;
     const unsigned id=amb_variation_id(l,index);
-    if(l->role==5 && l->patch==30){
+    if(l->role==5 && (l->patch==30 || l->patch==31)){
+        if(l->patch==31){
+            l->base[P_E6]=index?106:0;
+            return;
+        }
         l->base[P_E1]=index==1?66:index==2?35:20;
         l->base[P_E5]=index==1?102:index==2?54:16;
         l->base[P_E6]=index==2?112:0;

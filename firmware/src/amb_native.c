@@ -331,6 +331,11 @@ static void amb_fill_patch(amb_layer_t *l,unsigned key,unsigned k,unsigned role,
         l->base[P_E7]=58;l->lfo_dest=3;l->lfo_depth=83;l->base[P_LRATE]=32;
     }else if(role==5 && patch==27){
         l->base[P_E1]=62;l->base[P_E3]=36;l->base[P_LRATE]=24;
+    }else if(role==5 && patch==31){
+        static const int16_t wet[]={NZ_FIELD_RAIN,102,102,70,46,0,0,35};
+        memcpy(l->base+P_E0,wet,sizeof wet);
+        l->base[P_VOICE]=V_LEGATO;l->base[P_LD_FLT]=l->base[P_CHOR]=l->base[P_FRES]=0;
+        l->base[P_FCUT]=123;
     }else if(role==5 && patch==30){
         static const int16_t rain[]={NZ_RAIN,20,52,72,38,16,0,100};
         memcpy(l->base+P_E0,rain,sizeof rain);
