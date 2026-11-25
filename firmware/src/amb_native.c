@@ -582,7 +582,7 @@ static void amb_commit_generate(void)
     ambr.dirty=1;
 }
 /* The audio clock publishes small events. Only the display formats their labels. */
-enum { AUTO_ROLE, AUTO_SOUND, AUTO_RHYTHM, AUTO_PHRASE, AUTO_INTERPLAY, AUTO_PRESET, AUTO_CHORD, AUTO_TRAVEL };
+enum { AUTO_ROLE, AUTO_SOUND, AUTO_RHYTHM, AUTO_PHRASE, AUTO_INTERPLAY, AUTO_PRESET, AUTO_TRAVEL };
 typedef struct { uint8_t kind, layer, role, before, after, tail; } amb_auto_event_t;
 static struct {
     amb_auto_event_t events[16];
@@ -1553,7 +1553,7 @@ static void amb_step(void)
         else if(ambr.chord_q!=255) { amb.chord=ambr.chord_q;ambr.chord_q=255;amb_revoice(); }
         else if((!travel.ready || !amb_landscape_bar()) && amb.policy.active[0]!=8 && bar && AMB_AUTO[amb.auto_index] && bar%AMB_AUTO[amb.auto_index]==0 && amb_hash(amb.policy.seed+bar)%100u<amb.evolve[0]) {
             int scale[12];unsigned count=(unsigned)amb_scale(amb_pool(),scale);
-            unsigned before=amb.chord;amb.chord=(uint8_t)amb_walk_next(&ambr.harmony_walk,amb.policy.seed,amb.chord,count);amb_revoice();amb_auto_event(AUTO_CHORD,0,before,amb.chord);
+            amb.chord=(uint8_t)amb_walk_next(&ambr.harmony_walk,amb.policy.seed,amb.chord,count);amb_revoice();
         }
     }
     if(!(ambr.step%16u)){amb_ensemble_downbeat();amb_commit_evolution();}
@@ -1561,7 +1561,7 @@ static void amb_step(void)
     /* A generator change schedules future notes on the same instruments.
      * Keep sounding voices, gates and effect tails on their normal clocks. */
     amb_policy_boundary(&amb.policy,ambr.step);
-    if(amb.policy.active[0]==8){unsigned before=amb.chord;garden_harmony(ambr.step);amb_auto_event(AUTO_CHORD,0,before,amb.chord);}
+    if(amb.policy.active[0]==8)garden_harmony(ambr.step);
     else garden_drift.limit=0;
     amb_participation(part,ambr.step);
     mask=amb_policy_events(&amb.policy,ambr.step,part);
@@ -3622,7 +3622,7 @@ static void amb_auto_toast(void)
     if(amb_notices.tail==amb_notices.head)return;
     if(!amb_notices.showing){amb_notices.started=fm1_ms;amb_notices.showing=1;}
     amb_auto_event_t e=amb_notices.events[amb_notices.tail];
-    char title[42]="Auto: Layer 1",chord[2][20];
+    char title[42]="Auto: Layer 1";
     const char *from=0,*to=0;
     if(e.kind<=AUTO_SOUND){
         title[12]+=e.layer;
@@ -3631,13 +3631,12 @@ static void amb_auto_toast(void)
         else if(e.role==6){from=N_AS_SOURCE[e.before];to=N_AS_SOURCE[e.after];}
         else{from=amb_recipe(e.role,e.before)->name;to=amb_recipe(e.role,e.after)->name;}
     }else{
-        static const char *const labels[]={"Rhythm changed","Phrase changed","Interplay changed","Generate preset changed","Chord changed","Travel"};
+        static const char *const labels[]={"Rhythm changed","Phrase changed","Interplay changed","Generate preset changed","Travel"};
         str_cpy(title+6,labels[e.kind-AUTO_RHYTHM],34);
         if(e.kind<=AUTO_INTERPLAY){
             const char *const *names=e.kind==AUTO_RHYTHM?AMB_RHYTHMS:e.kind==AUTO_PHRASE?AMB_PHRASES:AMB_INTERPLAY;
             from=names[e.before];to=names[e.after];
         }else if(e.kind==AUTO_PRESET)to=amb_generate_recipes[e.after].name;
-        else if(e.kind==AUTO_CHORD){amb_chord_label(e.before,chord[0]);amb_chord_label(e.after,chord[1]);from=chord[0];to=chord[1];}
         else{from=amb_landscape_name((int)e.before-20);to=amb_landscape_name((int)e.after-20);}
     }
     const char *lines[]={title,from,to,e.tail==1?"Crossfade":"Release"};
