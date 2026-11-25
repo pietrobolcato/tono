@@ -189,15 +189,17 @@ static void amb_slope_stage(int32_t *b,unsigned n,int32_t *state,const tsvf_t *c
                             int damping,unsigned type,int gentle)
 {
     int32_t band=state[0],low=state[1],g=c->a3,a1=c->a1,a2=c->a2;
+    const int limit_step=g*95000;
     for(unsigned i=0;i<n;i++){
         int x=amb_limit(b[i]>>3,60000);
         int mid=(a1*(band>>12)+a2*(x-(low>>12))+4096)>>13;
-        int lo=(low+g*mid+2048)>>12;
+        int step=g*mid;
+        int lo=(low+step+2048)>>12;
         int hi=x-lo-((damping*mid+2048)>>12);
         /* g tops out just below 9000. Bound the input to each product
          * before doubling so the intermediate and state stay in int32. */
         band=amb_limit(band+2*g*amb_limit(hi,95000),307200000);
-        low=amb_limit(low+2*g*amb_limit(mid,95000),307200000);
+        low=amb_limit(low+2*amb_limit(step,limit_step),307200000);
         b[i]=((type==FT_HP?hi:lo)+(gentle?mid:0))*8;
     }
     state[0]=band;state[1]=low;
@@ -228,6 +230,26 @@ static int amb_filter_coefficients(tsvf_t coef[2],int freq,int damping,unsigned 
     }
     return damping;
 }
+/* The two audio cores own disjoint tracks. Keep synth and insert filter
+ * coefficients independent so UI changes and modulation take effect on the
+ * next rendered block, including while a layer is sustaining. */
+typedef struct {
+    tsvf_t coefficients[2];
+    int freq, damping, result;
+    unsigned slope_key;
+} amb_coef_cache_t;
+static amb_coef_cache_t amb_coef_cache[NTRK][2] __attribute__((section(".lowbuf")));
+static const tsvf_t *amb_cached_coef(unsigned track,unsigned insert,int freq,int *damping,unsigned slope)
+{
+    amb_coef_cache_t *c=&amb_coef_cache[track][insert];
+    unsigned key=slope+1;
+    if(c->slope_key!=key || c->freq!=freq || c->damping!=*damping){
+        c->slope_key=key;c->freq=freq;c->damping=*damping;
+        c->result=amb_filter_coefficients(c->coefficients,freq,*damping,slope);
+    }
+    *damping=c->result;
+    return c->coefficients;
+}
 static void amb_slope_edge(int32_t *buf,unsigned n,int32_t *last,int changed)
 {
     if(changed){
@@ -248,7 +270,6 @@ static void amb_synth_curve(unsigned ti,int32_t *out,unsigned n,int cut,int widt
 {
     int gain=amb_peak_q12[amb_bell_gain[ti]+6]-4096;
     int damping=amb_filter_damping((unsigned)width>>3,type==FT_BELL);
-    tsvf_t coef[2];
     track_t *t=&trk[ti];
     int freq=(cut<<8)+amb_second_cut[ti]+((mulq15(t->lfo_val,t->lfo_fade)*t->p[P_LD_FLT])>>7);
     if(t->p[P_ED_FLT]){
@@ -256,7 +277,7 @@ static void amb_synth_curve(unsigned ti,int32_t *out,unsigned n,int cut,int widt
         for(unsigned i=0;i<NVOICE;i++)if(t->v[i].active && t->v[i].stage<4 && (t->v[i].env>>9)>env)env=t->v[i].env>>9;
         freq+=(env*t->p[P_ED_FLT])>>7;
     }
-    damping=amb_filter_coefficients(coef,freq,damping,slope);
+    const tsvf_t *coef=amb_cached_coef(ti,0,freq,&damping,slope);
     unsigned channels=amb_synth_channels(t);
     for(unsigned c=0;c<channels;c++){
         int32_t *buf=amb_synth_buf(ti,out,channels,c);

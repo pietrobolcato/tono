@@ -30,8 +30,8 @@ static void amb_filter_process(unsigned k,int32_t *b,unsigned n,unsigned setting
         unsigned channels=a22?2:trk[k].engine==ENGI_DRUM && dx_xon?6:1;
         int a=coefficient[setting&15];
         static const uint8_t pitch[]={20,29,38,48,57,66,71,75,80,85,89,94,99,108,117,127};
-        tsvf_t coef[2];int damping=amb_filter_damping(shape,mode==3);
-        if(svf)damping=amb_filter_coefficients(coef,pitch[setting&15]<<8,damping,slope);
+        const tsvf_t *coef=0;int damping=amb_filter_damping(shape,mode==3);
+        if(svf)coef=amb_cached_coef(k,1,pitch[setting&15]<<8,&damping,slope);
         int32_t dry[CTL];
         for(unsigned c=0;c<channels;c++){
             int32_t *buf=!c?b:a22?voice_bank[k].a22.side:c==1?dx_sl:c==2?dx_sr:dx_sb[c-3];
