@@ -493,7 +493,7 @@ Set the time allowed for the old sound to fade.
 [release_or_crossfade]
 Release lets the outgoing voice ring out. Crossfade lowers it while bringing the incoming sound up. Tail Time sets the handoff duration.
 [move_while_playing]
-Allow automatic travel while the song plays.
+Off pauses travel, pattern and layer changes. On starts a fresh wait. Manual edits and playback continue.
 [shortest_cycle_in_bars]
 Set the shortest cycle in bars. Raising MIN removes fast sweeps. Equal MIN and MAX give a fixed-length cycle.
 [longest_cycle_in_bars]

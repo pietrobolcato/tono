@@ -852,7 +852,7 @@ static void amb_install(const amb_piece_t *p)
     amb_monitor_requested=(amb_controls.flags>>1)&1u;
     ambr.generate_queued=0;
     memset(ambr.gen_edit,0,sizeof ambr.gen_edit);
-    ambr.evolve_open=ambr.evolve_queued=0;memset(&travel,0,sizeof travel);amb_auto_reset();amb_reset_lanes();
+    ambr.evolve_open=ambr.evolve_queued=0;memset(&travel,0,sizeof travel);amb_auto_reset();amb_reset_lanes();amb_paused_rhythm_bar=0;
     memset(amb_memory,0,sizeof amb_memory);amb=*p;memcpy(amb_reset_grain,amb.grain,sizeof amb_reset_grain);memcpy(amb_reset_layer,amb.layer,sizeof amb_reset_layer);memcpy(amb_reset_eq,amb.layer_eq,sizeof amb_reset_eq);amb_reset_isolator=amb_controls.eq_isolator;
     memset(ambr.recent,0,sizeof ambr.recent);
     memset(ambr.recent_valid,0,sizeof ambr.recent_valid);memset(ambr.playhead_valid,0,sizeof ambr.playhead_valid);memset(&ambr.harmony_walk,0,sizeof ambr.harmony_walk);ambr.reset_pending=0;
@@ -1185,7 +1185,7 @@ static __attribute__((noinline)) void amb_prepare(void)
         if(l->role<3)t->p[P_DEC]=clamp(l->base[P_DEC]+bloom/2,0,127);
         if(song.playing && l->generated) {
             int off=(int)(amb_hash(amb.policy.seed+ambr.step/64+k*31)%17)-8;
-            ambr.evolve_smooth[k]+=(off*65536-ambr.evolve_smooth[k])/(stagger?512:2048);
+            if(amb_walk_value(0))ambr.evolve_smooth[k]+=(off*65536-ambr.evolve_smooth[k])/(stagger?512:2048);
             off=ambr.evolve_smooth[k]/65536;
             t->p[P_FCUT]=(int16_t)clamp(t->p[P_FCUT]+off*amb.evolve[1]/100,16,127);
             if(l->engine==0)t->p[P_E4]=(int16_t)clamp(t->p[P_E4]+off*amb.evolve[1]/100,0,127);
@@ -1383,7 +1383,7 @@ static void amb_participation(amb_participation_t *part,unsigned step)
     unsigned k;for(k=0;k<4;k++)part[k]=(amb_participation_t){amb.layer[k].generated && !amb.layer[k].base[P_MUTE] && (ambr.solo<0 || (unsigned)ambr.solo==k),(uint8_t)clamp(amb_routed(k,ROUTE_DENSITY,amb.layer[k].density,0,100)+
         ((amb.layer[k].role==4)?(ambr.macro_smooth[k][1]/256-64)/2:
          (amb.layer[k].role==0 || amb.layer[k].role==1)?(ambr.macro_smooth[k][2]/256-64)/2:0)+
-        ((int)amb_triangle(step/16,32)-50)*amb.evolve[2]/500,0,100)};
+        ((int)amb_triangle(amb_walk_value(0)?step/16:amb_paused_rhythm_bar,32)-50)*amb.evolve[2]/500,0,100)};
 }
 static void amb_capture_generated(unsigned k)
 {
@@ -1546,12 +1546,12 @@ static void amb_queue_octave(int direction)
 static void amb_step(void)
 {
     amb_participation_t part[4]; uint8_t mask; unsigned k,bar=ambr.step/16;
-    if(travel.ready)amb_landscape_colour(0);
+    if(travel.ready && !travel.paused)amb_landscape_colour(0);
     if(ambr.step%16==0) {
         amb_octave_boundary();
         if(amb_pending_ready){amb_install(&amb_pending);amb_pending_ready=0;amb_say("PRESET RECALLED ON BAR");}
         else if(ambr.chord_q!=255) { amb.chord=ambr.chord_q;ambr.chord_q=255;amb_revoice(); }
-        else if((!travel.ready || !amb_landscape_bar()) && amb.policy.active[0]!=8 && bar && AMB_AUTO[amb.auto_index] && bar%AMB_AUTO[amb.auto_index]==0 && amb_hash(amb.policy.seed+bar)%100u<amb.evolve[0]) {
+        else if((!travel.ready || travel.paused || !amb_landscape_bar()) && amb_walk_value(0) && amb.policy.active[0]!=8 && bar && AMB_AUTO[amb.auto_index] && bar%AMB_AUTO[amb.auto_index]==0 && amb_hash(amb.policy.seed+bar)%100u<amb.evolve[0]) {
             int scale[12];unsigned count=(unsigned)amb_scale(amb_pool(),scale);
             amb.chord=(uint8_t)amb_walk_next(&ambr.harmony_walk,amb.policy.seed,amb.chord,count);amb_revoice();
         }
@@ -1561,7 +1561,7 @@ static void amb_step(void)
     /* A generator change schedules future notes on the same instruments.
      * Keep sounding voices, gates and effect tails on their normal clocks. */
     amb_policy_boundary(&amb.policy,ambr.step);
-    if(amb.policy.active[0]==8)garden_harmony(ambr.step);
+    if(amb.policy.active[0]==8){if(amb_walk_value(0))garden_harmony(ambr.step); }
     else garden_drift.limit=0;
     amb_participation(part,ambr.step);
     mask=amb_policy_events(&amb.policy,ambr.step,part);
