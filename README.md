@@ -11,6 +11,7 @@
   <br>
 </p>
 
+----
 
 **A four-layer ambient instrument for the M-VAVE FM-1.** Four-layer instrument for making music that evolves as you play. Start with a single sound, bring in another, and decide how much of the piece you want to play yourself and how much you want to leave to Tono.
 
