@@ -1,12 +1,22 @@
 # Tono
 
-[![Meet Tono, the FM-1 against four coloured waves](docs/tono/media/meet-tono.jpg)](https://www.youtube.com/watch?v=IzsMZwEzl6E)
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=IzsMZwEzl6E">
+    <img src="docs/tono/media/meet-tono.jpg" alt="Meet Tono, the FM-1 against four coloured waves">
+  </a>
+  <br>
+  <a href="https://www.youtube.com/watch?v=IzsMZwEzl6E">
+    <strong>Introducing Tono (2:06)</strong>
+  </a>
+  <br>
+</p>
+
 
 **A four-layer ambient instrument for the M-VAVE FM-1.** Four-layer instrument for making music that evolves as you play. Start with a single sound, bring in another, and decide how much of the piece you want to play yourself and how much you want to leave to Tono.
 
 A bassline can become a drum pattern. A piano phrase can find a different ending each time it comes around. Shape a sound with effects, write your own sequence, or let a favourite combination play for a while and hear where it goes. Each layer has its own voice, effects and sequencer.
 
-**[Introducing Tono (2:06)](https://www.youtube.com/watch?v=IzsMZwEzl6E)** · **[Play Tono in your browser](https://pietrobolcato.github.io/tono/)** · **[Get the firmware for free](https://github.com/pietrobolcato/tono/releases/latest)**
+**[Play Tono in your browser](https://pietrobolcato.github.io/tono/)** · **[Get the firmware for free](https://github.com/pietrobolcato/tono/releases/latest)**
 
 ## Demo - listen
 
