@@ -42,6 +42,8 @@ jobs:
           version=${tag#v}
           gh release download "$tag" --dir site --pattern "tono-$version.fwsc" --pattern "tono-$version-notices.zip" --pattern SHA256SUMS
           python3 web/tono/stage.py emulator emulator/target/wasm32-unknown-unknown/release/fm1_web.wasm site "$version"
+          mkdir -p site/listen
+          cp docs/tono/media/{index.html,meet-tono.jpg,meet-tono.mp4,piano-and-cello.mp3} site/listen/
           cd site
           awk -v fw="tono-$version.fwsc" -v notices="tono-$version-notices.zip" '$2==fw || $2==notices' SHA256SUMS | sha256sum --check
           rm SHA256SUMS

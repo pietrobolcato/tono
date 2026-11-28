@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meet Tono · Unhurried Machines</title>
+<style>
+  :root { color-scheme: dark; font: 100%/1.5 system-ui, sans-serif; color: #f6f2e6; background: #101418 }
+  body { max-width: 62rem; margin: auto; padding: clamp(1rem, 4vw, 4rem) }
+  h1 { font-size: clamp(2.25rem, 7vw, 4.5rem); letter-spacing: -.055em; line-height: 1.05; margin: .35em 0 }
+  header p { margin: 0; color: #eebe5a }
+  video { display: block; width: 100%; height: auto; background: #101418; margin-block: 1.5rem }
+  h2 { font-size: 1.3rem; margin-bottom: .5rem }
+  audio { width: min(100%, 28rem) }
+  nav { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 2rem }
+  a { color: #73bed5; text-underline-offset: .2em }
+</style>
+<header><p>Unhurried Machines</p><h1>Meet Tono</h1></header>
+<main>
+  <video controls playsinline preload="metadata" poster="meet-tono.jpg" width="960" height="540" aria-label="Meet Tono launch film">
+    <source src="meet-tono.mp4" type="video/mp4">
+    <a href="meet-tono.mp4">Download the film</a>
+  </video>
+  <section id="piano-and-cello"><h2>Three grand pianos and a bowed cello</h2>
+    <audio controls preload="none" aria-label="Piano and cello excerpt, 20 seconds" src="piano-and-cello.mp3"></audio>
+  </section>
+</main>
+<nav aria-label="Explore Tono"><a href="../">Play Tono</a><a href="https://www.youtube.com/@unhurriedmachines">Unhurried Machines on YouTube</a><a href="https://github.com/pietrobolcato/tono">Firmware and installation</a></nav>
+</html>
