@@ -1,16 +1,12 @@
+[![Meet Tono, the FM-1 against four coloured waves](docs/tono/media/meet-tono.jpg)](https://www.youtube.com/watch?v=IzsMZwEzl6E)
+
 # Tono
 
 **A four-layer ambient instrument for the M-VAVE FM-1.** Bring in a bassline, let a pad hang over it, then turn a texture into a drum pulse while the piece keeps playing. Each layer has its own voice, effects and sequencer.
 
-**[Play Tono in your browser](https://pietrobolcato.github.io/tono/)** · **[Get the firmware](https://github.com/pietrobolcato/tono/releases/latest)**
+**[Introducing Tono (2:06)](https://www.youtube.com/watch?v=IzsMZwEzl6E)** · **[Play Tono in your browser](https://pietrobolcato.github.io/tono/)** · **[Get the firmware](https://github.com/pietrobolcato/tono/releases/latest)**
 
 ## Demo - listen
-
-[![Meet Tono, the FM-1 against four coloured waves](docs/tono/media/meet-tono.jpg)](https://www.youtube.com/watch?v=IzsMZwEzl6E)
-
-**[Introducing Tono](https://www.youtube.com/watch?v=IzsMZwEzl6E)** · 2:06
-
-At 1:00, a rolling snare gives way to three grand pianos and a bowed cello. At 1:45, *First Ferry* opens a short medley that closes with *Symphony for Mars*.
 
 | [Morning Session](https://www.youtube.com/watch?v=UJ1czSA0C08) | [Acid Ambient](https://www.youtube.com/watch?v=EIN45Fl_-m4) | Ambient Piano After Dark |
 | --- | --- | --- |
