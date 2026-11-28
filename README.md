@@ -2,15 +2,17 @@
 
 **A four-layer ambient instrument for the M-VAVE FM-1.** Bring in a bassline, let a pad hang over it, then turn a texture into a drum pulse while the piece keeps playing. Each layer has its own voice, effects and sequencer.
 
-[![Meet Tono. The FM-1 against four coloured waves.](docs/tono/media/meet-tono.jpg)](https://pietrobolcato.github.io/tono/listen/)
+![Meet Tono. The FM-1 against four coloured waves.](docs/tono/media/meet-tono.jpg)
 
-**[Play Tono in your browser](https://pietrobolcato.github.io/tono/)** · **[Watch Meet Tono · 2:06](https://pietrobolcato.github.io/tono/listen/)** · **[Get the firmware](https://github.com/pietrobolcato/tono/releases/latest)**
+<!-- Link this poster and the film title to the YouTube watch URL once available. -->
+
+**[Play Tono in your browser](https://pietrobolcato.github.io/tono/)** · *Meet Tono · coming to YouTube* · **[Get the firmware](https://github.com/pietrobolcato/tono/releases/latest)**
 
 ## Listen
 
 At **1:00** in the film, a rolling snare gives way to three grand pianos and a bowed cello. At **1:45**, *First Ferry* opens a short medley that closes with *Symphony for Mars*.
 
-[Hear the piano and cello · 20 seconds](https://pietrobolcato.github.io/tono/listen/#piano-and-cello) · [Unhurried Machines on YouTube](https://www.youtube.com/@unhurriedmachines)
+[Unhurried Machines on YouTube](https://www.youtube.com/@unhurriedmachines)
 
 ## Play your first piece
 
