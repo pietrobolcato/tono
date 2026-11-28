@@ -6,18 +6,17 @@
 
 ## Demo - listen
 
-![Meet Tono, the FM-1 against four coloured waves](docs/tono/media/meet-tono.jpg)
+[![Meet Tono, the FM-1 against four coloured waves](docs/tono/media/meet-tono.jpg)](https://www.youtube.com/watch?v=IzsMZwEzl6E)
 
-**Meet Tono** · 2:06 · Coming to YouTube
+**[Introducing Tono](https://www.youtube.com/watch?v=IzsMZwEzl6E)** · 2:06
 
 At 1:00, a rolling snare gives way to three grand pianos and a bowed cello. At 1:45, *First Ferry* opens a short medley that closes with *Symphony for Mars*.
 
-| Morning Session | Acid Ambient | From Percussion to Piano |
+| [Morning Session](https://www.youtube.com/watch?v=UJ1czSA0C08) | [Acid Ambient](https://www.youtube.com/watch?v=EIN45Fl_-m4) | Ambient Piano After Dark |
 | --- | --- | --- |
-| ![Morning Session thumbnail](docs/tono/media/morning-session.jpg) | ![Acid Ambient thumbnail](docs/tono/media/acid-ambient.jpg) | ![From Percussion to Piano thumbnail](docs/tono/media/percussion-to-piano.jpg) |
-| Four-hour live session | Sound study · 14:24 | Sound study · 38:55 |
+| [![Morning Session thumbnail](docs/tono/media/morning-session.jpg)](https://www.youtube.com/watch?v=UJ1czSA0C08) | [![Acid Ambient thumbnail](docs/tono/media/acid-ambient.jpg)](https://www.youtube.com/watch?v=EIN45Fl_-m4) | ![Ambient Piano After Dark thumbnail](docs/tono/media/ambient-piano-after-dark.jpg) |
+| Four-hour live session | Sound study · 14:24 | Upcoming · 15:24 |
 
-<!-- Link the four thumbnails directly to their YouTube watch URLs when the uploads are ready. -->
 Find us on [Unhurried Machines on YouTube](https://www.youtube.com/@unhurriedmachines).
 
 ## Features
